@@ -86,10 +86,7 @@ const Reset = () => {
         localStorage.removeItem("user");
         localStorage.clear();
         setTimeout(() => {
-          const homePath = window.location.pathname.includes("/dev/shipone/website/dist")
-            ? "/dev/shipone/website/dist/"
-            : "/";
-          window.location.href = homePath;
+          window.location.href = "/";
         }, 1000);
       } else {
         toast.error(response.message);

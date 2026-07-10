@@ -32,10 +32,7 @@ const Logout = ({ isLogoutOpen, onClose }) => {
       onClose();
       console.log("Logout successful, redirecting to home...");
       // Hard redirect to the app root to ensure all state is cleared
-      const homePath = window.location.pathname.includes("/dev/shipone/website/dist")
-        ? "/dev/shipone/website/dist/"
-        : "/";
-      window.location.href = homePath;
+      window.location.href = "/";
     }
   }
   return (

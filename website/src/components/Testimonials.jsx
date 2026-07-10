@@ -1,13 +1,8 @@
 import React from "react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation } from "swiper/modules";
+import useEmblaCarousel from "embla-carousel-react";
 import { FaStar } from "react-icons/fa";
-import { BsQuote } from "react-icons/bs";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
-
-import "swiper/css";
-import "swiper/css/navigation";
 import { comma } from "../common/common-assets/assets-images";
 
 const testimonials = [
@@ -86,6 +81,8 @@ for (let i = 0; i < testimonials.length; i += 2) {
 
 
 const Testimonials = () => {
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false, align: "start" });
+
   return (
     <section className="bg-[#0D1412] py-20 text-white">
       <div className="container mx-auto px-4">
@@ -103,76 +100,75 @@ const Testimonials = () => {
 
           {/* Navigation */}
           <div className="flex gap-3">
-            <div className="swiper-button-prev-custom w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center cursor-pointer">
+            <div
+              onClick={() => emblaApi?.scrollPrev()}
+              className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center cursor-pointer"
+            >
               <ArrowLeft size={18} className="text-black" />
             </div>
-            <div className="swiper-button-next-custom w-10 h-10 rounded-full bg-white flex items-center justify-center cursor-pointer">
+            <div
+              onClick={() => emblaApi?.scrollNext()}
+              className="w-10 h-10 rounded-full bg-white flex items-center justify-center cursor-pointer"
+            >
               <ArrowRight size={18} className="text-black" />
             </div>
           </div>
         </div>
 
         {/* Slider */}
-        <Swiper
-          modules={[Navigation]}
-          navigation={{
-            nextEl: ".swiper-button-next-custom",
-            prevEl: ".swiper-button-prev-custom",
-          }}
-          slidesPerView={1}
-          spaceBetween={30}
-          className="overflow-hidden rounded-xl"
-        >
-          {groupedTestimonials.map((group, slideIndex) => (
-            <SwiperSlide key={slideIndex}>
-              <div className="grid md:grid-cols-2 gap-2">
-                {group.map((item, index) => (
-                  <div
-                    key={index}
-                    className={`bg-[#1B2625] border border-white/5 px-6 pb-10 py-14 sm:p-10 relative rounded-xl`}
-                  >
-                    {/* Quote Icon */}
-                    <div className="absolute top-3 right-3 sm:top-6 sm:right-6 w-[50px] h-[50px] sm:w-[55px] sm:h-[55px] lg:w-[72px] lg:h-[72px] flex items-center justify-center">
-                      <img src={comma} alt="" />
-                    </div>
+        <div className="overflow-hidden rounded-xl" ref={emblaRef}>
+          <div className="flex -ml-[30px]">
+            {groupedTestimonials.map((group, slideIndex) => (
+              <div key={slideIndex} className="flex-[0_0_100%] min-w-0 pl-[30px]">
+                <div className="grid md:grid-cols-2 gap-2">
+                  {group.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`bg-[#1B2625] border border-white/5 px-6 pb-10 py-14 sm:p-10 relative rounded-xl`}
+                    >
+                      {/* Quote Icon */}
+                      <div className="absolute top-3 right-3 sm:top-6 sm:right-6 w-[50px] h-[50px] sm:w-[55px] sm:h-[55px] lg:w-[72px] lg:h-[72px] flex items-center justify-center">
+                        <img src={comma} alt="" />
+                      </div>
 
-                    {/* Profile */}
-                    <div className="flex items-center gap-4 mb-6">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-14 h-14 rounded-full object-cover"
-                      />
-                      <div>
-                        <h4 className={`font-semibold text-[18px] sm:text-[20px] text-white`}>
-                          {item.name}
-                        </h4>
-                        <p className={`text-[16px] font-medium text-white/50`}>
-                          {item.company}
-                        </p>
+                      {/* Profile */}
+                      <div className="flex items-center gap-4 mb-6">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-14 h-14 rounded-full object-cover"
+                        />
+                        <div>
+                          <h4 className={`font-semibold text-[18px] sm:text-[20px] text-white`}>
+                            {item.name}
+                          </h4>
+                          <p className={`text-[16px] font-medium text-white/50`}>
+                            {item.company}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Text */}
+                      <p className={`text-white/70 leading-relaxed mb-8`}>
+                        <i>
+                          Leverage agile frameworks to provide a robust synopsis for strategy foster collaborative thinking to further the overall value proposition. Organically grow the holistic world view of disruptive innovation via workplace diversity and empowerment.
+                        </i>
+
+                      </p>
+
+                      {/* Stars */}
+                      <div className="flex gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <FaStar key={i} className="text-[#FFC107]" style={{ fontSize: '24px' }} />
+                        ))}
                       </div>
                     </div>
-
-                    {/* Text */}
-                    <p className={`text-white/70 leading-relaxed mb-8`}>
-                      <i>
-                        Leverage agile frameworks to provide a robust synopsis for strategy foster collaborative thinking to further the overall value proposition. Organically grow the holistic world view of disruptive innovation via workplace diversity and empowerment.
-                      </i>
-
-                    </p>
-
-                    {/* Stars */}
-                    <div className="flex gap-1">
-                      {[...Array(5)].map((_, i) => (
-                        <FaStar key={i} className="text-[#FFC107]" style={{ fontSize: '24px' }} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
+            ))}
+          </div>
+        </div>
 
       </div>
     </section>

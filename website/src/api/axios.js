@@ -33,10 +33,7 @@ instance.interceptors.response.use(
             const message = error.response.data?.message || "Session expired - please log in again.";
             localStorage.clear();
             localStorage.setItem("deactivationMsg", message);
-            const homePath = window.location.pathname.includes("/dev/shipone/website/dist")
-                ? "/dev/shipone/website/dist/"
-                : "/";
-            window.location.href = homePath;
+            window.location.href = "/";
         }
         return Promise.reject(error);
     }

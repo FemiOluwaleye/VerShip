@@ -20,7 +20,7 @@ const CheckoutForm = ({ amount, bookingId, onSuccess, onCancel }) => {
             elements,
             confirmParams: {
                 // Return URL can be a success page, but since we handle it in-app:
-                return_url: window.location.origin + "/dev/shipone/website/history",
+                return_url: window.location.origin + "/history",
             },
             redirect: 'if_required',
         });
