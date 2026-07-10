@@ -115,6 +115,16 @@ db.transactions.belongsTo(db.bookings, { foreignKey: 'booking_id', as: 'booking'
 db.notifications.belongsTo(db.users, { foreignKey: 'sender_id', as: 'sender' });
 db.notifications.belongsTo(db.users, { foreignKey: 'reciever_id', as: 'receiver' });
 
+// Chat Associations (socket.js drives chat via raw literal() queries, so these
+// are additive — they don't change the existing queries, but keep the models
+// linked for future includes and referential clarity).
+db.chat_constant.hasMany(db.message, { foreignKey: 'chatConstant_id', as: 'messages' });
+db.message.belongsTo(db.chat_constant, { foreignKey: 'chatConstant_id', as: 'conversation' });
+db.chat_constant.belongsTo(db.users, { foreignKey: 'sender_id', as: 'sender' });
+db.chat_constant.belongsTo(db.users, { foreignKey: 'reciever_id', as: 'receiver' });
+db.message.belongsTo(db.users, { foreignKey: 'sender_id', as: 'sender' });
+db.message.belongsTo(db.users, { foreignKey: 'reciever_id', as: 'receiver' });
+
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 

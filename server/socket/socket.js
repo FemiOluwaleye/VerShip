@@ -1140,9 +1140,9 @@ module.exports = function (io) {
           raw: true,
         });
 
-        if (socketUser) {
-          io.to(socketUser.socket_id).emit("user_constant_list", null);
-          io.to(socketUser.socket_id).emit("send_message", getMsgData);
+        if (socketUser && socketUser.socketId) {
+          io.to(socketUser.socketId).emit("user_constant_list", null);
+          io.to(socketUser.socketId).emit("send_message", getMsgData);
         }
 
         socket.emit("send_message", getMsgData);

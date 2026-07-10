@@ -121,9 +121,7 @@ Static edits can't prove runtime SQL. Smoke-test these against Postgres first:
 
 1. **Chat / messaging** (`server/socket/socket.js`) — the most MySQL-specific
    code. Exercise: open a conversation list, send a message, load message
-   history, and confirm unread counts. This is where a missed identifier quote
-   would surface. **⚠️ See "Chat is dead code" below — this cannot be tested in
-   this codebase as-is.**
+   history, and confirm unread counts. **✅ Built + verified — see below.**
 2. **Provider listing / ratings** (`providerController.js`, `webController.js`
    forwarder list) — the `literal()` subqueries for `delivery_avg`, `safety_avg`,
    `review_count`.
@@ -135,8 +133,9 @@ Static edits can't prove runtime SQL. Smoke-test these against Postgres first:
 Runtime-tested against the live Replit Postgres dev DB (SSL off), the same code
 path that runs on Render:
 
-- **Boot + schema:** `sequelize.sync()` builds all **20 tables**; server serves
-  on port 5000; SSL auto-toggle (`sslmode=disable`) confirmed working.
+- **Boot + schema:** `sequelize.sync()` builds all tables (22 after adding the
+  chat models); server serves on port 5000; SSL auto-toggle (`sslmode=disable`)
+  confirmed working.
 - **Ported `literal()` rating/forwarder SQL (risk #2) — PASS with real rows.**
   Empty tables can't prove aggregate SQL, so a temporary fixture (1 verified
   provider + `providerDetails` + `barrelsprices` + 2 `reviewrating` rows) was
@@ -148,26 +147,31 @@ path that runs on Render:
   - `/website/ratings` → aggregate computed `averageRating 4.5 / totalReviews 2`.
   - Fixture fully removed afterward (all table counts back to 0).
 
-### ⚠️ Chat is dead code — socket messaging cannot run as-is
+### ✅ Chat / messaging (risk #1) — built + verified with real rows
 
 `server/socket/socket.js` (`send_message`, `get_message_list`,
-`user_constant_list`, read-status) reference **`db.message` and
-`db.chat_constant`, which do not exist** — there are no `message`/`chat_constant`
-model files, no associations in `models/index.js`/`init-models.js`, and no such
-tables in the database. `socket.js` is the *only* file that references them. Any
-of these socket events therefore throws `Cannot read properties of undefined`
-(swallowed by the handler's try/catch) and silently no-ops.
+`user_constant_list`, `cont_unread_msg`) used `db.message` and `db.chat_constant`,
+which had **no model files** — so the events silently no-op'd. Both models were
+**reverse-engineered from socket.js** (the only consumer) and added:
+`server/models/message.js` + `chat_constant.js`, with associations in
+`models/index.js`. `sequelize.sync()` now creates the `message` + `chat_constant`
+tables (22 tables total). Postgres-native types; no MySQL-only constructs.
 
-Implication: the IFNULL→COALESCE / camelCase-quoting port applied to the chat
-SQL is **correct but currently unreachable** — it can't be smoke-tested here
-because the underlying models were never part of this codebase. Two paths:
-- If chat is **not** a launch requirement → nothing to do; it's inert.
-- If chat **is** required → the `message` and `chat_constant` Sequelize models
-  (and their tables/associations) must be authored before this code runs. That
-  is a **feature-completion task, not part of the MySQL→Postgres migration**, and
-  needs the original chat schema to reproduce it faithfully.
+Also fixed: `send_message` read `socketUser.socket_id`, but the users field is
+`socketId` (set on `connectUser`) — so recipient live-push targeted `undefined`.
+Now reads `socketId`, so real-time delivery works.
 
-Also noted (pre-existing, not a migration regression): `send_message` reads
-`socketUser.socket_id`, but the users model field is `socketId` — so even with
-models present, the recipient live-push targets `undefined`. Flag for whoever
-completes the chat feature.
+Verified end-to-end with two socket.io clients against Postgres (seeded two
+users, torn down after):
+- `send_message` A→B delivered to B **in real time** (socketId fix), persisted.
+- `get_message_list` returns history with the `CONCAT("firstName","lastName")`
+  name literals.
+- `user_constant_list` — the most MySQL-specific query — returns the correct
+  `Receiver_user_id` (the inlined `CASE` expression), `COALESCE` last message,
+  `unread_msg` count (2), and `ReceiverName`.
+- `cont_unread_msg` marks read → unread drops to 0.
+
+> **Prod caveat:** if the original prod MySQL DB already has `message`/
+> `chat_constant` tables, reconcile these reverse-engineered models with that
+> schema before pgloader (sync won't alter existing tables). On a from-scratch
+> Postgres they're created correctly.
