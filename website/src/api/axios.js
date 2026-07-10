@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// API base is injected at build time via VITE_API_URL (set in the Render static
-// site's env). Falls back to the current prod URL if unset.
-// Local dev: set VITE_API_URL=http://localhost:8182 in website/.env
-export const API_URL = import.meta.env.VITE_API_URL || 'https://admin.vershipgo.com';
+// Single-service app: the API is served same-origin, so the base is relative by
+// default (calls like /website/login hit this same server). VITE_API_URL can
+// override it (e.g. pointing a local frontend dev server at a remote API).
+export const API_URL = import.meta.env.VITE_API_URL || '';
 const instance = axios.create({
     baseURL: API_URL,
 });

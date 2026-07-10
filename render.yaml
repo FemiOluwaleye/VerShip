@@ -1,5 +1,5 @@
-# Render Blueprint for VerShipGo — one Node web service (API + Socket.IO),
-# a managed Postgres DB, and two static React frontends.
+# Render Blueprint for VerShipGo — ONE Node web service that serves the unified
+# app (public site + /admin) AND the API + Socket.IO, plus a managed Postgres DB.
 #
 # First deploy: push this file, then in Render create a new Blueprint from the
 # repo. Fill the secret env vars marked `sync: false` in the dashboard, then run
@@ -12,13 +12,15 @@ databases:
     postgresMajorVersion: "16"
 
 services:
-  # ---- Backend: Express + Sequelize (Postgres) + Socket.IO ----
+  # ---- Single service: Express (API + Socket.IO) serving the unified frontend ----
   - type: web
-    name: vershipgo-api
+    name: vershipgo
     runtime: node
     rootDir: server
     plan: starter # Socket.IO + persistent disk require a paid instance (no scale-to-zero)
-    buildCommand: npm install
+    # Install the server (npm), then build the unified frontend (pnpm) into
+    # website/dist, which shipone.js serves at / (public) and /admin (admin).
+    buildCommand: npm install && cd ../website && corepack enable && pnpm install --no-frozen-lockfile && pnpm run build
     startCommand: node shipone.js
     healthCheckPath: /
     disk:
@@ -35,8 +37,10 @@ services:
       - key: UPLOAD_DIR
         value: /var/data
       # PORT is injected by Render automatically; shipone.js reads process.env.PORT.
+      # The frontend calls the API same-origin, so no VITE_API_URL/REACT_APP_API_URL
+      # build vars are needed.
       - key: PUBLIC_BASE_URL
-        sync: false # set to the API's public URL / custom domain
+        sync: false # set to the service's public URL / custom domain
       - key: JWT_SECRET
         sync: false
       - key: STRIPE_SECRET_KEY
@@ -55,33 +59,3 @@ services:
         sync: false
       - key: FREIGHT_FORWARDER_NOTIFY_EMAIL
         sync: false
-
-  # ---- Admin panel (Create React App) ----
-  - type: web
-    name: vershipgo-admin
-    runtime: static
-    rootDir: client
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./build
-    envVars:
-      - key: REACT_APP_API_URL
-        sync: false # e.g. https://vershipgo-api.onrender.com/admin
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-
-  # ---- Public website (Vite) ----
-  - type: web
-    name: vershipgo-website
-    runtime: static
-    rootDir: website
-    buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    envVars:
-      - key: VITE_API_URL
-        sync: false # e.g. https://vershipgo-api.onrender.com
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
