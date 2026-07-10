@@ -1,0 +1,46 @@
+{
+  "name": "shipone",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^7.3.7",
+    "@mui/styled-engine": "^7.3.7",
+    "@mui/system": "^7.3.7",
+    "@mui/utils": "^7.3.7",
+    "@react-oauth/google": "^0.13.4",
+    "@stripe/react-stripe-js": "^5.6.0",
+    "@stripe/stripe-js": "^8.7.0",
+    "autoprefixer": "^10.4.23",
+    "axios": "^1.13.4",
+    "firebase": "^12.9.0",
+    "lucide-react": "^0.563.0",
+    "moment": "^2.30.1",
+    "postcss": "^8.5.6",
+    "react-apple-login": "^1.1.6",
+    "react-google-autocomplete": "^2.7.5",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.13.0",
+    "sonner": "^2.0.7",
+    "swiper": "^12.1.0",
+    "tailwindcss": "^4.1.18",
+    "world-countries": "^5.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@vitejs/plugin-react": "^5.1.2",
+    "vite": "^7.3.1"
+  }
+}

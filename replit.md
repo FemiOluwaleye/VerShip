@@ -1,45 +1,32 @@
-# [Project name]
+# VerShip
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Shipping / freight-forwarding marketplace. This Replit runs the app as a single
+artifact (one server) for staging; production targets **Render** (see
+`RENDER_MIGRATION.md`).
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- **Run button** starts the one artifact: the `Server` workflow runs
+  `cd server && node shipone.js` on **port 5000** (forwarded to the dev domain).
+- It serves the admin panel (`client/build`) at `/` and exposes the REST API
+  (`/admin`, `/api`, `/website`) + Socket.IO, backed by the Replit dev Postgres.
+- Rebuild the admin UI after changes:
+  `cd client && CI=false node node_modules/react-scripts/bin/react-scripts.js build`
+- Required env: `DATABASE_URL` (injected by Replit); dev secrets live in
+  `server/.env` (gitignored).
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
-
-## Where things live
-
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
-
-## Architecture decisions
-
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- App code: `server/` (Express 4 + Sequelize + Socket.IO), `client/` (CRA admin),
+  `website/` (Vite public site — builds on Render, not Replit; see below).
+- DB: **PostgreSQL** (Replit dev DB locally, Render managed Postgres in prod).
+- The old pnpm-workspace template artifacts (hello-world / api-server /
+  mockup-sandbox) were removed — VerShip is the only artifact.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- The **public website can't build on Replit** — its deps (swiper, etc.) are
+  blocked by Replit's Socket Security firewall. It builds fine on Render.
+- Replit's Bash shell runs with `set -e`; guard `pkill` with `|| true`.
+- See `RENDER_MIGRATION.md` for the full Render deployment plan and the
+  MySQL→Postgres portability notes.

@@ -2,6 +2,8 @@
 
 # compiled output
 dist
+build/
+*.zip
 tmp
 out-tsc
 *.tsbuildinfo
@@ -47,3 +49,16 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Claude Code persistent config (login + transcripts) — persists on the Replit
+# filesystem; must never be committed (contains credentials).
+.claude/
+
+# Claude / Codex session artifacts (local working notes, not part of the app)
+.agents/
+CLAUDE_*.md
+CODEX_*.md
+
+# Playwright output
+/test-results/
+/playwright-report/

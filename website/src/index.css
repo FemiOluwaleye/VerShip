@@ -1,0 +1,198 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+.container {
+  padding: 0 20px;
+}
+
+@media (width >=96rem) {
+  .container {
+    max-width: 1240px;
+    padding: 0 20px;
+  }
+}
+
+.shadow {
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Hide Stripe Link Badge & Developer Tools */
+.stripe-link-badge-container, 
+[class*="stripe-link-badge"],
+.__private-stripe-link-badge-container,
+#stripe-link-badge-container,
+[class*="FloatingActionButton"],
+[class*="StripeDeveloperTools"],
+button[aria-label="Open Stripe Developer Tools"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -9999 !important;
+}
+
+/* CMS Content Formatting */
+.cms-content ul {
+  list-style-type: disc !important;
+  margin-left: 1.5rem !important;
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.cms-content ol {
+  list-style-type: decimal !important;
+  margin-left: 1.5rem !important;
+  margin-top: 1rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.cms-content li {
+  margin-bottom: 0.5rem !important;
+  display: list-item !important;
+}
+
+.cms-content p {
+  margin-bottom: 1rem !important;
+}
+
+.cms-content strong, 
+.cms-content b {
+  font-weight: bold !important;
+}
+
+.cms-content h1, 
+.cms-content h2, 
+.cms-content h3, 
+.cms-content h4 {
+  font-weight: bold !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
+  color: white !important;
+}
+
+.cms-content h1 { font-size: 2.25rem !important; }
+.cms-content h2 { font-size: 1.875rem !important; }
+.cms-content h3 { font-size: 1.5rem !important; }
+.cms-content h4 { font-size: 1.25rem !important; }
+
+/* Tooltip Styles */
+.tooltip-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.tooltip-text {
+  visibility: hidden;
+  width: 250px;
+  background-color: #2D413F;
+  color: #fff;
+  text-align: center;
+  border-radius: 8px;
+  padding: 10px;
+  position: absolute;
+  z-index: 50;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -125px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  border: 1px solid #4E6B5D;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #2D413F transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Business detail print: match on-screen look (dark theme, left column only) */
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
+  body.bussiness-detail-print-page {
+    background: #0e1f17 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.bussiness-detail-print-page,
+  body.bussiness-detail-print-page * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.bussiness-detail-print-page nav,
+  body.bussiness-detail-print-page footer,
+  body.bussiness-detail-print-page [data-sonner-toaster],
+  body.bussiness-detail-print-page .bussiness-detail-no-print {
+    display: none !important;
+  }
+
+  body.bussiness-detail-print-page .bussiness-detail-print-shell {
+    display: block !important;
+    background: #0e1f17 !important;
+    padding: 0 16px 24px !important;
+  }
+
+  body.bussiness-detail-print-page .bussiness-detail-print-grid {
+    display: block !important;
+    max-width: 100% !important;
+  }
+
+  body.bussiness-detail-print-page .bussiness-detail-print-only {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body.bussiness-detail-print-page .bussiness-detail-print-block-header {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body.bussiness-detail-print-page .bussiness-detail-print-break {
+    break-before: page;
+    page-break-before: always;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    visibility: hidden;
+  }
+
+  body.bussiness-detail-print-page .bussiness-detail-print-root {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+}
