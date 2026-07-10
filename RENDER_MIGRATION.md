@@ -4,6 +4,14 @@ This repo has been prepared to run on **Render** (Postgres + persistent disk)
 instead of AWS (RDS MySQL + local disk). Code changes are already applied on the
 `render-migration` branch; the steps below are the one-time ops you run.
 
+> **Now a single full-stack app.** The former three pieces (`server/` API,
+> `client/` CRA admin, `website/` Vite public site) were consolidated into ONE
+> service: the public site and the admin dashboard are one Vite build
+> (`website/dist`, admin lazy-loaded under `/admin`), served by the Express
+> server which also exposes the API + Socket.IO. `client/` is gone. Deploys to
+> Render as **one web service**, previews on Replit as one Run. The DB/SSL
+> portability work below is unchanged.
+
 ## What changed in the code
 
 | Area | Change |
@@ -15,8 +23,8 @@ instead of AWS (RDS MySQL + local disk). Code changes are already applied on the
 | Dep bumps | Bumped 2018-vintage express-generator pins (ejs 2→3, express 4.16→4.21, http-errors 1→2, morgan, debug, cookie-parser) — required to install behind Replit's package firewall; all within-ecosystem-compatible and identical on Render |
 | Uploads | `helper/helper.js` + `shipone.js` now use `UPLOAD_DIR` (the mounted disk) instead of `public/images` |
 | Maintenance scripts | `update_db.js` / `checkSchema.js` rewritten to be dialect-agnostic |
-| Frontends | API base URLs are now env-driven (`REACT_APP_API_URL`, `VITE_API_URL`) |
-| Infra | `render.yaml` blueprint defines all 3 services + DB + disk |
+| Frontends | Merged into one Vite app (`website/`): public site + admin (`src/admin/`, lazy `/admin/*`). API is same-origin (`/website/*`, `/api/admin/*`); no build-time API-URL vars. `swiper`→`embla` (Replit firewall); admin auth namespaced to `admin_token` |
+| Infra | `render.yaml` blueprint = ONE web service (builds the frontend + runs the server) + DB + disk |
 
 ## Running locally in Replit (dev)
 
@@ -31,31 +39,28 @@ same code path that runs on Render, so it doubles as a live test of the port.
   Replit-injected one wins (dotenv doesn't override existing env vars).
 - **Schema:** created by `sequelize.sync()` on first boot (all 20 tables). Verified
   working, including the ported `literal()` provider/forwarder queries.
-- **One codebase, two serving modes:** `shipone.js` serves a frontend build only
-  if its folder is present (`serveClient`/`serveWebsite`). On Replit the builds
-  are present → single-URL staging monolith. On Render's API service they're never
-  built (`rootDir: server`) → the server is API-only and the frontends are separate
-  Static Sites. No config flags, no drift in the API/DB/socket code.
-- **Run:** click **Run** — the `Server` workflow runs `cd server && node shipone.js`
-  on port 5000, forwarded to the dev domain. Logs `Frontend serving: ON (staging
-  monolith)`.
-- **Admin panel (client):** rebuilt for staging — points at the Replit origin via
-  `client/.env.local` (gitignored). Rebuild after changes with
-  `cd client && CI=false node node_modules/react-scripts/bin/react-scripts.js build`.
-- **Public website:** **cannot be built on Replit** — its deps (swiper + others)
-  are hard-blocked by Replit's Socket Security firewall (Critical-CVE policy), at
-  every version. It builds fine on Render (no firewall). Its stale prod-pointed
-  build was moved to `website/dist.prodbuild-stale` so staging does NOT serve a
-  prod-pointed booking form (which would write to the prod DB). Stage the website
-  on a **Render preview environment** instead, or restore that folder for a
-  visual-only look (accepting it calls prod).
+- **One build, one server:** `shipone.js` serves `website/dist` (the unified
+  build) at `/` (public) and `/admin/*` (admin SPA), plus the API + Socket.IO. If
+  the build is absent it runs API-only. Same code path on Replit and Render.
+- **Run:** click **Run** — the `Server` workflow builds the frontend
+  (`cd website && pnpm install && pnpm run build`) then starts the server
+  (`cd ../server && node shipone.js`) on port 5000. Logs
+  `Frontend serving: ON (unified app: / + /admin)`.
+- **Admin dashboard:** lives at `/admin/*` (login → `/admin/login`), built as part
+  of the one Vite build — no separate rebuild. Its Bootstrap/jQuery theme loads
+  only under `/admin` (injected/removed by `AdminAssetsLoader`) so it never bleeds
+  onto the public Tailwind site; admin code is code-split so public visitors don't
+  download it.
+- **Public website builds on Replit now:** the sole blocker (`swiper`, hard-blocked
+  by Replit's Socket Security firewall) was replaced with `embla-carousel`. The
+  whole app builds and previews on Replit.
 
 ## Step 1 — Create the services
 
 Push `render-migration`, then in Render: **New → Blueprint**, point at this repo.
-It provisions `vershipgo-db` (Postgres), `vershipgo-api` (web), and the two
-static sites. Fill every `sync: false` env var in the dashboard (Stripe, SMTP,
-`JWT_SECRET`, etc. — see `render.yaml` for the full list).
+It provisions `vershipgo-db` (Postgres) and `vershipgo` (one web service that
+builds the frontend and runs the server). Fill every `sync: false` env var in the
+dashboard (Stripe, SMTP, `JWT_SECRET`, etc. — see `render.yaml` for the full list).
 
 ## Step 2 — Migrate the data (MySQL → Postgres)
 
@@ -98,18 +103,17 @@ rsync -av OLD_HOST:/path/to/server/public/images/  ./images/
 
 New uploads land in `/var/data/images` automatically and survive deploys.
 
-## Step 4 — Point the frontends at the API
+## Step 4 — (nothing to wire — frontend is same-origin)
 
-Set on the static sites (Step 1 covers where):
-- `vershipgo-admin` → `REACT_APP_API_URL = https://<api-host>/admin`
-- `vershipgo-website` → `VITE_API_URL = https://<api-host>`
-
-Redeploy the static sites so the values bake into the build.
+The frontend calls the API on the same origin (`/website/*`, `/api/admin/*`), so
+there are no `REACT_APP_API_URL` / `VITE_API_URL` build vars to set. The single
+service serves both. Skip straight to DNS.
 
 ## Step 5 — Cut over DNS
 
-Repoint `admin.vershipgo.com` (and the public domain) to the Render services via
-custom domains. Keep AWS running until you've verified Render, then decommission.
+Repoint the domain(s) to the one Render service via a custom domain (the public
+site is `/`, admin is `/admin`). Keep AWS running until you've verified Render,
+then decommission.
 
 ## ⚠️ Test before cutover — highest-risk areas
 
