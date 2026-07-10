@@ -219,7 +219,7 @@ const Profile = () => {
       return;
     }
  console.log("Validation passed, proceeding to API call");
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("admin_token");
     console.log("Token exists:", token);
     if (!token) {
       toast.error("No token found. Please log in again.");
@@ -252,8 +252,8 @@ const Profile = () => {
       );
 
       if (emailChanged) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("userData");
+        localStorage.removeItem("admin_token");
+        localStorage.removeItem("admin_userData");
         toast.success("Email updated successfully. Please log in with your new email.");
         navigate("/", {
           replace: true,

@@ -26,7 +26,7 @@ const AdminBank = () => {
   useEffect(() => {
     const fetchBankData = async () => {
       setLoading(true);
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("admin_token");
       if (!token) {
         toast.error("No token found. Please log in again.");
         setLoading(false);
@@ -198,7 +198,7 @@ const AdminBank = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("admin_token");
     if (!token) {
       toast.error("No token found. Please log in again.");
       return;

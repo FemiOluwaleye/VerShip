@@ -20,7 +20,7 @@ function Navbar({ toggleSidebar }) {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("admin_token");
 
       try {
         const response = await axiosInstance.get(`/profile`, {
@@ -117,7 +117,7 @@ function Navbar({ toggleSidebar }) {
     if (result.isConfirmed) {
       try {
         await axiosInstance.post(`/logout`);
-        localStorage.removeItem("token");
+        localStorage.removeItem("admin_token");
         toast.success("Logged out successfully!");
         setTimeout(() => {
           navigate("/");
@@ -143,7 +143,7 @@ function Navbar({ toggleSidebar }) {
               </button>
 
               <Link to="/dashboard" className="new-logo">
-                <img src="./src/assets/images/logo-new.png" alt="" />
+                <img src="/vendor/images/logo-new.png" alt="" />
               </Link>
             </div>
           </div>
@@ -161,16 +161,16 @@ function Navbar({ toggleSidebar }) {
               >
                 {/* <img
                   className="header-profile-user"
-                  src={image || "assets/images/users/avatar-4.jpg"}
+                  src={image || "/vendor/images/users/avatar-4.jpg"}
                   alt="Profile Avatar"
                 /> */}
                 <img
                   className="header-profile-user"
-                  src={image ? image : "/assets/images/download.jpeg"}
+                  src={image ? image : "/vendor/images/download.jpeg"}
                   alt="Profile Avatar"
                   onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = "/assets/images/download.jpeg";
+                    e.target.src = "/vendor/images/download.jpeg";
                   }}
                 />
                 <div className="text-start d-none d-xl-inline-block ms-2 me-2">
@@ -209,7 +209,7 @@ function Navbar({ toggleSidebar }) {
                     </div>
                     <div className="d-flex align-items-center">
                       <img
-                        src={image || "assets/images/users/avatar-4.jpg"}
+                        src={image || "/vendor/images/users/avatar-4.jpg"}
                         alt=""
                         width={70}
                         height={70}

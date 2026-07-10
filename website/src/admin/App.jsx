@@ -34,7 +34,7 @@ import CookieEdit from './Admin/Cookies/CookieEdit';
 
 
 const App = () => {
-  const isAuthenticated = localStorage.getItem("token");
+  const isAuthenticated = localStorage.getItem("admin_token");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {

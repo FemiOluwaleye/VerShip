@@ -1,11 +1,12 @@
 import React from 'react';
 import axios from 'axios';
 
-// API base is injected at build time via REACT_APP_API_URL (set in the Render
-// static site's env). Falls back to the current prod URL if unset.
-export const BASE_URL = process.env.REACT_APP_API_URL || 'https://admin.vershipgo.com/admin';
-export const API_URL = process.env.REACT_APP_API_URL || 'https://admin.vershipgo.com/admin';
-// Local dev: set REACT_APP_API_URL=http://localhost:8182/admin in client/.env
+// Single-service app: the admin API and the frontend are same-origin.
+// API_URL is the axios base for admin API calls (mounted at /api/admin on the
+// server); BASE_URL is the prefix for uploaded file/image URLs (served by the
+// /admin/images static mount). Both are overridable via Vite env for flexibility.
+export const BASE_URL = import.meta.env.VITE_ADMIN_FILE_URL || '/admin';
+export const API_URL = import.meta.env.VITE_ADMIN_API_URL || '/api/admin';
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
@@ -13,7 +14,7 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -29,8 +30,8 @@ axiosInstance.interceptors.response.use(
       const { status } = error.response;
 
       if (status === 401) {
-        localStorage.removeItem('token');
-        window.location.replace('/');
+        localStorage.removeItem('admin_token');
+        window.location.replace('/admin/login');
       }
     }
     return Promise.reject(error);

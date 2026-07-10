@@ -2,14 +2,14 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 
 const PrivateRoute = ({ element, requiredRole = null }) => {
-  const isAuthenticated = localStorage.getItem("token");
+  const isAuthenticated = localStorage.getItem("admin_token");
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
   if (requiredRole !== null) {
-    const userData = JSON.parse(localStorage.getItem("userData") || "{}");
+    const userData = JSON.parse(localStorage.getItem("admin_userData") || "{}");
     if (userData.role !== requiredRole) {
       return <Navigate to="/dashboard" replace />;
     }

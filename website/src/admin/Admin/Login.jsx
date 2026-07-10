@@ -64,8 +64,8 @@ const Login = () => {
       toast.success("Login successful!");
 
       setTimeout(() => {
-        localStorage.setItem("token", response.data.body.token);
-        localStorage.setItem("userData", JSON.stringify(response.data.body));
+        localStorage.setItem("admin_token", response.data.body.token);
+        localStorage.setItem("admin_userData", JSON.stringify(response.data.body));
         navigate("/dashboard", { replace: true });
       }, 1500);
     } catch (error) {
@@ -89,8 +89,8 @@ const Login = () => {
         <div className="left-auth">
           {/* 
           <img
-            // src="assets/images/auth.png"
-            src="/dev/shipone/website/dist/assets/logo-8tXBiyx4.png"
+            // src="/vendor/images/auth.png"
+            src="/vendor/images/shipone.png"
             alt="Logo"
             style={{ width: "100%", height: "100%" }}
           /> */}
@@ -100,7 +100,7 @@ const Login = () => {
         <div className="right-auth">
           <div className="flex-grow-1">
             <div className="authtitle mb-2">
-              <img src="assets/images/shipone.png" width={240} alt="Logo" />
+              <img src="/vendor/images/shipone.png" width={240} alt="Logo" />
             </div>
             <div className="font-size-18 fw-medium text-white mt-5">Login</div>
 

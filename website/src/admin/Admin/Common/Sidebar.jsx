@@ -119,7 +119,7 @@ function Sidebar({ isOpen }) {
       <div className="navbar-brand-box">
         <Link to="/dashboard" className="logo" onClick={handleLinkClick}>
           <span className="logo-lg">
-            <img src="/assets/images/shipone.png" alt="" height={20} />
+            <img src="/vendor/images/shipone.png" alt="" height={20} />
           </span>
         </Link>
         {/* <button

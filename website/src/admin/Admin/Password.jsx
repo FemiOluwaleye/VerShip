@@ -139,7 +139,7 @@ const Password = () => {
     setErrors(formErrors);
     if (!formIsValid) return;
 
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("admin_token");
     if (!token) {
       toast.error("No token found. Please log in again.");
       return;
@@ -153,10 +153,10 @@ const Password = () => {
       );
 
       if (response.data.success) {
-        localStorage.setItem("token", response.data.body.token);
+        localStorage.setItem("admin_token", response.data.body.token);
         toast.success("Your password was reset successfully");
         setTimeout(() => {
-          window.location.href = "/login";
+          window.location.href = "/admin/login";
         }, 1500);
       } else {
         toast.error(response.data.message || "Password reset failed");
@@ -200,7 +200,7 @@ const Password = () => {
                     <div className="card-body">
                       <div className="text-center mb-4">
                         <img
-                          src="assets/images/keyimg.png"
+                          src="/vendor/images/keyimg.png"
                           style={{ width: "200px" }}
                           alt="Key"
                         />
