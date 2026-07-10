@@ -26,7 +26,7 @@ name = "Server"
 # Express server which serves it alongside the API + Socket.IO on port 5000.
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd website && pnpm install --no-frozen-lockfile && pnpm run build && cd ../server && node shipone.js"
+args = "cd website && pnpm install --ignore-workspace && pnpm run build && cd ../server && node shipone.js"
 waitForPort = 5000
 
 [agent]

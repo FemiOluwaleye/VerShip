@@ -20,7 +20,9 @@ services:
     plan: starter # Socket.IO + persistent disk require a paid instance (no scale-to-zero)
     # Install the server (npm), then build the unified frontend (pnpm) into
     # website/dist, which shipone.js serves at / (public) and /admin (admin).
-    buildCommand: npm install && cd ../website && corepack enable && pnpm install --no-frozen-lockfile && pnpm run build
+    # website/ is a standalone app that lives inside a pnpm workspace root, so it
+    # must install with --ignore-workspace (a plain install prunes its deps).
+    buildCommand: npm install && cd ../website && corepack enable && pnpm install --ignore-workspace && pnpm run build
     startCommand: node shipone.js
     healthCheckPath: /
     disk:
