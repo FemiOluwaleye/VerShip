@@ -92,7 +92,7 @@ const FaqEdit = () => {
 
       if (response.data.success) {
         toast.success("FAQ updated successfully!");
-        setTimeout(() => navigate("/faqlist"), 1000);
+        setTimeout(() => navigate("/admin/faqlist"), 1000);
       } else {
         toast.error(response.data.message || "Failed to update FAQ.");
       }
@@ -153,7 +153,7 @@ const FaqEdit = () => {
                           <Link
                             type="button"
                             className="btn btn-secondary mx-2"
-                            to="/faqlist"
+                            to="/admin/faqlist"
                           >
                             Back
                           </Link>

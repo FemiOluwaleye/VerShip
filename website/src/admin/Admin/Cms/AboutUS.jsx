@@ -59,7 +59,7 @@ const AboutUs = () => {
         content,
       });
       toast.success("About Us updated successfully");
-      navigate("/aboutus");
+      navigate("/admin/aboutus");
     } catch (error) {
       setSubmitError("Error submitting About Us content. Please try again.");
       toast.error("Error submitting About Us content. Please try again.");

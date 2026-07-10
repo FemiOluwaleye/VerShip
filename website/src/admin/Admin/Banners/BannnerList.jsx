@@ -131,12 +131,12 @@ const BannerList = () => {
               <nav aria-label="breadcrumb" className="mt-1">
                 <ol className="breadcrumb mb-0">
                   <li className="breadcrumb-item">
-                    <Link to="/dashboard" className="new">
+                    <Link to="/admin/dashboard" className="new">
                       <i className="ri-home-4-fill me-1" /> Home
                     </Link>
                   </li>
                   <li className="breadcrumb-item">
-                    <Link to="/" className="new">
+                    <Link to="/admin/" className="new">
                       <i className="ri-image-2-line me-1" /> Banners
                     </Link>
                   </li>
@@ -188,7 +188,7 @@ const BannerList = () => {
                   </div>
                   <div className="d-flex justify-content-end ms-auto">
                     <Link
-                      to="/addbanner"
+                      to="/admin/addbanner"
                       className="btn btn-soft-primary px-2 btn-sm me-1"
                     >
                       <i className="ri-add-fill font-size-16"></i>

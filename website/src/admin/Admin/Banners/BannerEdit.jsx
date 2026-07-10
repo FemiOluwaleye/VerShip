@@ -92,7 +92,7 @@ const BannerEdit = () => {
       const response = await axiosInstance.post(`/bannerupdate/${id}`, formData);
       if (response.data.success) {
         toast.success("Banner updated successfully!");
-        setTimeout(() => navigate("/bannerlist"), 1000);
+        setTimeout(() => navigate("/admin/bannerlist"), 1000);
       } else {
         toast.error(response.data.message || "Failed to update banner.");
       }
@@ -163,7 +163,7 @@ const BannerEdit = () => {
                           <Link
                             type="button"
                             className="btn btn-secondary mx-2"
-                            to='/bannerlist'
+                            to='/admin/bannerlist'
                           >
                             Back
                           </Link>

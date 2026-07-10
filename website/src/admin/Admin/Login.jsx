@@ -66,7 +66,7 @@ const Login = () => {
       setTimeout(() => {
         localStorage.setItem("admin_token", response.data.body.token);
         localStorage.setItem("admin_userData", JSON.stringify(response.data.body));
-        navigate("/dashboard", { replace: true });
+        navigate("/admin/dashboard", { replace: true });
       }, 1500);
     } catch (error) {
       if (error.response) {

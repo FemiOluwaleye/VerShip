@@ -594,7 +594,7 @@ importers:
         version: 11.14.1(@emotion/react@11.14.0(react@18.3.1))(react@18.3.1)
       '@fancyapps/fancybox':
         specifier: ^3.5.7
-        version: 3.5.7
+        version: 3.5.7(jquery@3.7.1)
       '@fortawesome/fontawesome-free':
         specifier: ^6.7.2
         version: 6.7.2
@@ -637,6 +637,9 @@ importers:
       embla-carousel-react:
         specifier: ^8.6.0
         version: 8.6.0(react@18.3.1)
+      jquery:
+        specifier: ^3.7.1
+        version: 3.7.1
       lucide-react:
         specifier: ^0.563.0
         version: 0.563.0(react@18.3.1)
@@ -2795,6 +2798,9 @@ packages:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
     engines: {node: '>=10'}
 
+  jquery@3.7.1:
+    resolution: {integrity: sha512-m4avr8yL8kmFN8psrbFFFmB/If14iN5o9nw/NgnnM+kybDJpRsAynV2BsfpTYrTRysYUdADVD7CkUUizgkpLfg==}
+
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -4022,7 +4028,9 @@ snapshots:
   '@esbuild/linux-x64@0.27.3':
     optional: true
 
-  '@fancyapps/fancybox@3.5.7': {}
+  '@fancyapps/fancybox@3.5.7(jquery@3.7.1)':
+    dependencies:
+      jquery: 3.7.1
 
   '@floating-ui/core@1.7.5':
     dependencies:
@@ -5985,6 +5993,8 @@ snapshots:
   jiti@2.7.0: {}
 
   joycon@3.1.1: {}
+
+  jquery@3.7.1: {}
 
   js-tokens@4.0.0: {}
 

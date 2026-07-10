@@ -106,7 +106,7 @@ const Dashboard = () => {
               <nav aria-label="breadcrumb" className="mt-1">
                 <ol className="breadcrumb mb-0">
                   <li className="breadcrumb-item">
-                    <Link to="/dashboard" className="new">
+                    <Link to="/admin/dashboard" className="new">
                       <i className="ri-home-4-fill me-1"></i> Home
                     </Link>
                   </li>
@@ -131,7 +131,7 @@ const Dashboard = () => {
                     </div>
                     <div className="row gx-3">
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/userlist">
+                        <Link to="/admin/userlist">
                           <div className="card bg-soft-blue">
                             <div
                               className="card-body"
@@ -157,7 +157,7 @@ const Dashboard = () => {
 
 
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/providerlist">
+                        <Link to="/admin/providerlist">
                           <div className="card bg-soft-blue">
                             <div className="card-body" style={{ paddingBottom: "13px" }}>
                               <div className="d-flex align-items-center">
@@ -179,7 +179,7 @@ const Dashboard = () => {
 
 
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/Bookinglist">
+                        <Link to="/admin/Bookinglist">
                           <div className="card bg-soft-blue">
                             <div
                               className="card-body"
@@ -204,7 +204,7 @@ const Dashboard = () => {
                       </div>
 
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/contactlist">
+                        <Link to="/admin/contactlist">
                           <div className="card bg-soft-blue">
                             <div
                               className="card-body"
@@ -232,7 +232,7 @@ const Dashboard = () => {
                       </div>
 
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/faqlist">
+                        <Link to="/admin/faqlist">
                           <div className="card bg-soft-blue">
                             <div
                               className="card-body"

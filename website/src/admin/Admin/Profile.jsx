@@ -255,7 +255,7 @@ const Profile = () => {
         localStorage.removeItem("admin_token");
         localStorage.removeItem("admin_userData");
         toast.success("Email updated successfully. Please log in with your new email.");
-        navigate("/", {
+        navigate("/admin/", {
           replace: true,
           state: { email: updatedData.email || data.email.trim() },
         });
@@ -293,7 +293,7 @@ const Profile = () => {
       }
 
       toast.success("Profile updated successfully");
-      navigate("/profile", { state: { updated: true } });
+      navigate("/admin/profile", { state: { updated: true } });
     } catch (error) {
       console.error("Update error:", error);
 

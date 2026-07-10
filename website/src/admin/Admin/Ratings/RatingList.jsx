@@ -155,12 +155,12 @@ const RatingList = () => {
                 <nav aria-label="breadcrumb" className="mt-1">
                   <ol className="breadcrumb mb-0">
                     <li className="breadcrumb-item">
-                      <Link to="/dashboard" className="new">
+                      <Link to="/admin/dashboard" className="new">
                         <i className="ri-home-4-fill me-1" /> Home
                       </Link>
                     </li>
                     <li className="breadcrumb-item">
-                      <Link to="/" className="new">
+                      <Link to="/admin/" className="new">
                         <i className="ri-group-2-line me-1" /> Ratings
                       </Link>
                     </li>

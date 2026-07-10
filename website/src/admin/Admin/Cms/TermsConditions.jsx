@@ -62,7 +62,7 @@ const TermsConditions = () => {
         content,
       });
       toast.success("Terms and Conditions updated successfully");
-      navigate("/termsconditions");
+      navigate("/admin/termsconditions");
     } catch (error) {
       setSubmitError(
         "Error submitting terms and conditions. Please try again."

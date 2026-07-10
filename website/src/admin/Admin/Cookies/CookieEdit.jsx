@@ -62,7 +62,7 @@ const CookieEdit = () => {
             const response = await axiosInstance.post(`/cookieupdate/${id}`, data);
             if (response.data.success) {
                 toast.success("Cookie updated successfully!");
-                setTimeout(() => navigate("/cookielist"), 1000);
+                setTimeout(() => navigate("/admin/cookielist"), 1000);
             } else {
                 toast.error(response.data.message || "Failed to update cookie");
             }
@@ -117,7 +117,7 @@ const CookieEdit = () => {
                                                 </div>
 
                                                 <div className="text-end mb-2">
-                                                    <Link className="btn btn-secondary px-4 mx-2" to="/cookielist">Back</Link>
+                                                    <Link className="btn btn-secondary px-4 mx-2" to="/admin/cookielist">Back</Link>
                                                     <button type="submit" className="btn btn-primary px-4">Update Cookie</button>
                                                 </div>
                                             </form>

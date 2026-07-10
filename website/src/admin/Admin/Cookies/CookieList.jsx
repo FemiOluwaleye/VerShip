@@ -75,7 +75,7 @@ const CookieList = () => {
                                 <nav aria-label="breadcrumb" className="mt-1">
                                     <ol className="breadcrumb mb-0">
                                         <li className="breadcrumb-item">
-                                            <Link to="/dashboard" className="new"><i className="ri-home-4-fill me-1" /> Home</Link>
+                                            <Link to="/admin/dashboard" className="new"><i className="ri-home-4-fill me-1" /> Home</Link>
                                         </li>
                                         <li className="breadcrumb-item active" aria-current="page">Cookies</li>
                                     </ol>
@@ -96,7 +96,7 @@ const CookieList = () => {
                                             <i className="ri-search-line" />
                                         </div>
                                         <div className="d-flex justify-content-end ms-auto">
-                                            <Link to="/addcookie" className="btn btn-soft-primary px-2 btn-sm me-1">
+                                            <Link to="/admin/addcookie" className="btn btn-soft-primary px-2 btn-sm me-1">
                                                 <i className="ri-add-fill font-size-16"></i>
                                             </Link>
                                         </div>

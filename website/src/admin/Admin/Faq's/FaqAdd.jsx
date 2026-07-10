@@ -68,7 +68,7 @@ const FaqAdd = () => {
 
       if (response.status === 200 && response.data.success) {
         toast.success("FAQ added successfully!");
-        setTimeout(() => navigate("/faqlist"), 1000);
+        setTimeout(() => navigate("/admin/faqlist"), 1000);
       } else {
         toast.error(response.data.message || "FAQ creation failed.");
       }
@@ -141,7 +141,7 @@ const FaqAdd = () => {
                         <div className="text-end mb-2">
                           <Link
                             className="btn btn-secondary px-4 mx-2"
-                            to="/faqlist"
+                            to="/admin/faqlist"
                           >
                             Back
                           </Link>

@@ -214,7 +214,7 @@ const AdminBank = () => {
       });
 
       toast.success("Bank details updated successfully");
-      navigate("/bankdetail");
+      navigate("/admin/bankdetail");
     } catch (error) {
       toast.error("Error updating bank details");
     }

@@ -1,14 +1,27 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, Suspense } from 'react'
 import { Toaster, toast } from "sonner";
-import { BrowserRouter as Router } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 import AppRoutes from './routes/AppRoutes'
 // import CookieConsent from './components/CookieConsent'
-const user = JSON.parse(localStorage.getItem("user") || "{}");
-const role = user?.role;
-// console.log("-==========ToastContainer===>>>>>>>>>", ToastContainer)
+
+// The admin dashboard is a separate, code-split chunk (Redux + Bootstrap/jQuery
+// theme). Lazy-loading it keeps all of that out of the public site's bundle —
+// public visitors never download it.
+const AdminApp = React.lazy(() => import('./admin/AdminApp'))
+
+// Public site chrome (Navbar/Footer wrap every public route, but NOT admin).
+const PublicLayout = () => (
+    <>
+        <ScrollToTop />
+        <Navbar />
+        <AppRoutes />
+        <Footer />
+        {/* <CookieConsent /> */}
+    </>
+)
 
 const App = () => {
     useEffect(() => {
@@ -24,7 +37,7 @@ const App = () => {
             <Router basename="/">
                 <style>
                     {`
-            .stripe-link-badge-container, 
+            .stripe-link-badge-container,
             [class*="stripe-link-badge"],
             .__private-stripe-link-badge-container {
               display: none !important;
@@ -34,11 +47,17 @@ const App = () => {
             }
           `}
                 </style>
-                <ScrollToTop />
-                <Navbar />
-                <AppRoutes />
-                <Footer />
-                {/* <CookieConsent /> */}
+                <Routes>
+                    <Route
+                        path="/admin/*"
+                        element={
+                            <Suspense fallback={<div style={{ padding: 40 }}>Loading admin…</div>}>
+                                <AdminApp />
+                            </Suspense>
+                        }
+                    />
+                    <Route path="/*" element={<PublicLayout />} />
+                </Routes>
             </Router>
             <Toaster richColors position="top-right" />
         </>

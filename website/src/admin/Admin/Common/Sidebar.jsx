@@ -117,7 +117,7 @@ function Sidebar({ isOpen }) {
       }}
     >
       <div className="navbar-brand-box">
-        <Link to="/dashboard" className="logo" onClick={handleLinkClick}>
+        <Link to="/admin/dashboard" className="logo" onClick={handleLinkClick}>
           <span className="logo-lg">
             <img src="/vendor/images/shipone.png" alt="" height={20} />
           </span>
@@ -149,7 +149,7 @@ function Sidebar({ isOpen }) {
         <div id="sidebar-menu">
           <ul className="metismenu list-unstyled" id="side-menu">
             <li className={isActive("/dashboard") ? "mm-active" : ""}>
-              <Link to="/dashboard" onClick={handleLinkClick}>
+              <Link to="/admin/dashboard" onClick={handleLinkClick}>
                 <i className="ri-pie-chart-2-fill" />
                 <span>Dashboard</span>
               </Link>
@@ -168,7 +168,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/userlist") ? "active" : ""}
-                      to="/userlist"
+                      to="/admin/userlist"
                       onClick={handleLinkClick}
                     >
                       User listings
@@ -191,7 +191,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/providerlist") ? "active" : ""}
-                      to="/providerlist"
+                      to="/admin/providerlist"
                       onClick={handleLinkClick}
                     >
                       Providers listings
@@ -214,7 +214,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/bookinglist") ? "active" : ""}
-                      to="/bookinglist"
+                      to="/admin/bookinglist"
                       onClick={handleLinkClick}
                     >
                       Booking List
@@ -223,7 +223,7 @@ function Sidebar({ isOpen }) {
                   {/* <li>
                     <Link
                       className={isActive("/BookingCompleted") ? "active" : ""}
-                      to="/BookingCompleted"
+                      to="/admin/BookingCompleted"
                       onClick={handleLinkClick}
                     >
                       Completed Bookings
@@ -248,7 +248,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/ratinglist") ? "active" : ""}
-                      to="/ratinglist"
+                      to="/admin/ratinglist"
                       onClick={handleLinkClick}
                     >
                       Rating list
@@ -270,7 +270,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/reportlist") ? "active" : ""}
-                      to="/reportlist"
+                      to="/admin/reportlist"
                       onClick={handleLinkClick}
                     >
                       Report list
@@ -292,7 +292,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/bannerlist") ? "active" : ""}
-                      to="/bannerlist"
+                      to="/admin/bannerlist"
                       onClick={handleLinkClick}
                     >
                       Banner list
@@ -315,7 +315,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/contactlist") ? "active" : ""}
-                      to="/contactlist"
+                      to="/admin/contactlist"
                       onClick={handleLinkClick}
                     >
                       Contact List
@@ -324,7 +324,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/faqlist") ? "active" : ""}
-                      to="/faqlist"
+                      to="/admin/faqlist"
                       onClick={handleLinkClick}
                     >
                       FAQ's List
@@ -333,7 +333,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/cookielist") ? "active" : ""}
-                      to="/cookielist"
+                      to="/admin/cookielist"
                       onClick={handleLinkClick}
                     >
                       Cookies List
@@ -356,7 +356,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/password") ? "active" : ""}
-                      to="/password"
+                      to="/admin/password"
                       onClick={handleLinkClick}
                     >
                       Change Password
@@ -367,39 +367,39 @@ function Sidebar({ isOpen }) {
             </li> */}
 
             <li className={isActive("/aboutus") ? "mm-active" : ""}>
-              <Link to="/aboutus" onClick={handleLinkClick}>
+              <Link to="/admin/aboutus" onClick={handleLinkClick}>
                 <Info />
                 <span>About Us</span>
               </Link>
             </li>
 
             <li className={isActive("/privacypolicy") ? "mm-active" : ""}>
-              <Link to="/privacypolicy" onClick={handleLinkClick}>
+              <Link to="/admin/privacypolicy" onClick={handleLinkClick}>
                 <File />
                 <span>Privacy Policy</span>
               </Link>
             </li>
 
             <li className={isActive("/termsConditions") ? "mm-active" : ""}>
-              <Link to="/termsConditions" onClick={handleLinkClick}>
+              <Link to="/admin/termsConditions" onClick={handleLinkClick}>
                 <CheckSquare />
                 <span>Terms & Conditions</span>
               </Link>
             </li>
             <li className={isActive("/cookiepolicy") ? "mm-active" : ""}>
-              <Link to="/cookiepolicy" onClick={handleLinkClick}>
+              <Link to="/admin/cookiepolicy" onClick={handleLinkClick}>
                 <Database size={18} />
                 <span>Cookie Policy</span>
               </Link>
             </li>
             <li className={isActive("/freightforwarder") ? "mm-active" : ""}>
-              <Link to="/freightforwarder" onClick={handleLinkClick}>
+              <Link to="/admin/freightforwarder" onClick={handleLinkClick}>
                 <Shield size={18} />
                 <span>Freight Forwarder Agreement</span>
               </Link>
             </li>
             <li className={isActive("/refundpolicy") ? "mm-active" : ""}>
-              <Link to="/refundpolicy" onClick={handleLinkClick}>
+              <Link to="/admin/refundpolicy" onClick={handleLinkClick}>
                 <RotateCcw size={18} />
                 <span>Refund Policy</span>
               </Link>

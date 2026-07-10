@@ -83,7 +83,7 @@ const BannerAdd = () => {
 
       if (response.status === 200 && response.data.success) {
         toast.success("Banner added successfully!");
-        setTimeout(() => navigate("/bannerlist"), 1000);
+        setTimeout(() => navigate("/admin/bannerlist"), 1000);
       } else {
         toast.error(response.data.message || "Banner creation failed.");
       }
@@ -181,7 +181,7 @@ const BannerAdd = () => {
                         <div className="text-end mb-2">
                           <Link
                             className="btn btn-secondary px-4 mx-2"
-                            to="/bannerlist"
+                            to="/admin/bannerlist"
                           >
                             Back
                           </Link>

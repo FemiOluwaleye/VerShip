@@ -18,7 +18,7 @@ const Footer = () => {
       <span>
         Copyright © 2025 Designed by{" "}
         <Link
-          to="/dashboard"
+          to="/admin/dashboard"
           rel="nofollow noopener noreferrer"
           title="VerShip"
           style={{ textDecoration: "none", color: "#1e3308" }}
