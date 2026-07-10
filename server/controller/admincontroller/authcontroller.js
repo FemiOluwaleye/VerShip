@@ -229,7 +229,7 @@ module.exports = {
                 faq
             });
         } catch (error) {
-            return helper.error(res, "Error fetching dashboard data", error);
+            return helper.error(res, "Error fetching dashboard data", 500);
         }
     },
     chartData: async (req, res) => {
@@ -271,7 +271,7 @@ module.exports = {
                 categories,
             });
         } catch (error) {
-            return helper.error(res, "Error fetching chart data", error);
+            return helper.error(res, "Error fetching chart data", 500);
         }
     },
     AdminBank: async (req, res) => {
@@ -394,7 +394,13 @@ module.exports = {
                     deliveryTimeCount++;
                 }
             });
-            totalPrice = await db.barrelsprices.sum('barrelPrice');
+            // barrelPrice is a VARCHAR column; Postgres SUM() rejects varchar
+            // (MySQL silently coerced it), so cast to DECIMAL and skip blanks.
+            const [priceAgg] = await db.sequelize.query(
+                `SELECT COALESCE(SUM(CAST(NULLIF("barrelPrice", '') AS DECIMAL)), 0) AS total FROM "barrelsprices" WHERE "deletedAt" IS NULL`,
+                { type: db.sequelize.QueryTypes.SELECT }
+            );
+            totalPrice = parseFloat(priceAgg.total) || 0;
             const avgPricePerBarrel = (totalBarrels > 0) ? (totalPrice / totalBarrels).toFixed(2) : 0;
             const avgDeliveryTime = (deliveryTimeCount > 0) ? (totalDeliveryDays / deliveryTimeCount).toFixed(1) : 0;
             const avgBarrelsPerOrder = (totalOrders > 0) ? (totalBarrels / totalOrders).toFixed(1) : 0;
@@ -454,7 +460,7 @@ module.exports = {
             });
         } catch (error) {
             console.error("getDashboardMetrics error:", error);
-            return helper.error(res, "Error fetching dashboard metrics", error);
+            return helper.error(res, "Error fetching dashboard metrics", 500);
         }
     }
 

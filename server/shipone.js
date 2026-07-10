@@ -147,11 +147,12 @@ app.use(cors());
 // and served here so the whole app previews at one URL. On Render the frontends
 // deploy as separate CDN Static Sites, so these folders are absent in the API
 // service and the server runs API-only automatically (no dead routes, no 500s).
-const buildpath = path.resolve(__dirname, "../client/build");
-const websiteBuildPath = path.resolve(__dirname, "../website/dist");
-const serveClient = fs.existsSync(path.join(buildpath, "index.html"));
-const serveWebsite = fs.existsSync(path.join(websiteBuildPath, "index.html"));
-console.log(`Frontend serving: ${serveClient || serveWebsite ? 'ON (staging monolith)' : 'OFF (API-only)'}`);
+// Single unified frontend: the public site (/) and the admin dashboard (/admin/*)
+// are ONE Vite build (website/dist). Served by this same web service on both
+// Replit and Render. If the build is absent the server runs API-only.
+const appBuildPath = path.resolve(__dirname, "../website/dist");
+const serveApp = fs.existsSync(path.join(appBuildPath, "index.html"));
+console.log(`Frontend serving: ${serveApp ? 'ON (unified app: / + /admin)' : 'OFF (API-only)'}`);
 
 // User uploads live on the persistent disk (UPLOAD_DIR) in production, or the
 // local public folder in dev. Serve them at /images regardless of location so
@@ -160,8 +161,7 @@ const uploadRoot = process.env.UPLOAD_DIR || path.join(__dirname, "public");
 app.use('/images', express.static(path.join(uploadRoot, "images")));
 app.use('/admin/images', express.static(path.join(uploadRoot, "images")));
 
-if (serveWebsite) app.use('/dev/shipone/website', express.static(websiteBuildPath));
-if (serveClient) app.use(express.static(buildpath));
+if (serveApp) app.use(express.static(appBuildPath));
 
 // Prevent caching for specific routes
 app.use((req, res, next) => {
@@ -192,21 +192,16 @@ app.use('/admin', express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-app.use('/admin', adminRouter);
+// Admin API moved off /admin so the /admin/* URL space belongs to the SPA.
+app.use('/api/admin', adminRouter);
 app.use('/api', apiRouter);
 app.use('/website', websiteRouter);
 // Catch-all for frontend routing (Single Page Apps) — only when the builds are
 // present (Replit staging). On Render's API-only service these are skipped so
 // unmatched routes fall through to the 404 handler instead of erroring.
-if (serveWebsite) {
-  app.get('/dev/shipone/website/*', (req, res) => {
-    res.sendFile(path.join(websiteBuildPath, "index.html"));
-  });
-}
-
-if (serveClient) {
+if (serveApp) {
   app.get('*', (req, res) => {
-    res.sendFile(path.join(buildpath, "index.html"));
+    res.sendFile(path.join(appBuildPath, "index.html"));
   });
 }
 

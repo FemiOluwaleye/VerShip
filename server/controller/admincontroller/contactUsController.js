@@ -52,7 +52,7 @@ module.exports = {
             });
         } catch (error) {
             console.error("Error fetching contacts:", error);
-            return helper.error(res, "Something went wrong", error);
+            return helper.error(res, "Something went wrong", 500);
         }
     },
     contactView: async (req, res) => {
@@ -61,7 +61,7 @@ module.exports = {
             const data = await db.contactus.findByPk(id);
             return res.status(200).json({ message: true, data });
         } catch (error) {
-            return helper.error(res, "Something went wrong", error);
+            return helper.error(res, "Something went wrong", 500);
         }
     },
     contactDelete: async (req, res) => {
@@ -71,7 +71,7 @@ module.exports = {
             return helper.success(res, "Contact deleted successfully");
 
         } catch (error) {
-            return helper.error(res, "Something went wrong", error);
+            return helper.error(res, "Something went wrong", 500);
         }
     },
 };
