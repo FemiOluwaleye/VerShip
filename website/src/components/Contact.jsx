@@ -157,6 +157,9 @@ const Contact = () => {
                     name="first_name"
                     value={formData.first_name}
                     onChange={handleChange}
+                    aria-label="First Name"
+                    aria-required="true"
+                    aria-invalid={errors.first_name ? "true" : "false"}
                     placeholder="First Name*"
                     className={`bg-white/10 text-white placeholder-white/60 px-5 py-4 outline-none border ${errors.first_name ? 'border-red-500' : 'border-transparent'}`}
                   />
@@ -168,6 +171,9 @@ const Contact = () => {
                     name="last_name"
                     value={formData.last_name}
                     onChange={handleChange}
+                    aria-label="Last Name"
+                    aria-required="true"
+                    aria-invalid={errors.last_name ? "true" : "false"}
                     placeholder="Last Name*"
                     className={`bg-white/10 text-white placeholder-white/60 px-5 py-4 outline-none border ${errors.last_name ? 'border-red-500' : 'border-transparent'}`}
                   />
@@ -179,6 +185,9 @@ const Contact = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    aria-label="Email"
+                    aria-required="true"
+                    aria-invalid={errors.email ? "true" : "false"}
                     placeholder="Email*"
                     className={`bg-white/10 text-white placeholder-white/60 px-5 py-4 outline-none border ${errors.email ? 'border-red-500' : 'border-transparent'}`}
                   />
@@ -205,6 +214,9 @@ const Contact = () => {
                     name="city"
                     value={formData.city}
                     onChange={handleChange}
+                    aria-label="City"
+                    aria-required="true"
+                    aria-invalid={errors.city ? "true" : "false"}
                     placeholder="City*"
                     className={`bg-white/10 text-white placeholder-white/60 px-5 py-4 outline-none border ${errors.city ? 'border-red-500' : 'border-transparent'}`}
                   />
@@ -217,6 +229,9 @@ const Contact = () => {
                   name="message"
                   value={formData.message}
                   onChange={handleChange}
+                  aria-label="Your Message"
+                  aria-required="true"
+                  aria-invalid={errors.message ? "true" : "false"}
                   placeholder="Your Message*"
                   rows="5"
                   className={`w-full bg-white/10 text-white placeholder-white/60 px-5 py-4 outline-none resize-none border ${errors.message ? 'border-red-500' : 'border-transparent'}`}

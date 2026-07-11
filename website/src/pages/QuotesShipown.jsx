@@ -57,6 +57,41 @@ const extractAddressComponents = (place) => {
     return components;
 };
 
+// The 14 parishes of Jamaica — deliveries in this app always land in Jamaica,
+// so the recipient's "state" is really a parish. A fixed list makes it easy to
+// enter and keeps the value clean for the forwarder.
+const JAMAICA_PARISHES = [
+    "Kingston", "St. Andrew", "St. Thomas", "Portland", "St. Mary", "St. Ann",
+    "Trelawny", "St. James", "Hanover", "Westmoreland", "St. Elizabeth",
+    "Manchester", "Clarendon", "St. Catherine",
+];
+
+const ParishField = ({ label, value, onChange, errorKey, errors }) => {
+    // Preserve an autocomplete-filled value even if it isn't an exact match.
+    const options = value && !JAMAICA_PARISHES.includes(value)
+        ? [value, ...JAMAICA_PARISHES]
+        : JAMAICA_PARISHES;
+    return (
+        <div>
+            <label className="text-lg text-white font-medium">{label}</label>
+            <select
+                value={value || ""}
+                onChange={(e) => onChange(e.target.value)}
+                className={`w-full mt-1 bg-[#0b1f1a] border rounded-[14px] px-3 py-4 text-sm text-white focus:outline-none transition
+        ${errors[errorKey] ? "border-red-400 focus:border-red-400" : "border-[#4E6B5D] focus:border-[#9fe0b8]"}`}
+            >
+                <option value="" disabled>Select parish</option>
+                {options.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                ))}
+            </select>
+            {errors[errorKey] && (
+                <p className="text-red-400 text-xs mt-1">{errors[errorKey]}</p>
+            )}
+        </div>
+    );
+};
+
 const Field = ({ label, placeholder, value, onChange, errorKey, errors, disabled = false }) => (
     <div>
         <label className="text-lg text-white font-medium">{label}</label>
@@ -1011,7 +1046,10 @@ const QuotesShipown = () => {
                         {/* Delivery */}
                         <div>
                             <h4 className="text-[25px] font-semibold mb-2">Add Delivery Address</h4>
-                            <p className="mb-3 text-white/70 text-sm invisible">placeholder</p>
+                            <p className="mb-3 text-white/60 text-xs leading-relaxed">
+                                Jamaican format, e.g.<br />
+                                <span className="text-white/80">Elvis Livingston · 15 Molynes Road · Kingston 10 · St. Andrew · JAMAICA, W.I.</span>
+                            </p>
                             <label className="text-sm text-white flex items-center mb-4 cursor-pointer">
                                 <input type="checkbox" className={checkboxCls} checked={deliveryAddr.sameAsPrimary} onChange={(e) => handleDeliverySameAsPrimary(e.target.checked)} />
                                 Same as primary contact address
@@ -1031,8 +1069,8 @@ const QuotesShipown = () => {
                                     error={errors.delivery_phone} 
                                 />
                                 <AddressField
-                                    label="Address"
-                                    placeholder="e.g. 5 VerShip Close"
+                                    label="Street Address"
+                                    placeholder="e.g. 15 Molynes Road"
                                     value={deliveryAddr.address}
                                     onChange={setDelivery("address")}
                                     onAddressExtract={handleDeliveryAddressSelect}
@@ -1042,8 +1080,8 @@ const QuotesShipown = () => {
                                 />
                                 <div className="grid grid-cols-2 gap-4">
                                     <Field
-                                        label="City"
-                                        placeholder="e.g. Kingston"
+                                        label="Town / City"
+                                        placeholder="e.g. Kingston 10"
                                         value={deliveryAddr.city || ""}
                                         onChange={(val) => {
                                             setDeliveryAddr(prev => ({ ...prev, city: val }));
@@ -1052,9 +1090,8 @@ const QuotesShipown = () => {
                                         errorKey="delivery_city"
                                         errors={errors}
                                     />
-                                    <Field
-                                        label="State"
-                                        placeholder="e.g. NY"
+                                    <ParishField
+                                        label="Parish"
                                         value={deliveryAddr.state || ""}
                                         onChange={(val) => {
                                             setDeliveryAddr(prev => ({ ...prev, state: val }));
@@ -1064,7 +1101,7 @@ const QuotesShipown = () => {
                                         errors={errors}
                                     />
                                 </div>
-                                <Field label="Apt / Suite (Optional)" placeholder="e.g. Apt 2B, Suite 100" value={deliveryAddr.suiteAptBuilding} onChange={setDelivery("suiteAptBuilding")} errorKey="delivery_auite_address" errors={errors} />
+                                <Field label="Apt / Suite (Optional)" placeholder="e.g. Apt 2B" value={deliveryAddr.suiteAptBuilding} onChange={setDelivery("suiteAptBuilding")} errorKey="delivery_auite_address" errors={errors} />
                             </div>
                         </div>
                     </div>

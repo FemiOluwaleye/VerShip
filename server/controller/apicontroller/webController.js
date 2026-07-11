@@ -2365,11 +2365,14 @@ module.exports = {
                     if (!typeMatch) return false;
                 }
 
-                // 3. Distance Calculation (internal state for setting distance)
+                // 3. Distance is intentionally NOT used for provider matching.
+                // Pickup/delivery mileage pricing is computed client-side in
+                // ShipmentDetailsSection using the Google Distance Matrix (real
+                // driving miles) against each forwarder's per-mile config. This
+                // server path filters by country/type only; `distance` stays 0
+                // as a stable sort key. See calculateDistance() above if server
+                // authoritative distance is ever needed.
                 let distance = 0;
-                if (drop_off_lat && drop_off_long && p.originLat && p.originLong) {
-                    // distance = calculateDistance(...)
-                }
                 p.setDataValue('distance', distance);
 
                 return true;

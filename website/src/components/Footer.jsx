@@ -34,11 +34,11 @@ const Footer = () => {
               
               {/* Social Icons */}
               <div className="flex gap-4">
-                <a href="#" className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1A1F1D] flex items-center justify-center hover:bg-[#C1A35E] hover:text-[#0A0D0C] transition-all text-white/50">
-                  <img src={Group} alt="Facebook" width={18} />
+                <a href="#" aria-label="VerShip on Facebook" className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1A1F1D] flex items-center justify-center hover:bg-[#C1A35E] hover:text-[#0A0D0C] transition-all text-white/50">
+                  <img src={Group} alt="" width={18} />
                 </a>
-                <a href="#" className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1A1F1D] flex items-center justify-center hover:bg-[#C1A35E] hover:text-[#0A0D0C] transition-all text-white/50">
-                  <img src={instagram12} alt="Instagram" width={18} />
+                <a href="#" aria-label="VerShip on Instagram" className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1A1F1D] flex items-center justify-center hover:bg-[#C1A35E] hover:text-[#0A0D0C] transition-all text-white/50">
+                  <img src={instagram12} alt="" width={18} />
                 </a>
                 {/* <a href="#" className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1A1F1D] flex items-center justify-center hover:bg-[#C1A35E] hover:text-[#0A0D0C] transition-all text-white/50">
                   <img src={twitters} alt="Twitter" width={18} />
@@ -100,7 +100,8 @@ const Footer = () => {
         <div className="w-full flex justify-center mt-6 md:mt-8 opacity-80 pointer-events-none select-none px-4">
           <img
             src={logoFooter}
-            alt="VerShip Watermark"
+            alt=""
+            aria-hidden="true"
             className="w-full max-w-[320px] md:max-w-[1200px] h-auto object-contain object-bottom"
           />
         </div>

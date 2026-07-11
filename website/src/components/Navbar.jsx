@@ -64,18 +64,24 @@ export default function Navbar() {
 
   return (
     <div className="w-full relative z-50 bg-white">
-      <nav className="w-full border-b border-[#E5E7EB]">
+      <nav aria-label="Main" className="w-full border-b border-[#E5E7EB]">
         <div className=" mx-auto flex items-stretch">
 
           {/* Mobile View Toggle & Logo */}
           <div className="lg:hidden w-full flex items-center justify-between px-4 py-4">
             <img
               src={logo}
-              alt="Logo"
+              alt="VerShip home"
               className="h-12 cursor-pointer"
               onClick={() => navigate(homePath)}
             />
-            <button onClick={() => setIsOpen(!isOpen)}>
+            <button
+              type="button"
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label={isOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isOpen}
+              aria-controls="mobile-menu"
+            >
               {isOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
             </button>
           </div>
@@ -115,7 +121,7 @@ export default function Navbar() {
               <div className="flex items-center justify-center py-2 px-12 bg-[#F8FAFA]">
                 <img
                   src={logo}
-                  alt="Logo"
+                  alt="VerShip home"
                   className="h-[44px] cursor-pointer"
                   onClick={() => navigate(homePath)}
                 />
@@ -191,7 +197,7 @@ export default function Navbar() {
             <div className="w-full flex justify-center py-6 bg-[#F8FAFA]">
               <img
                 src={logo}
-                alt="Logo"
+                alt="VerShip"
                 className="h-20"
               />
             </div>
@@ -201,7 +207,7 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {isOpen && !isSignupOnlyNavbar && (
-        <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-gray-200 shadow-xl py-6 px-6 space-y-6 animate-in slide-in-from-top duration-300">
+        <div id="mobile-menu" className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-gray-200 shadow-xl py-6 px-6 space-y-6 animate-in slide-in-from-top duration-300">
           <div className="flex flex-col space-y-4">
             <div onClick={() => { navigate("/about"); setIsOpen(false); }} className="text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">About</div>
             <div onClick={() => {

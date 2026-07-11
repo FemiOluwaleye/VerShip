@@ -297,27 +297,27 @@ const Banner = () => {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="bg-[#F8FAFA] pt-12 md:pt-20 pb-8 md:pb-6 px-4 md:px-6 flex flex-col items-center overflow-hidden relative">
+      <section className="bg-[#F8FAFA] pt-6 md:pt-8 pb-3 md:pb-4 px-4 md:px-6 flex flex-col items-center overflow-hidden relative">
 
         {/* Container Image (Layered on top) */}
-        <div className="relative mt-0 md:mt-[-80px] mb-8 md:mb-12 z-30 w-full max-w-[850px] flex justify-center">
+        <div className="relative mt-0 md:mt-[-40px] mb-3 md:mb-4 z-30 w-full max-w-[560px] flex justify-center">
           <img
             src={container}
-            alt="Shipping Container"
-            className="w-full md:w-[850px] object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.15)] md:drop-shadow-[0_40px_40px_rgba(0,0,0,0.15)]"
+            alt="VerShip — shipping barrels to Jamaica made easy"
+            className="w-full md:w-[560px] object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.15)] md:drop-shadow-[0_30px_30px_rgba(0,0,0,0.15)]"
           />
         </div>
 
         {/* Reviews and Social Proof */}
-        <div className="flex flex-col items-center gap-4 relative z-40">
+        <div className="flex flex-col items-center gap-3 relative z-40">
           <div className="text-[#595d5e] text-base md:text-[19px] text-center max-w-2xl leading-snug font-normal px-4">
             Compare rates from trusted shipping companies, book the best option and ship your barrel all through one platform
           </div>
 
-          <div className="mt-4 md:mt-2 p-2 rounded-full bg-[#073737]/10">
+          <div className="p-2 rounded-full bg-[#073737]/10">
             <button
               onClick={scrollToForm}
-              className="bg-[#0D4D4D] text-white w-[168px] h-[48px] rounded-full font-bold text-base md:text-lg hover:bg-[#0A3D3D] transition-all flex items-center justify-center"
+              className="bg-[#0D4D4D] text-white w-[168px] h-[46px] rounded-full font-bold text-base md:text-lg hover:bg-[#0A3D3D] transition-all flex items-center justify-center"
             >
               Get quotes
             </button>
@@ -326,7 +326,7 @@ const Banner = () => {
       </section>
 
       {/* Form Section */}
-      <section id="booking-form" ref={formRef} className="bg-[#071618] pt-12 pb-9 md:pt-24 md:pb-16 px-4 md:px-6">
+      <section id="booking-form" ref={formRef} className="bg-[#071618] pt-6 pb-8 md:pt-8 md:pb-14 px-4 md:px-6">
         <div className="max-w-[1326px] mx-auto">
           {/* Tabs */}
           <div className="flex justify-center mb-[-1px] relative z-20">
@@ -384,74 +384,85 @@ const Banner = () => {
             {/* Top Row: Origin & Destination */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div ref={originRef} className="relative">
-                <div
+                <button
+                  type="button"
                   onClick={() => setOpenOrigin(!openOrigin)}
-                  className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4 cursor-pointer hover:border-[#D4B97C]/30 transition-all flex items-center justify-between"
+                  aria-haspopup="listbox"
+                  aria-expanded={openOrigin}
+                  aria-label="Select origin"
+                  className="w-full text-left bg-[#0a1b1d] border border-white/5 rounded-xl p-4 cursor-pointer hover:border-[#D4B97C]/30 transition-all flex items-center justify-between"
                 >
                   <span className={`text-sm md:text-base ${origin ? 'text-white/70' : 'text-white/30'}`}>
                     {origin || "Select origin"}
                   </span>
                   <img
                     src={loc}
-                    alt="target"
+                    alt=""
                     className="w-5 h-5 object-contain"
                   />
-                </div>
+                </button>
                 {openOrigin && (
-                  <div className="absolute top-full left-0 w-full mt-2 bg-[#121A19] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
+                  <ul role="listbox" aria-label="Origin" className="absolute top-full left-0 w-full mt-2 bg-[#121A19] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
                     {ORIGINS.map((item) => {
                       // Check if this origin is available from any provider OR is always available
                       const isAvailable = availableOrigins.includes(item) || ALWAYS_AVAILABLE_ORIGINS.includes(item);
-                      
+
                       return (
-                        <div
-                          key={item}
-                          onClick={() => {
-                            if (isAvailable) { 
-                              setOrigin(item); 
-                              setOpenOrigin(false); 
-                            }
-                          }}
-                          className={`px-6 py-3 font-medium transition-colors text-sm md:text-base
+                        <li key={item} role="option" aria-selected={origin === item} aria-disabled={!isAvailable}>
+                          <button
+                            type="button"
+                            disabled={!isAvailable}
+                            onClick={() => {
+                              setOrigin(item);
+                              setOpenOrigin(false);
+                            }}
+                            className={`w-full text-left px-6 py-3 font-medium transition-colors text-sm md:text-base
                           ${!isAvailable
-                              ? "text-white/25 cursor-not-allowed"
-                              : "text-white/80 hover:bg-[#C1A35E] hover:text-black cursor-pointer"
-                            }`}
-                        >
-                          {item} {!isAvailable}
-                        </div>
+                                ? "text-white/25 cursor-not-allowed"
+                                : "text-white/80 hover:bg-[#C1A35E] hover:text-black cursor-pointer"
+                              }`}
+                          >
+                            {item}
+                          </button>
+                        </li>
                       );
                     })}
-                  </div>
+                  </ul>
                 )}
               </div>
 
               <div ref={destinationRef} className="relative">
-                <div
+                <button
+                  type="button"
                   onClick={() => setOpenDestination(!openDestination)}
-                  className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4 cursor-pointer hover:border-[#D4B97C]/30 transition-all flex items-center justify-between"
+                  aria-haspopup="listbox"
+                  aria-expanded={openDestination}
+                  aria-label="Select destination"
+                  className="w-full text-left bg-[#0a1b1d] border border-white/5 rounded-xl p-4 cursor-pointer hover:border-[#D4B97C]/30 transition-all flex items-center justify-between"
                 >
                   <span className={`text-sm md:text-base ${destination ? 'text-white/70' : 'text-white/30'}`}>
                     {destination || "Select destination"}
                   </span>
                   <img
                     src={iccon}
-                    alt="target"
+                    alt=""
                     className="w-5 h-5 object-contain"
                   />
-                </div>
+                </button>
                 {openDestination && (
-                  <div className="absolute top-full left-0 w-full mt-2 bg-[#121A19] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
+                  <ul role="listbox" aria-label="Destination" className="absolute top-full left-0 w-full mt-2 bg-[#121A19] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
                     {DESTINATIONS.map((item) => (
-                      <div
-                        key={item}
-                        onClick={() => { setDestination(item); setOpenDestination(false); }}
-                        className="px-6 py-3 text-white/80 hover:bg-[#C1A35E] hover:text-black cursor-pointer font-medium transition-colors text-sm md:text-base"
-                      >
-                        {item}
-                      </div>
+                      <li key={item} role="option" aria-selected={destination === item}>
+                        <button
+                          type="button"
+                          onClick={() => { setDestination(item); setOpenDestination(false); }}
+                          className="w-full text-left px-6 py-3 text-white/80 hover:bg-[#C1A35E] hover:text-black cursor-pointer font-medium transition-colors text-sm md:text-base"
+                        >
+                          {item}
+                        </button>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 )}
               </div>
             </div>
@@ -475,6 +486,7 @@ const Banner = () => {
                       }
                     }}
                     className="bg-transparent text-white/70 text-sm md:text-base outline-none w-full placeholder-white/30"
+                    aria-label="Barrel quantity"
                     placeholder="Enter barrel quantity e.g. 2"
                     min="1"
                     max="25"
@@ -487,20 +499,25 @@ const Banner = () => {
                 <>
                   {/* Pickup Date Field with Label */}
                   <div className="flex-grow md:w-[40%]">
-                    <div
-                      onClick={() => pickupDateRef.current?.showPicker()}
-                      className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#D4B97C]/30 transition-all"
-                    >
-                      <span className={`text-sm md:text-base ${pickupDate ? 'text-white/70' : 'text-white/30'}`}>
-                        {pickupDate ? formatDate(pickupDate) : "Select pickup date"}
-                      </span>
-                      <img
-                        src={calender}
-                        alt="calendar"
-                        className="w-5 h-5 object-contain"
-                      />
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => pickupDateRef.current?.showPicker()}
+                        aria-label={`Choose pickup date${pickupDate ? `, currently ${formatDate(pickupDate)}` : ""}`}
+                        className="w-full text-left bg-[#0a1b1d] border border-white/5 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#D4B97C]/30 transition-all"
+                      >
+                        <span className={`text-sm md:text-base ${pickupDate ? 'text-white/70' : 'text-white/30'}`}>
+                          {pickupDate ? formatDate(pickupDate) : "Select pickup date"}
+                        </span>
+                        <img
+                          src={calender}
+                          alt=""
+                          className="w-5 h-5 object-contain"
+                        />
+                      </button>
                       <input
                         type="date"
+                        aria-label="Pickup date"
                         ref={pickupDateRef}
                         value={pickupDate}
                         min={getMinPickupDate()}
@@ -515,16 +532,21 @@ const Banner = () => {
 
                   {/* Delivery Date Field with Label */}
                   <div className="flex-grow md:w-[40%]">
-                    <div
-                      onClick={() => deliveryDateRef.current?.showPicker()}
-                      className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#D4B97C]/30 transition-all"
-                    >
-                      <span className={`text-sm md:text-base ${deliveryDate ? 'text-white/70' : 'text-white/30'}`}>
-                        {deliveryDate ? formatDate(deliveryDate) : "Select delivery date"}
-                      </span>
-                      <Calendar className="text-[#D4B97C] w-5 h-5" />
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => deliveryDateRef.current?.showPicker()}
+                        aria-label={`Choose delivery date${deliveryDate ? `, currently ${formatDate(deliveryDate)}` : ""}`}
+                        className="w-full text-left bg-[#0a1b1d] border border-white/5 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#D4B97C]/30 transition-all"
+                      >
+                        <span className={`text-sm md:text-base ${deliveryDate ? 'text-white/70' : 'text-white/30'}`}>
+                          {deliveryDate ? formatDate(deliveryDate) : "Select delivery date"}
+                        </span>
+                        <Calendar className="text-[#D4B97C] w-5 h-5" aria-hidden="true" />
+                      </button>
                       <input
                         type="date"
+                        aria-label="Delivery date"
                         ref={deliveryDateRef}
                         value={deliveryDate}
                         min={getMinDeliveryDate()}
@@ -547,7 +569,7 @@ const Banner = () => {
                       </span>
                       <img
                         src={calender}
-                        alt="calendar"
+                        alt=""
                         className="w-5 h-5 object-contain opacity-50"
                       />
                     </div>

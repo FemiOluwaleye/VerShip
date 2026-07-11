@@ -265,27 +265,27 @@ const BussinessSignup = () => {
       {/* Card */}
 
       <div
-        className="flex flex-col items-center text-white gap-6
+        className="flex flex-col items-center text-white gap-4
         bg-[#2D413F] backdrop-blur-md
         rounded-[22px]
         shadow-[0_25px_80px_rgba(0,0,0,0.6)]
-        
-        w-[90vw] sm:w-[500px] md:w-[650px] lg:w-[800px]
-        px-6 sm:px-20 md:px-25 lg:px-30 py-10 mb-20 mt-35"
+
+        w-[90vw] sm:w-[560px] md:w-[720px] lg:w-[820px]
+        px-6 sm:px-12 md:px-14 py-8 my-12"
       >
         {/* Heading */}
-        <h1 className="text-[26px] lg:text-[32px] text-nowrap font-semibold">
+        <h1 className="text-[24px] lg:text-[28px] text-nowrap font-semibold">
           Create Your Account
         </h1>
-        <p className="text-sm text-white/70 -mt-3">
+        <p className="text-sm text-white/70 -mt-2">
           Please enter required details.
         </p>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="w-full grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
           {/* Name */}
           <div>
-            <label className="text-lg font-medium">Legal Name of Business</label>
+            <label className="text-sm font-medium">Legal Name of Business</label>
             <input
               type="text"
               name="companyName"
@@ -311,7 +311,7 @@ const BussinessSignup = () => {
               placeholder="Enter"
               className="w-full bg-transparent border border-white/20
       text-white placeholder:text-white/40
-      rounded-[16px] px-4 mt-2 py-2.5
+      rounded-[16px] px-4 mt-2 py-2
       focus:outline-none focus:border-yellow-400"
             />
             {errors.companyName && (
@@ -321,7 +321,7 @@ const BussinessSignup = () => {
 
 
           {/* <div>
-            <label className="text-lg font-medium">Doing Business As</label>
+            <label className="text-sm font-medium">Doing Business As</label>
             <input
               type="text"
               name="working_as"
@@ -330,7 +330,7 @@ const BussinessSignup = () => {
               placeholder="Enter"
               className="w-full mt-2 bg-transparent border border-white/20
               text-white placeholder:text-white/40
-              rounded-[16px] px-4 py-2.5
+              rounded-[16px] px-4 py-2
               focus:outline-none focus:border-yellow-400"
             />
             {errors.working_as && (
@@ -338,7 +338,7 @@ const BussinessSignup = () => {
             )}
           </div> */}
           <div>
-            <label className="text-lg font-medium">Doing Business As(Optional)</label>
+            <label className="text-sm font-medium">Doing Business As(Optional)</label>
             <input
               type="text"
               name="working_as"
@@ -364,7 +364,7 @@ const BussinessSignup = () => {
               placeholder="Enter"
               className="w-full mt-2 bg-transparent border border-white/20
       text-white placeholder:text-white/40
-      rounded-[16px] px-4 py-2.5
+      rounded-[16px] px-4 py-2
       focus:outline-none focus:border-yellow-400"
             />
             {errors.working_as && (
@@ -373,8 +373,8 @@ const BussinessSignup = () => {
           </div>
 
           {/* Email */}
-          <div>
-            <label className="text-lg font-medium">Email</label>
+          <div className="sm:col-span-2">
+            <label className="text-sm font-medium">Email</label>
             <input
               type="email"
               name="email"
@@ -383,7 +383,7 @@ const BussinessSignup = () => {
               placeholder="Enter"
               className="w-full mt-2 bg-transparent border border-white/20
               text-white placeholder:text-white/40
-              rounded-[16px] px-4 py-2.5
+              rounded-[16px] px-4 py-2
               focus:outline-none focus:border-yellow-400"
             />
             {errors.email && (
@@ -391,7 +391,7 @@ const BussinessSignup = () => {
             )}
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <PhoneInput
               label="Mobile Number"
               value={formData.phone}
@@ -409,8 +409,8 @@ const BussinessSignup = () => {
             />
           </div>
 
-          <div>
-            <label className="text-lg font-medium">Street Address of Main Location</label>
+          <div className="sm:col-span-2">
+            <label className="text-sm font-medium">Street Address of Main Location</label>
             <div className="relative">
               {apiLoaded ? (
                 // Update the onPlaceSelected handler for Autocomplete
@@ -493,7 +493,7 @@ const BussinessSignup = () => {
                   placeholder="Enter"
                   className="w-full mt-2 bg-transparent relative border border-white/20
     text-white placeholder:text-white/40
-    rounded-[16px] px-4 py-2.5
+    rounded-[16px] px-4 py-2
     focus:outline-none focus:border-yellow-400"
                   onChange={(e) => {
                     const value = e.target.value;
@@ -510,7 +510,7 @@ const BussinessSignup = () => {
                   placeholder="Enter"
                   className="w-full mt-2 bg-transparent relative border border-white/20
                 text-white placeholder:text-white/40
-                rounded-[16px] px-4 py-2.5
+                rounded-[16px] px-4 py-2
                 focus:outline-none focus:border-yellow-400"
                 />
               )}
@@ -524,7 +524,7 @@ const BussinessSignup = () => {
 
           {/* City */}
           <div>
-            <label className="text-lg font-medium">City</label>
+            <label className="text-sm font-medium">City</label>
             <input
               type="text"
               name="city"
@@ -533,7 +533,7 @@ const BussinessSignup = () => {
               placeholder="Enter city"
               className="w-full mt-2 bg-transparent border border-white/20
       text-white placeholder:text-white/40
-      rounded-[16px] px-4 py-2.5
+      rounded-[16px] px-4 py-2
       focus:outline-none focus:border-yellow-400"
             />
             {errors.city && (
@@ -543,7 +543,7 @@ const BussinessSignup = () => {
 
           {/* State */}
           <div>
-            <label className="text-lg font-medium">State</label>
+            <label className="text-sm font-medium">State</label>
             <input
               type="text"
               name="state"
@@ -552,7 +552,7 @@ const BussinessSignup = () => {
               placeholder="Enter state"
               className="w-full mt-2 bg-transparent border border-white/20
       text-white placeholder:text-white/40
-      rounded-[16px] px-4 py-2.5
+      rounded-[16px] px-4 py-2
       focus:outline-none focus:border-yellow-400"
             />
             {errors.state && (
@@ -561,7 +561,7 @@ const BussinessSignup = () => {
           </div>
           {/* Password */}
           <div className="flex flex-col">
-            <label className="text-lg font-medium">Password</label>
+            <label className="text-sm font-medium">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -571,7 +571,7 @@ const BussinessSignup = () => {
                 placeholder="********"
                 className="w-full bg-transparent border mt-2 border-white/20
                 text-white placeholder:text-white/40
-                rounded-[16px] px-4 pr-12 py-2.5
+                rounded-[16px] px-4 pr-12 py-2
                 focus:outline-none focus:border-yellow-400"
               />
               <div
@@ -588,7 +588,7 @@ const BussinessSignup = () => {
 
           {/* Confirm Password */}
           <div className="flex flex-col">
-            <label className="text-lg font-medium">Confirm Password</label>
+            <label className="text-sm font-medium">Confirm Password</label>
             <div className="relative">
               <input
                 type={showConfirmPassword ? "text" : "password"}
@@ -598,7 +598,7 @@ const BussinessSignup = () => {
                 placeholder="********"
                 className="w-full bg-transparent border mt-2 border-white/20
                 text-white placeholder:text-white/40
-                rounded-[16px] px-4 pr-12 py-2.5
+                rounded-[16px] px-4 pr-12 py-2
                 focus:outline-none focus:border-yellow-400"
               />
               <div
@@ -614,7 +614,7 @@ const BussinessSignup = () => {
           </div>
 
           {/* Terms */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 sm:col-span-2">
             <div className="flex items-start gap-2 text-sm text-white/80">
               <input
                 type="checkbox"
@@ -640,7 +640,7 @@ const BussinessSignup = () => {
           </div>
 
           {/* Button */}
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center mt-2 sm:col-span-2">
             <button
               disabled={loading}
               type="submit"

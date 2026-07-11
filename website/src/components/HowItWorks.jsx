@@ -24,7 +24,7 @@ const HowItWorks = () => {
         <section id="how-it-works" className="bg-white pt-8 pb-20 md:pt-10 md:pb-32 px-4 md:px-26 relative overflow-hidden">
 
             {/* Marquee Text Slider */}
-            <div className="w-full overflow-hidden whitespace-nowrap opacity-[0.10] pointer-events-none">
+            <div aria-hidden="true" className="w-full overflow-hidden whitespace-nowrap opacity-[0.10] pointer-events-none">
                 <div className="mb-14 inline-block animate-marquee text-[50px] md:text-[80px] font-medium text-black tracking-tighter">
                     Shipping Simplified.&nbsp; &nbsp; Quotes in Seconds.&nbsp; &nbsp; Delivered with Care. &nbsp; &nbsp;
                     Shipping Simplified.&nbsp; &nbsp; Quotes in Seconds.&nbsp; &nbsp; Delivered with Care. &nbsp; &nbsp;

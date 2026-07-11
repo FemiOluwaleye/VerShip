@@ -12,6 +12,29 @@ body {
 }
 
 
+/* Accessibility: visible keyboard focus indicator (WCAG 2.4.7) */
+:focus-visible {
+  outline: 2px solid #FFBF00;
+  outline-offset: 2px;
+}
+
+/* Accessibility: "Skip to main content" link — visually hidden until focused */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 10px 16px;
+  background: #0D4D4D;
+  color: #ffffff;
+  font-weight: 600;
+  border-radius: 0 0 8px 0;
+}
+
+.skip-to-main:focus {
+  left: 0;
+}
+
 .container {
   padding: 0 20px;
 }

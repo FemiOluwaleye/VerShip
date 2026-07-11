@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Keep authenticated / transactional areas out of the index
+Disallow: /admin
+Disallow: /login
+Disallow: /signup
+Disallow: /reset
+Disallow: /forgot
+Disallow: /profile
+Disallow: /chat
+Disallow: /cards
+Disallow: /quotes
+Disallow: /quotes-shipown
+Disallow: /request
+Disallow: /notifications
+
+Sitemap: https://vershipgo.com/sitemap.xml

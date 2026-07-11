@@ -18,7 +18,6 @@ const BuisnessCreateAccount = () => {
     businessAddress: "",
     businessLatitude: "",
     businessLongitude: "",
-    description: "",
     city: "", // Added
     state: "", // Added
   });
@@ -168,7 +167,6 @@ const BuisnessCreateAccount = () => {
           businessAddress: businessInfo.businessAddress || user.location || "",
           businessLatitude: businessInfo.businessLatitude || user.latitude || "",
           businessLongitude: businessInfo.businessLongitude || user.longitude || "",
-          description: businessInfo.description || user.bio || "",
           city: businessInfo.city || "",
           state: businessInfo.state || "",
         });
@@ -192,9 +190,6 @@ const BuisnessCreateAccount = () => {
         break;
       case "businessAddress":
         if (!value.trim()) error = "Business Address is required";
-        break;
-      case "description":
-        if (!value.trim()) error = "Brief Description of Business is required";
         break;
       case "city":
         if (!value.trim()) error = "City is required";
@@ -254,7 +249,6 @@ const BuisnessCreateAccount = () => {
       form.append("businessAddress", formData.businessAddress);
       form.append("businessLatitude", formData.businessLatitude);
       form.append("businessLongitude", formData.businessLongitude);
-      form.append("description", formData.description);
       form.append("city", formData.city);
       form.append("state", formData.state);
       form.append("profile_step", 2);
@@ -341,10 +335,10 @@ const BuisnessCreateAccount = () => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="w-full max-w-[560px] flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="w-full max-w-[640px] grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
           {/* Business Name */}
           <div>
-            <label className="text-lg font-medium">Business Name</label>
+            <label className="text-sm font-medium">Business Name</label>
             <input
               type="text"
               name="businessName"
@@ -369,7 +363,7 @@ const BuisnessCreateAccount = () => {
               placeholder="Enter"
               className="w-full bg-transparent border border-white/20
               text-white placeholder:text-white/40
-              rounded-md px-4 py-2.5
+              rounded-md px-4 py-2
               focus:outline-none focus:border-yellow-400"
             />
             {errors.businessName && (
@@ -379,7 +373,7 @@ const BuisnessCreateAccount = () => {
 
           {/* Registration Number */}
           <div>
-            <label className="text-lg font-medium">FMC License (Optional)</label>
+            <label className="text-sm font-medium">FMC License (Optional)</label>
             <input
               type="text"
               name="registerationNumber"
@@ -389,7 +383,7 @@ const BuisnessCreateAccount = () => {
               placeholder="Enter"
               className="w-full bg-transparent border border-white/20
               text-white placeholder:text-white/40
-              rounded-md px-4 py-2.5
+              rounded-md px-4 py-2
               focus:outline-none focus:border-yellow-400"
             />
             {errors.registerationNumber && (
@@ -398,8 +392,8 @@ const BuisnessCreateAccount = () => {
           </div>
 
           {/* Country */}
-          <div className="relative">
-            <label className="text-lg font-medium text-white">
+          <div className="relative sm:col-span-2">
+            <label className="text-sm font-medium text-white">
               Country of Registration
             </label>
             <select
@@ -436,8 +430,8 @@ const BuisnessCreateAccount = () => {
           </div>
 
           {/* Business Address with Autocomplete */}
-          <div>
-            <label className="text-lg font-medium">Business Address</label>
+          <div className="sm:col-span-2">
+            <label className="text-sm font-medium">Business Address</label>
             {apiLoaded ? (
               <Autocomplete
                 onPlaceSelected={(place) => {
@@ -463,7 +457,7 @@ const BuisnessCreateAccount = () => {
                 placeholder="Enter"
                 className="w-full bg-transparent border border-white/20
                   text-white placeholder:text-white/40
-                  rounded-md px-4 py-2.5
+                  rounded-md px-4 py-2
                   focus:outline-none focus:border-yellow-400"
                 onChange={(e) => {
                   const value = e.target.value;
@@ -480,7 +474,7 @@ const BuisnessCreateAccount = () => {
                 placeholder="Enter"
                 className="w-full bg-transparent border border-white/20
                 text-white placeholder:text-white/40
-                rounded-md px-4 py-2.5
+                rounded-md px-4 py-2
                 focus:outline-none focus:border-yellow-400"
               />
             )}
@@ -491,7 +485,7 @@ const BuisnessCreateAccount = () => {
 
           {/* City Field */}
           <div>
-            <label className="text-lg font-medium">City</label>
+            <label className="text-sm font-medium">City</label>
             <input
               type="text"
               name="city"
@@ -504,7 +498,7 @@ const BuisnessCreateAccount = () => {
               placeholder="Enter city"
               className="w-full bg-transparent border border-white/20
                 text-white placeholder:text-white/40
-                rounded-md px-4 py-2.5
+                rounded-md px-4 py-2
                 focus:outline-none focus:border-yellow-400"
             />
             {errors.city && (
@@ -514,7 +508,7 @@ const BuisnessCreateAccount = () => {
 
           {/* State Field */}
           <div>
-            <label className="text-lg font-medium">State</label>
+            <label className="text-sm font-medium">State</label>
             <input
               type="text"
               name="state"
@@ -527,7 +521,7 @@ const BuisnessCreateAccount = () => {
               placeholder="Enter state"
               className="w-full bg-transparent border border-white/20
                 text-white placeholder:text-white/40
-                rounded-md px-4 py-2.5
+                rounded-md px-4 py-2
                 focus:outline-none focus:border-yellow-400"
             />
             {errors.state && (
@@ -535,39 +529,8 @@ const BuisnessCreateAccount = () => {
             )}
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="text-lg font-medium">Brief Description of Business</label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={(e) => {
-                let value = e.target.value;
-                if (value.length === 1) {
-                  value = value.charAt(0).toUpperCase();
-                }
-                handleInputChange({
-                  ...e,
-                  target: {
-                    ...e.target,
-                    name: "description",
-                    value: value,
-                  },
-                });
-              }}
-              placeholder="Enter"
-              className="w-full bg-transparent border border-white/20
-              text-white placeholder:text-white/40
-              rounded-md px-4 py-2.5
-              focus:outline-none focus:border-yellow-400 h-[150px]"
-            />
-            {errors.description && (
-              <p className="text-red-400 text-sm mt-1">{errors.description}</p>
-            )}
-          </div>
-
           {/* Button */}
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center mt-2 sm:col-span-2">
             <button
               disabled={loading}
               type="submit"

@@ -171,16 +171,19 @@ const ShipmentDetailsSection = () => {
   console.log("🔍 Pickup Distance (miles):", pickupDistance);
   console.log("🔍 Delivery Distance (miles):", deliveryDistance);
 
-  let effectivePickupDistance = pickupDistance;
-  let effectiveDeliveryDistance = deliveryDistance;
+  // Prefer real driving distance (Google Distance Matrix, set async into
+  // googleDistance) over straight-line Haversine. The forwarder's per-mile
+  // pickup/delivery pricing is meant to bill against road miles; Haversine
+  // undercounts them, so it's only a fallback until Google resolves.
+  let effectivePickupDistance =
+    googleDistance.d1 != null ? googleDistance.d1 : pickupDistance;
+  let effectiveDeliveryDistance =
+    googleDistance.d2 != null ? googleDistance.d2 : deliveryDistance;
 
   if (isRequestBarrel) {
     effectivePickupDistance = 0;
     effectiveDeliveryDistance = 0;
     console.log("🔍 Request Barrel Drop-Off: Both pickup and delivery fees set to 0");
-  } else {
-    effectivePickupDistance = pickupDistance;
-    effectiveDeliveryDistance = deliveryDistance;
   }
 
   let finalFlatPickupCharge = 0;

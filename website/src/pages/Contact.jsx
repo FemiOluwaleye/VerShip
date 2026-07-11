@@ -110,8 +110,11 @@ const Contact = () => {
           <form className="w-full rounded-[20px] space-y-6" onSubmit={handleSubmit}>
 
             <div>
-              <label className="block text-[18px] font-medium mb-1">First Name</label>
+              <label htmlFor="contact-first_name" className="block text-[18px] font-medium mb-1">First Name</label>
               <input
+                id="contact-first_name"
+                aria-required="true"
+                aria-invalid={errors.first_name ? "true" : "false"}
                 type="text"
                 name="first_name"
                 value={formData.first_name}
@@ -142,8 +145,11 @@ const Contact = () => {
 
 
             <div>
-              <label className="block text-[18px] font-medium mb-1">Last Name</label>
+              <label htmlFor="contact-last_name" className="block text-[18px] font-medium mb-1">Last Name</label>
               <input
+                id="contact-last_name"
+                aria-required="true"
+                aria-invalid={errors.last_name ? "true" : "false"}
                 type="text"
                 name="last_name"
                 value={formData.last_name}
@@ -172,8 +178,11 @@ const Contact = () => {
             </div>
 
             <div>
-              <label className="block text-[18px] font-medium mb-1">Email</label>
+              <label htmlFor="contact-email" className="block text-[18px] font-medium mb-1">Email</label>
               <input
+                id="contact-email"
+                aria-required="true"
+                aria-invalid={errors.email ? "true" : "false"}
                 type="email"
                 name="email"
                 value={formData.email}
@@ -204,8 +213,11 @@ const Contact = () => {
             </div>
 
             <div>
-              <label className="block text-[18px] font-medium mb-1">Message</label>
+              <label htmlFor="contact-message" className="block text-[18px] font-medium mb-1">Message</label>
               <textarea
+                id="contact-message"
+                aria-required="true"
+                aria-invalid={errors.textarea ? "true" : "false"}
                 name="textarea"
                 value={formData.textarea}
                 onChange={(e) => {

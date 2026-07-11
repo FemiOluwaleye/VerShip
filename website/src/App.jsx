@@ -15,9 +15,12 @@ const AdminApp = React.lazy(() => import('./admin/AdminApp'))
 // Public site chrome (Navbar/Footer wrap every public route, but NOT admin).
 const PublicLayout = () => (
     <>
+        <a href="#main-content" className="skip-to-main">Skip to main content</a>
         <ScrollToTop />
         <Navbar />
-        <AppRoutes />
+        <main id="main-content">
+            <AppRoutes />
+        </main>
         <Footer />
         {/* <CookieConsent /> */}
     </>

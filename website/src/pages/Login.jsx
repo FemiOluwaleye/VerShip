@@ -510,37 +510,45 @@ const Login = () => {
                             className="flex flex-col items-start justify-center gap-4 w-full px-2 sm:px-10"
                         >
                             <div className="flex flex-col gap-1 w-full">
-                                <label className="text-13px sm:text-[14px] xl:text-[18px] font-semibold">
+                                <label htmlFor="login-email" className="text-13px sm:text-[14px] xl:text-[18px] font-semibold">
                                     Email
                                 </label>
                                 <input
+                                    id="login-email"
                                     type="email"
                                     className={`text-[13px] sm:text-[14px] xl:text-[16px] text-white rounded-[16px] border ${errors.email ? 'border-red-500' : 'border-[#4E6B5D]'}  py-2 xl:py-3 px-5 w-full focus:outline-none bg-transparent`}
                                     name="email"
                                     value={form.email}
                                     onChange={handleChange}
+                                    aria-required="true"
+                                    aria-invalid={errors.email ? "true" : "false"}
                                     placeholder="Enter your Email"
                                 />
                                 {errors.email && <p className="text-red-400 text-xs">{errors.email}</p>}
                             </div>
                             <div className="flex flex-col gap-1 w-full relative">
-                                <label className="text-[13px] sm:text-[14px] xl:text-[18px] font-semibold">
+                                <label htmlFor="login-password" className="text-[13px] sm:text-[14px] xl:text-[18px] font-semibold">
                                     Password
                                 </label>
                                 <input
+                                    id="login-password"
                                     type={showPassword ? "text" : "password"}
                                     className={`text-[13px] sm:text-[14px] xl:text-[16px] text-white border ${errors.password ? 'border-red-500' : 'border-[#4E6B5D]'} rounded-[16px] bg-transparent py-2 xl:py-3 px-5 w-full focus:outline-none`}
                                     name="password"
                                     value={form.password}
                                     onChange={handleChange}
+                                    aria-required="true"
+                                    aria-invalid={errors.password ? "true" : "false"}
                                     placeholder="Enter your Password"
                                 />
-                                <div
+                                <button
+                                    type="button"
                                     onClick={() => setShowPassword(!showPassword)}
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                     className="absolute right-4 top-[50%] -translate-y-[50%] mt-4 cursor-pointer text-white/50 hover:text-white"
                                 >
                                     {showPassword ? <FaEyeSlash /> : <FaEye />}
-                                </div>
+                                </button>
                                 {errors.password && <p className="text-red-400 text-xs">{errors.password}</p>}
                             </div>
                             <div className="flex items-start justify-between w-full">
