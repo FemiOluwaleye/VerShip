@@ -13,6 +13,7 @@ const ratingController = require('../controller/admincontroller/ratingController
 const reportController = require('../controller/admincontroller/reportController');
 const bannerController = require('../controller/admincontroller/bannerController');
 const cookieController = require('../controller/admincontroller/cookieController');
+const prepackedController = require('../controller/admincontroller/prepackedController');
 
 
 router.post('/login', auth.login);
@@ -105,6 +106,14 @@ router.get('/bannerlist', bannerController.bannerList);
 router.post('/bannerdelete/:id', bannerController.bannerDelete);
 router.post('/bannerupdate/:id', bannerController.bannerUpdate);
 router.get('/bannerdetail/:id', bannerController.bannerDetail);
+
+// pre-packed food barrel routes (product CRUD + orders)
+router.post('/prepacked/add', prepackedController.addProduct);
+router.get('/prepacked/list', prepackedController.productList);
+router.get('/prepacked/detail/:id', prepackedController.productDetail);
+router.post('/prepacked/update/:id', prepackedController.productUpdate);
+router.post('/prepacked/delete/:id', prepackedController.productDelete);
+router.get('/prepacked-orders/list', prepackedController.orderList);
 
 // cookie routes
 router.get('/cookielist', cookieController.cookieList);

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import Commonbanner from "./Commonbanner";
 import { tick } from "../common/common-assets/assets-images";
 import { check } from "../common/common-assets/assets-images";
 import { box, card, close } from "../common/common-assets/assets-images";

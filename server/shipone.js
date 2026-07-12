@@ -14,6 +14,13 @@ const socketIO = require('socket.io');
 const cors = require('cors');
 // const admin = require("firebase-admin");
 
+// Safety net for the consolidated single-service architecture: a stray
+// un-awaited promise rejection (e.g. a mail/DB call missing .catch) must not
+// take down the API + admin + public site for every user. Log and stay up.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason && reason.stack ? reason.stack : reason);
+});
+
 /*
 // Initialize Firebase Admin
 try {

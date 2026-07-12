@@ -110,6 +110,12 @@ export default function Navbar() {
                   How it works
                 </div>
                 <div
+                  onClick={() => navigate("/prepacked-barrel")}
+                  className="flex-1 flex items-center justify-center text-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg whitespace-nowrap px-2"
+                >
+                  Pre-Packed Barrels
+                </div>
+                <div
                   onClick={() => navigate("/contact")}
                   className="flex-1 flex items-center justify-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg"
                 >
@@ -218,6 +224,7 @@ export default function Navbar() {
               }
               setIsOpen(false);
             }} className="text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">How it works</div>
+            <div onClick={() => { navigate("/prepacked-barrel"); setIsOpen(false); }} className="text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">Pre-Packed Barrels</div>
             <div onClick={() => { navigate("/contact"); setIsOpen(false); }} className="text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">Contact</div>
           </div>
 

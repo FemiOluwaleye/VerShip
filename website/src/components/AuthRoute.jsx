@@ -80,6 +80,7 @@ import EditTimelineNext from '../pages/EditTimelineNext';
 import BusinessUploadNext from '../pages/BusinessUploadNext';
 import BusinessVerification from '../pages/BusinessVerification';
 import BarrelRequestForm from '../pages/BarrelRequestForm';
+import PrepackedBarrel from '../pages/PrepackedBarrel';
 import ForgotPasswordReset from '../pages/ForgotPasswordReset';
 import ForgotVerification from '../pages/ForgotVerification';
 import ProtectedRoute from '../components/ProtectedRoute';
@@ -214,6 +215,7 @@ const AppRoutes = () => {
             <Route path="/businessuploadnext" element={<ProtectedRoute><BusinessUploadNext /></ProtectedRoute>} />
             <Route path="/businessverification" element={<BusinessVerification />} />
             <Route path="/barrel-request/:id" element={<BarrelRequestForm />} />
+            <Route path="/prepacked-barrel" element={<PrepackedBarrel />} />
 
         </Routes>
     );

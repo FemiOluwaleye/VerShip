@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, Calendar, Info, MapPin, Search, Star, ArrowUpRight, Target, Flag } from "lucide-react";
+import { ChevronDown, Calendar, Info, MapPin, Search, ArrowUpRight, Target, Flag } from "lucide-react";
 import { container, profile1, loc, calender, iccon } from "../common/common-assets/assets-images";
 import { useNavigate, useLocation } from "react-router-dom";
-import { saveBookingRequest, getRatings, getProviderList } from "../api/cms";
+import { saveBookingRequest, getProviderList } from "../api/cms";
 import { toast } from "sonner";
 import { API_URL } from "../api/axios";
 
@@ -72,12 +72,6 @@ const Banner = () => {
     }
   }, [activeSubTab, providersList, origin]);
 
-  const [ratingsData, setRatingsData] = useState({
-    averageRating: 4.9,
-    totalReviews: 146822,
-    loading: true
-  });
-
   const getMinPickupDate = () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -96,7 +90,6 @@ const Banner = () => {
   // REMOVED the auto-selection useEffect - no automatic selection
 
   useEffect(() => {
-    fetchRatings();
     fetchProviders();
   }, []);
 
@@ -117,66 +110,6 @@ const Banner = () => {
       setProvidersList(providers);
     } catch (error) {
       console.error("Failed to fetch providers:", error);
-    }
-  };
-
-  const fetchRatings = async () => {
-    try {
-      const response = await getRatings();
-
-      let statsData = { averageRating: 0, totalReviews: 0 };
-      let ratingsArray = [];
-
-      if (response && response.body) {
-        if (response.body.stats) {
-          statsData = response.body.stats;
-        }
-        if (response.body.ratings && Array.isArray(response.body.ratings)) {
-          ratingsArray = response.body.ratings;
-        }
-      } else if (response && response.data) {
-        if (response.data.stats) {
-          statsData = response.data.stats;
-        }
-        if (response.data.ratings && Array.isArray(response.data.ratings)) {
-          ratingsArray = response.data.ratings;
-        } else if (Array.isArray(response.data)) {
-          ratingsArray = response.data;
-        }
-      }
-
-      if (ratingsArray.length > 0) {
-        let totalRating = 0;
-        let validRatingCount = 0;
-
-        ratingsArray.forEach(rating => {
-          if (rating.rating) {
-            totalRating += parseFloat(rating.rating);
-            validRatingCount++;
-          }
-        });
-
-        const calculatedAverage = validRatingCount > 0 ? totalRating / validRatingCount : 0;
-
-        setRatingsData({
-          averageRating: statsData.averageRating > 0 ? parseFloat(statsData.averageRating.toFixed(1)) : parseFloat(calculatedAverage.toFixed(1)),
-          totalReviews: statsData.totalReviews > 0 ? statsData.totalReviews : validRatingCount,
-          loading: false
-        });
-      } else {
-        setRatingsData({
-          averageRating: 4.9,
-          totalReviews: 146822,
-          loading: false
-        });
-      }
-    } catch (error) {
-      console.error("Failed to fetch ratings:", error);
-      setRatingsData({
-        averageRating: 4.9,
-        totalReviews: 146822,
-        loading: false
-      });
     }
   };
 
@@ -308,13 +241,33 @@ const Banner = () => {
           />
         </div>
 
-        {/* Reviews and Social Proof */}
-        <div className="flex flex-col items-center gap-3 relative z-40">
-          <div className="text-[#595d5e] text-base md:text-[19px] text-center max-w-2xl leading-snug font-normal px-4">
-            Compare rates from trusted shipping companies, book the best option and ship your barrel all through one platform
-          </div>
+        {/* Brand copy & social proof */}
+        <div className="flex flex-col items-center gap-3 md:gap-4 relative z-40 max-w-2xl text-center px-4">
+          {/* Eyebrow / context kicker */}
+          <span className="inline-flex items-center gap-2 text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-[#0D4D4D]/80">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#C1A35E]" aria-hidden="true" />
+            USA to Jamaica · Door to door
+          </span>
 
-          <div className="p-2 rounded-full bg-[#073737]/10">
+          {/* Headline */}
+          <h1 className="text-[#071618] font-bold tracking-tight text-[26px] leading-[1.15] md:text-[40px] md:leading-[1.1]">
+            Barrel shipping to Jamaica,{" "}
+            <span className="text-[#0D4D4D]">simplified.</span>
+          </h1>
+
+          {/* Supporting copy */}
+          <p className="text-[#595d5e] text-base md:text-[19px] leading-snug font-normal">
+            Compare rates from trusted shipping companies, book the best option, and ship your barrel — all on one platform.
+          </p>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-1">
+            <button
+              onClick={() => navigate("/prepacked-barrel")}
+              className="bg-[#C1A35E] text-[#071618] px-6 h-[46px] rounded-full font-bold text-base md:text-lg hover:bg-[#E5C78A] transition-all flex items-center justify-center shadow-[0_8px_16px_rgba(193,163,94,0.25)]"
+            >
+              Order VerShip Pre-Packed Barrel Now
+            </button>
             <button
               onClick={scrollToForm}
               className="bg-[#0D4D4D] text-white w-[168px] h-[46px] rounded-full font-bold text-base md:text-lg hover:bg-[#0A3D3D] transition-all flex items-center justify-center"

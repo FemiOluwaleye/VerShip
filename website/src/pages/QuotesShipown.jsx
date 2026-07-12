@@ -244,27 +244,30 @@ const QuotesShipown = () => {
         return matched || { dialCode: "+1", code: "US" };
     };
 
+    // Recipients (and the delivery address) always land in Jamaica, so default
+    // their phone country code to Jamaica (+1876). The shipper is the sender and
+    // stays on the US default (+1).
     const [primaryContact, setPrimaryContact] = useState({
-        firstName: "", lastName: "", phone: "", 
-        country: getInitialCountry("", "+1"), 
+        firstName: "", lastName: "", phone: "",
+        country: getInitialCountry("JM", "+1876"),
         email: "",
         address: "", city: "", state: "", suiteAptBuilding: "", lat: "", lng: ""
     });
     const [secondaryContact, setSecondaryContact] = useState({
-        firstName: "", lastName: "", phone: "", 
-        country: getInitialCountry("", "+1"), 
+        firstName: "", lastName: "", phone: "",
+        country: getInitialCountry("JM", "+1876"),
         email: "",
         address: "", city: "", state: "", suiteAptBuilding: "", lat: "", lng: ""
     });
     const [shipperAddr, setShipperAddr] = useState({
-        firstName: "", lastName: "", email: "", phone: "", 
+        firstName: "", lastName: "", email: "", phone: "",
         country: getInitialCountry("", "+1"),
         address: "", city: "", state: "", suiteAptBuilding: "", lat: "", lng: "",
         sameAsOrigin: false
     });
     const [deliveryAddr, setDeliveryAddr] = useState({
-        firstName: "", lastName: "", email: "", phone: "", 
-        country: getInitialCountry("", "+1"),
+        firstName: "", lastName: "", email: "", phone: "",
+        country: getInitialCountry("JM", "+1876"),
         address: "", city: "", state: "", suiteAptBuilding: "", lat: "", lng: "",
         sameAsPrimary: false
     });
