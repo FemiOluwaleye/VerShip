@@ -7,6 +7,14 @@ const helper = require("../../helper/helper");
 // create/update accept a `contents` array (or JSON string) and REPLACE the
 // child rows (parent-replaces-children).
 
+// Normalize a truthy/falsy request value (checkbox, "true"/"false", 1/0) to a boolean.
+function toBool(v) {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "number") return v !== 0;
+    if (typeof v === "string") return ["1", "true", "on", "yes"].includes(v.toLowerCase());
+    return false;
+}
+
 // Accepts an array or a JSON string; returns a normalized array of {name,quantity,icon,sort_order}.
 function parseContents(raw) {
     let arr = raw;
@@ -37,6 +45,7 @@ module.exports = {
             const { name, tagline, description, price, currency, transitTime, status } = req.body;
             if (!name) return helper.error(res, "Product name is required");
             if (price === undefined || price === "") return helper.error(res, "Price is required");
+            const featured = req.body.featured !== undefined ? toBool(req.body.featured) : false;
 
             let imagePath = "";
             if (req.files && req.files.image) {
@@ -52,6 +61,7 @@ module.exports = {
                 currency: currency || "USD",
                 transitTime: transitTime || "",
                 status: status || "1",
+                featured,
             });
 
             await replaceContents(product.id, parseContents(req.body.contents));
@@ -131,6 +141,7 @@ module.exports = {
                 currency: req.body.currency ?? product.currency,
                 transitTime: req.body.transitTime ?? product.transitTime,
                 status: req.body.status ?? product.status,
+                featured: req.body.featured !== undefined ? toBool(req.body.featured) : product.featured,
                 image: req.body.image || product.image,
             };
             await db.prepacked_barrel.update(fields, { where: { id } });
@@ -163,7 +174,7 @@ module.exports = {
         }
     },
 
-    // Read-only list of placed orders (so the owner can fulfil them).
+    // List of placed orders (so the owner can fulfil them via orderUpdateStatus).
     orderList: async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
@@ -201,6 +212,43 @@ module.exports = {
                 limit,
                 totalPages: Math.ceil(total / limit),
             });
+        } catch (error) {
+            return helper.error(res, error.message);
+        }
+    },
+
+    // Update an order's fulfilment state: status ('0'..'4') and/or payment_status (0|1).
+    orderUpdateStatus: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const order = await db.prepacked_orders.findOne({ where: { id } });
+            if (!order) return helper.error(res, "Order not found");
+
+            const fields = {};
+
+            if (req.body.status !== undefined) {
+                const status = String(req.body.status);
+                if (!["0", "1", "2", "3", "4"].includes(status)) {
+                    return helper.error(res, "Invalid status");
+                }
+                fields.status = status;
+            }
+
+            if (req.body.payment_status !== undefined) {
+                const payment = Number(req.body.payment_status);
+                if (![0, 1].includes(payment)) {
+                    return helper.error(res, "Invalid payment status");
+                }
+                fields.payment_status = payment;
+            }
+
+            if (Object.keys(fields).length === 0) {
+                return helper.error(res, "Nothing to update");
+            }
+
+            await db.prepacked_orders.update(fields, { where: { id } });
+            const updated = await db.prepacked_orders.findOne({ where: { id } });
+            return helper.success(res, "Order updated successfully", { data: updated });
         } catch (error) {
             return helper.error(res, error.message);
         }

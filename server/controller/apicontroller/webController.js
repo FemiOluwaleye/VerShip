@@ -585,20 +585,37 @@ module.exports = {
 
     // ---------------- PRE-PACKED FOOD BARREL (owner-sold fixed product) ----------------
     // Public: return the active product + its contents for the landing page.
+    // Public: the barrels shown on the landing page — all ACTIVE + FEATURED ones.
+    // Falls back to the single newest active barrel when nothing is featured, so
+    // the page is never empty for setups that haven't marked a barrel featured.
+    // Returns an ARRAY in `body` (the page renders a selectable grid).
     getPrepackedBarrel: async (req, res) => {
         try {
-            const product = await db.prepacked_barrel.findOne({
-                where: { status: "1" },
-                include: [{ model: db.prepacked_barrel_items, as: 'contents' }],
-                order: [
-                    ['id', 'DESC'],
-                    [{ model: db.prepacked_barrel_items, as: 'contents' }, 'sort_order', 'ASC'],
-                ],
+            const include = [{ model: db.prepacked_barrel_items, as: 'contents' }];
+            const order = [
+                ['id', 'DESC'],
+                [{ model: db.prepacked_barrel_items, as: 'contents' }, 'sort_order', 'ASC'],
+            ];
+
+            let products = await db.prepacked_barrel.findAll({
+                where: { status: "1", featured: true },
+                include,
+                order,
             });
-            if (!product) {
+
+            if (!products.length) {
+                products = await db.prepacked_barrel.findAll({
+                    where: { status: "1" },
+                    include,
+                    order,
+                    limit: 1,
+                });
+            }
+
+            if (!products.length) {
                 return helper.failure(res, "No pre-packed barrel is available right now.");
             }
-            return helper.success(res, "Pre-packed barrel fetched successfully.", product);
+            return helper.success(res, "Pre-packed barrels fetched successfully.", products);
         } catch (error) {
             console.log("error=------getPrepackedBarrel-------->>>>>", error);
             return helper.failure(res, error.message);
@@ -4291,7 +4308,33 @@ module.exports = {
                 return helper.failure(res, "Booking not found.");
             }
 
-            const paidTotal = total ?? pay_now;
+            // Ownership: only the booking's own user may confirm its payment (IDOR guard).
+            if (booking.userId != null && String(booking.userId) !== String(req.user.id)) {
+                return helper.forbidden(res, "You are not allowed to update this booking.");
+            }
+
+            // Verify the payment actually happened via Stripe rather than trusting the
+            // client. Prevents marking a booking paid without paying, and amount tampering.
+            const paymentId = req.body.paymentId;
+            if (!paymentId) {
+                return helper.failure(res, "paymentId is required.");
+            }
+            const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+            let paymentIntent;
+            try {
+                paymentIntent = await stripe.paymentIntents.retrieve(paymentId);
+            } catch (e) {
+                return helper.failure(res, "Payment verification failed.");
+            }
+            if (!paymentIntent || paymentIntent.status !== "succeeded") {
+                return helper.failure(res, "Payment has not been completed.");
+            }
+            if (String(paymentIntent.metadata?.bookingId || "") !== String(booking.id)) {
+                return helper.failure(res, "Payment does not match this booking.");
+            }
+
+            // Authoritative amount comes from Stripe (in cents), not the request body.
+            const paidTotal = Number(((paymentIntent.amount_received || paymentIntent.amount) / 100).toFixed(2));
 
             await booking.update({
                 pay_now_price: paidTotal,

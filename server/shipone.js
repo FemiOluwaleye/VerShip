@@ -63,9 +63,16 @@ app.post('/stripe/webhook', bodyParser.raw({ type: 'application/json' }), async 
   console.log('[WEBHOOK] Stripe signature captured:', sig ? 'Present' : 'Missing');
 
   try {
-    console.log('[WEBHOOK] Parsing request body');
-    let event = JSON.parse(req.body.toString());
-    console.log('[WEBHOOK] Event parsed successfully, type:', event.type);
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!endpointSecret) {
+      console.error('[WEBHOOK] STRIPE_WEBHOOK_SECRET is not configured — rejecting unverifiable webhook');
+      return res.status(500).send('Webhook secret not configured');
+    }
+    // Verify the event genuinely came from Stripe using the raw request body.
+    // Without this, anyone could POST a forged payment_intent.succeeded and mark
+    // bookings as paid.
+    const event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    console.log('[WEBHOOK] Event verified, type:', event.type);
 
     if (event.type === 'account.updated') {
       console.log('[WEBHOOK] Processing account.updated event');
@@ -223,7 +230,9 @@ const uploadRoot = process.env.UPLOAD_DIR || path.join(__dirname, "public");
 app.use('/images', express.static(path.join(uploadRoot, "images")));
 app.use('/admin/images', express.static(path.join(uploadRoot, "images")));
 
-if (serveApp) app.use(express.static(appBuildPath));
+// redirect:false so a prerendered directory route (e.g. dist/about/) isn't
+// auto-redirected to a trailing slash before the catch-all can serve it cleanly.
+if (serveApp) app.use(express.static(appBuildPath, { redirect: false }));
 
 // Prevent caching for specific routes
 app.use((req, res, next) => {
@@ -263,6 +272,16 @@ app.use('/website', websiteRouter);
 // unmatched routes fall through to the 404 handler instead of erroring.
 if (serveApp) {
   app.get('*', (req, res) => {
+    // Prefer a prerendered per-route page (from `npm run prerender`) so crawlers
+    // get real content + per-page metadata; otherwise serve the SPA shell.
+    // Falls back safely when no prerendered files exist.
+    const cleanPath = req.path.replace(/\/+$/, "");
+    if (cleanPath && !path.extname(cleanPath)) {
+      const candidate = path.resolve(appBuildPath, "." + cleanPath, "index.html");
+      if (candidate.startsWith(appBuildPath + path.sep) && fs.existsSync(candidate)) {
+        return res.sendFile(candidate);
+      }
+    }
     res.sendFile(path.join(appBuildPath, "index.html"));
   });
 }

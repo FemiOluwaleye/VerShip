@@ -65,3 +65,9 @@ CODEX_*.md
 
 # e2e auth fixtures (contain JWTs)
 e2e/.auth.json
+
+# Local migration tooling & scratch — not part of the app; legacy_dump.sql
+# holds real legacy data and must never be committed.
+/attached_assets/
+/legacy_dump.sql
+/server/import_legacy.js

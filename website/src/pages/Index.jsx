@@ -1,4 +1,5 @@
 import React from 'react'
+import Seo from '../components/Seo'
 import Banner from '../components/Banner'
 import HowItWorks from '../components/HowItWorks'
 import MoveBusinessForward from '../components/MoveBusinessForward'
@@ -42,6 +43,7 @@ const Index = () => {
 
   return (
     <>
+      <Seo path="/" />
 
       <Banner />
       <HowItWorks />

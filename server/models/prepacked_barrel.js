@@ -44,11 +44,18 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: true,
             defaultValue: ""
         },
-        // '1' = active/featured (shown on the landing page), '0' = hidden
+        // '1' = active (eligible to show), '0' = hidden everywhere
         status: {
             type: DataTypes.STRING(4),
             allowNull: false,
             defaultValue: "1"
+        },
+        // When true (and status active), the barrel is shown on the public
+        // landing page. Multiple barrels can be featured at once.
+        featured: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false
         }
     }, {
         sequelize,

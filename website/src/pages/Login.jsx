@@ -522,9 +522,10 @@ const Login = () => {
                                     onChange={handleChange}
                                     aria-required="true"
                                     aria-invalid={errors.email ? "true" : "false"}
+                                    aria-describedby={errors.email ? "login-email-error" : undefined}
                                     placeholder="Enter your Email"
                                 />
-                                {errors.email && <p className="text-red-400 text-xs">{errors.email}</p>}
+                                {errors.email && <p id="login-email-error" role="alert" className="text-red-400 text-xs">{errors.email}</p>}
                             </div>
                             <div className="flex flex-col gap-1 w-full relative">
                                 <label htmlFor="login-password" className="text-[13px] sm:text-[14px] xl:text-[18px] font-semibold">
@@ -539,6 +540,7 @@ const Login = () => {
                                     onChange={handleChange}
                                     aria-required="true"
                                     aria-invalid={errors.password ? "true" : "false"}
+                                    aria-describedby={errors.password ? "login-password-error" : undefined}
                                     placeholder="Enter your Password"
                                 />
                                 <button
@@ -549,7 +551,7 @@ const Login = () => {
                                 >
                                     {showPassword ? <FaEyeSlash /> : <FaEye />}
                                 </button>
-                                {errors.password && <p className="text-red-400 text-xs">{errors.password}</p>}
+                                {errors.password && <p id="login-password-error" role="alert" className="text-red-400 text-xs">{errors.password}</p>}
                             </div>
                             <div className="flex items-start justify-between w-full">
                                 <div className="flex items-center justify-center gap-0.5 sm:gap-1">
@@ -566,9 +568,9 @@ const Login = () => {
                                     </label>
                                 </div>
                                 <div>
-                                    <p onClick={() => navigate('/forgot')} className="text-[12px]  sm:text-[14px] cursor-pointer hover:text-yellow-400 underline transition">
+                                    <button type="button" onClick={() => navigate('/forgot')} className="text-[12px]  sm:text-[14px] cursor-pointer hover:text-yellow-400 underline transition">
                                         Forgot Password?
-                                    </p>
+                                    </button>
                                 </div>
                             </div>
                             <div className="flex items-center justify-center w-full mt-3 sm:mt-5 xl:mt-10">
@@ -618,7 +620,7 @@ const Login = () => {
 
                         <p className="text-sm text-white/80">
                             Don't have an Account?
-                            <span onClick={() => navigate('/type')} className="text-yellow-400 font-bold cursor-pointer hover:underline ml-1"> Sign Up</span>
+                            <button type="button" onClick={() => navigate('/type')} className="text-yellow-400 font-bold cursor-pointer hover:underline ml-1">Sign Up</button>
                         </p>
                     </div>
                 </div>

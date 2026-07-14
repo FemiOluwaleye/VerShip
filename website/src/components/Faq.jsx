@@ -107,23 +107,32 @@ const Faq = ({ show = true }) => {
             {faqs.map((faq, index) => (
               <div
                 key={faq.id}
-                className="bg-[#1B2625] border border-white/5 px-7 py-8 cursor-pointer transition hover:border-white/20 rounded-xl"
-                onClick={() => toggleFaq(index)}
+                className="bg-[#1B2625] border border-white/5 px-7 py-8 transition hover:border-white/20 rounded-xl"
               >
-                <div className="flex justify-between gap-2 items-center ">
-                  <h3 className="font-semibold text-[16px] sm:text-[18px] lg:text-[21px] text-white">
-                    {faq.question}
-                  </h3>
-                  <div className=''>
-                    <img src={arrow} className='w-[14px]' alt="" />
-
-                  </div>
-                </div>
+                <h3 className="m-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleFaq(index)}
+                    aria-expanded={activeIndex === index}
+                    aria-controls={`faq-panel-${faq.id}`}
+                    id={`faq-header-${faq.id}`}
+                    className="w-full flex justify-between gap-2 items-center text-left cursor-pointer font-semibold text-[16px] sm:text-[18px] lg:text-[21px] text-white"
+                  >
+                    <span>{faq.question}</span>
+                    <img
+                      src={arrow}
+                      className={`w-[14px] shrink-0 transition-transform ${activeIndex === index ? 'rotate-180' : ''}`}
+                      alt=""
+                    />
+                  </button>
+                </h3>
 
                 {activeIndex === index && (
-                  <p className="mt-4 text-white/50 text-[14px] sm:text-[16px] lg:text-[17px] leading-relaxed">
-                    {faq.answer}
-                  </p>
+                  <div id={`faq-panel-${faq.id}`} role="region" aria-labelledby={`faq-header-${faq.id}`}>
+                    <p className="mt-4 text-white/70 text-[14px] sm:text-[16px] lg:text-[17px] leading-relaxed">
+                      {faq.answer}
+                    </p>
+                  </div>
                 )}
               </div>
             ))}

@@ -60,8 +60,18 @@ Object.keys(db).forEach(modelName => {
 });
 
 sequelize.sync({ alter: false })
-  .then(() => {
+  .then(async () => {
     console.log('Database synced successfully');
+    // Additive column guards: sync runs with alter:false, so columns added to a
+    // model after its table already exists are NOT applied. Add them here
+    // idempotently (Postgres ADD COLUMN IF NOT EXISTS is a no-op if present).
+    try {
+      await sequelize.query(
+        'ALTER TABLE prepacked_barrel ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT false'
+      );
+    } catch (err) {
+      console.error('Column guard (prepacked_barrel.featured) failed:', err.message);
+    }
   })
   .catch((err) => {
     console.error('Error syncing the database:', err);

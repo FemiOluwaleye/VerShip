@@ -12,10 +12,13 @@ body {
 }
 
 
-/* Accessibility: visible keyboard focus indicator (WCAG 2.4.7) */
+/* Accessibility: visible keyboard focus indicator (WCAG 2.4.7).
+   !important so it overrides Tailwind's many `focus:outline-none` utilities,
+   but only for keyboard focus (:focus-visible), so mouse clicks stay clean. */
 :focus-visible {
-  outline: 2px solid #FFBF00;
-  outline-offset: 2px;
+  outline: 2px solid #FFBF00 !important;
+  outline-offset: 2px !important;
+  border-radius: 2px;
 }
 
 /* Accessibility: "Skip to main content" link — visually hidden until focused */

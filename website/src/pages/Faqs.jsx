@@ -3,6 +3,7 @@ import { FiChevronDown } from "react-icons/fi";
 import { arrow2 } from '../common/common-assets/assets-images';
 import Commonbanner from '../components/Commonbanner';
 import { getFaqs } from "../api/cms";
+import Seo from "../components/Seo";
 
 
 
@@ -91,6 +92,7 @@ const Faqs = () => {
   return (
     <>
       <section className="bg-[linear-gradient(180deg,#2C4736_0%,#09120F_100%)]">
+        <Seo title="FAQs" path="/faqs" description="Answers to common questions about shipping barrels from the USA to Jamaica with VerShip — quotes, delivery times, customs, tracking, and pricing." />
         <Commonbanner title="FAQ's" />
         <div className="container mx-auto px-4 py-16">
 
@@ -98,23 +100,32 @@ const Faqs = () => {
             {faqs.map((faq, index) => (
               <div
                 key={faq.id}
-                className="bg-[#2D413F] shadow border-l-5 border-[#FCC604] px-7 py-8 cursor-pointer transition hover:bg-[#2D413F] hover:shadow-none hover:cursor-pointer transition-shadow duration-300 ease-in-out"
-                onClick={() => toggleFaq(index)}
+                className="bg-[#2D413F] shadow border-l-5 border-[#FCC604] px-7 py-8 transition hover:shadow-none transition-shadow duration-300 ease-in-out"
               >
-                <div className="flex justify-between gap-2 items-center ">
-                  <h3 className="font-semibold text-[16px] sm:text-[18px] lg:text-[23px] bg-[#2D413F]  text-white">
-                    {faq.question}
-                  </h3>
-                  <div className=''>
-                    <img src={arrow2} className='w-[26px]' alt="" />
-
-                  </div>
-                </div>
+                <h3 className="m-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleFaq(index)}
+                    aria-expanded={activeIndex === index}
+                    aria-controls={`faqs-panel-${faq.id}`}
+                    id={`faqs-header-${faq.id}`}
+                    className="w-full flex justify-between gap-2 items-center text-left cursor-pointer font-semibold text-[16px] sm:text-[18px] lg:text-[23px] text-white"
+                  >
+                    <span>{faq.question}</span>
+                    <img
+                      src={arrow2}
+                      className={`w-[26px] shrink-0 transition-transform ${activeIndex === index ? 'rotate-180' : ''}`}
+                      alt=""
+                    />
+                  </button>
+                </h3>
 
                 {activeIndex === index && (
-                  <p className="mt-4 text-white text-[14px] sm:text-[16px] lg:text-[17px]">
-                    {faq.answer}
-                  </p>
+                  <div id={`faqs-panel-${faq.id}`} role="region" aria-labelledby={`faqs-header-${faq.id}`}>
+                    <p className="mt-4 text-white text-[14px] sm:text-[16px] lg:text-[17px]">
+                      {faq.answer}
+                    </p>
+                  </div>
                 )}
               </div>
             ))}

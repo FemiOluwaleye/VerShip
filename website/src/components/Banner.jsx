@@ -230,19 +230,19 @@ const Banner = () => {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="bg-[#F8FAFA] pt-6 md:pt-8 pb-3 md:pb-4 px-4 md:px-6 flex flex-col items-center overflow-hidden relative">
+      <section className="bg-[#F8FAFA] pt-4 md:pt-5 pb-2 md:pb-3 px-4 md:px-6 flex flex-col items-center overflow-hidden relative">
 
         {/* Container Image (Layered on top) */}
-        <div className="relative mt-0 md:mt-[-40px] mb-3 md:mb-4 z-30 w-full max-w-[560px] flex justify-center">
+        <div className="relative mt-0 md:mt-[-28px] mb-1 md:mb-2 z-30 w-full max-w-[400px] flex justify-center">
           <img
             src={container}
             alt="VerShip — shipping barrels to Jamaica made easy"
-            className="w-full md:w-[560px] object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.15)] md:drop-shadow-[0_30px_30px_rgba(0,0,0,0.15)]"
+            className="w-full object-contain drop-shadow-[0_16px_18px_rgba(0,0,0,0.15)]"
           />
         </div>
 
         {/* Brand copy & social proof */}
-        <div className="flex flex-col items-center gap-3 md:gap-4 relative z-40 max-w-2xl text-center px-4">
+        <div className="flex flex-col items-center gap-2 md:gap-2.5 relative z-40 max-w-2xl text-center px-4">
           {/* Eyebrow / context kicker */}
           <span className="inline-flex items-center gap-2 text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-[#0D4D4D]/80">
             <span className="w-1.5 h-1.5 rounded-full bg-[#C1A35E]" aria-hidden="true" />
@@ -250,27 +250,27 @@ const Banner = () => {
           </span>
 
           {/* Headline */}
-          <h1 className="text-[#071618] font-bold tracking-tight text-[26px] leading-[1.15] md:text-[40px] md:leading-[1.1]">
+          <h1 className="text-[#071618] font-bold tracking-tight text-[24px] leading-[1.1] md:text-[34px] md:leading-[1.05]">
             Barrel shipping to Jamaica,{" "}
             <span className="text-[#0D4D4D]">simplified.</span>
           </h1>
 
           {/* Supporting copy */}
-          <p className="text-[#595d5e] text-base md:text-[19px] leading-snug font-normal">
+          <p className="text-[#595d5e] text-sm md:text-[17px] leading-snug font-normal">
             Compare rates from trusted shipping companies, book the best option, and ship your barrel — all on one platform.
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-1">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-0.5">
             <button
               onClick={() => navigate("/prepacked-barrel")}
-              className="bg-[#C1A35E] text-[#071618] px-6 h-[46px] rounded-full font-bold text-base md:text-lg hover:bg-[#E5C78A] transition-all flex items-center justify-center shadow-[0_8px_16px_rgba(193,163,94,0.25)]"
+              className="bg-[#C1A35E] text-[#071618] px-6 h-[42px] rounded-full font-bold text-sm md:text-base hover:bg-[#E5C78A] transition-all flex items-center justify-center shadow-[0_8px_16px_rgba(193,163,94,0.25)]"
             >
               Order VerShip Pre-Packed Barrel Now
             </button>
             <button
               onClick={scrollToForm}
-              className="bg-[#0D4D4D] text-white w-[168px] h-[46px] rounded-full font-bold text-base md:text-lg hover:bg-[#0A3D3D] transition-all flex items-center justify-center"
+              className="bg-[#0D4D4D] text-white w-[168px] h-[42px] rounded-full font-bold text-sm md:text-base hover:bg-[#0A3D3D] transition-all flex items-center justify-center"
             >
               Get quotes
             </button>
@@ -279,7 +279,7 @@ const Banner = () => {
       </section>
 
       {/* Form Section */}
-      <section id="booking-form" ref={formRef} className="bg-[#071618] pt-6 pb-8 md:pt-8 md:pb-14 px-4 md:px-6">
+      <section id="booking-form" ref={formRef} className="bg-[#071618] pt-4 pb-6 md:pt-5 md:pb-8 px-4 md:px-6">
         <div className="max-w-[1326px] mx-auto">
           {/* Tabs */}
           <div className="flex justify-center mb-[-1px] relative z-20">
@@ -287,7 +287,7 @@ const Banner = () => {
               <div className="relative">
                 <button
                   onClick={() => setActiveSubTab("Ship Your Own Barrel")}
-                  className={`px-8 md:px-12 py-4 md:py-5 font-medium text-sm md:text-[22px] transition-all relative z-10 ${activeSubTab === "Ship Your Own Barrel"
+                  className={`px-8 md:px-12 py-3 md:py-4 font-medium text-sm md:text-[20px] transition-all relative z-10 ${activeSubTab === "Ship Your Own Barrel"
                     ? "text-[#D4B97C]"
                     : "text-white hover:text-white/80"
                     }`}
@@ -310,7 +310,7 @@ const Banner = () => {
               <div className="relative">
                 <button
                   onClick={() => setActiveSubTab("Request Barrel Drop-Off")}
-                  className={`px-8 md:px-12 py-4 md:py-5 font-medium text-sm md:text-[22px] transition-all relative z-10 ${activeSubTab === "Request Barrel Drop-Off"
+                  className={`px-8 md:px-12 py-3 md:py-4 font-medium text-sm md:text-[20px] transition-all relative z-10 ${activeSubTab === "Request Barrel Drop-Off"
                     ? "text-[#D4B97C]"
                     : "text-white hover:text-white/80"
                     }`}
@@ -333,9 +333,9 @@ const Banner = () => {
           </div>
 
           {/* Form Container */}
-          <div className="bg-[#051111] border border-white/10 rounded-[16px] md:rounded-[20px] p-6 md:p-10 pb-10 md:pb-12 shadow-2xl relative z-10">
+          <div className="bg-[#051111] border border-white/10 rounded-[16px] md:rounded-[20px] p-5 md:p-7 pb-6 md:pb-8 shadow-2xl relative z-10">
             {/* Top Row: Origin & Destination */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div ref={originRef} className="relative">
                 <button
                   type="button"
@@ -421,7 +421,7 @@ const Banner = () => {
             </div>
 
             {/* Bottom Row: Quantity & Dates */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6 md:mb-10">
+            <div className="flex flex-col md:flex-row gap-4 mb-4 md:mb-6">
               {/* Quantity Field - No label for both tabs */}
               <div className="flex-grow md:w-[20%]">
                 <div className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4">
@@ -541,7 +541,7 @@ const Banner = () => {
               )}
             </div>
 
-            <div className="flex justify-center mt-4 md:mt-8">
+            <div className="flex justify-center mt-2 md:mt-4">
               <div className="p-2 bg-[#DCD5C5]/5 rounded-2xl md:rounded-[14px]">
                 <button
                   onClick={handleSubmit}

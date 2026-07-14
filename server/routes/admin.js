@@ -114,6 +114,7 @@ router.get('/prepacked/detail/:id', prepackedController.productDetail);
 router.post('/prepacked/update/:id', prepackedController.productUpdate);
 router.post('/prepacked/delete/:id', prepackedController.productDelete);
 router.get('/prepacked-orders/list', prepackedController.orderList);
+router.post('/prepacked-orders/update/:id', prepackedController.orderUpdateStatus);
 
 // cookie routes
 router.get('/cookielist', cookieController.cookieList);

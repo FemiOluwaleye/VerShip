@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Commonbanner from "../components/Commonbanner";
 import { getRefundPolicy } from "../api/cms";
+import { sanitizeHtml } from "../utils/sanitizeHtml";
+import Seo from "../components/Seo";
 
 const RefundPolicy = () => {
     const [content, setContent] = useState("");
@@ -24,6 +26,7 @@ const RefundPolicy = () => {
 
     return (
         <div className="bg-[linear-gradient(180deg,#2C4736_0%,#09120F_100%)] min-h-screen">
+            <Seo title="Refund Policy" path="/refund-policy" description="VerShip's refund, cancellation, and payment policy for bookings made through the platform." />
             <Commonbanner title="Refund Policy" />
             <div className="container mx-auto flex flex-col items-start justify-center gap-5 text-white/80">
                 <div className="w-full py-10 lg:py-20">
@@ -32,7 +35,7 @@ const RefundPolicy = () => {
                     ) : (
                         <div
                             className="text-[16px] lg:text-[18px] font-normal leading-relaxed cms-content"
-                            dangerouslySetInnerHTML={{ __html: content }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
                         />
                     )}
                 </div>

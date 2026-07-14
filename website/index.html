@@ -5,26 +5,37 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Primary Meta Tags -->
+    <!-- Fallback title/description. Per-route title, description, canonical, and
+         OG/Twitter tags are set at runtime via react-helmet-async (src/components/Seo.jsx).
+         Those page-specific tags are intentionally NOT hardcoded here, so non-home
+         routes don't inherit a homepage canonical. -->
     <title>VerShip — Compare & Book Barrel Shipping from the USA to Jamaica</title>
-    <meta name="title" content="VerShip — Compare & Book Barrel Shipping from the USA to Jamaica" />
     <meta name="description" content="VerShip lets you compare rates from trusted freight forwarders, book the best option, and ship your barrel from the USA to Jamaica — all door to door on one platform." />
     <meta name="keywords" content="barrel shipping, USA to Jamaica shipping, freight forwarder Jamaica, compare shipping rates, ship barrel Jamaica, Kingston freight, VerShip" />
     <meta name="author" content="VerShip" />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://vershipgo.com/" />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://vershipgo.com/" />
-    <meta property="og:title" content="VerShip — Compare & Book Barrel Shipping from the USA to Jamaica" />
-    <meta property="og:description" content="Compare rates from trusted freight forwarders, book the best option, and ship your barrel from the USA to Jamaica — all door to door on one platform." />
-    <meta property="og:site_name" content="VerShip" />
-
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="VerShip — Compare & Book Barrel Shipping from the USA to Jamaica" />
-    <meta name="twitter:description" content="Compare rates from trusted freight forwarders and ship your barrel from the USA to Jamaica, door to door, on one platform." />
+    <!-- Structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "VerShip",
+      "url": "https://vershipgo.com/",
+      "description": "Compare rates from trusted freight forwarders and ship your barrel from the USA to Jamaica, door to door, on one platform.",
+      "email": "info@vershipgo.com",
+      "telephone": "+1-814-232-4537",
+      "areaServed": ["US", "JM"]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "VerShip",
+      "url": "https://vershipgo.com/"
+    }
+    </script>
 
     <script type="text/javascript" src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
   </head>

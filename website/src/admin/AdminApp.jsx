@@ -38,6 +38,10 @@ import ProviderList from "./Admin/Providers/ProvidersListing";
 import CookieList from "./Admin/Cookies/CookieList";
 import CookieAdd from "./Admin/Cookies/CookieAdd";
 import CookieEdit from "./Admin/Cookies/CookieEdit";
+import PrepackedOrderList from "./Admin/PrepackedOrders/OrderList";
+import PrepackedProductList from "./Admin/PrepackedOrders/ProductList";
+import PrepackedProductAdd from "./Admin/PrepackedOrders/ProductAdd";
+import PrepackedProductEdit from "./Admin/PrepackedOrders/ProductEdit";
 
 // Route paths are RELATIVE — this whole tree is mounted under /admin/* by the
 // public App router, so React Router resolves them beneath /admin.
@@ -96,6 +100,10 @@ const AdminApp = () => {
             <Route path="updatecookie/:id" element={<PrivateRoute element={<CookieEdit />} />} />
             <Route path="bookingcompleted" element={<PrivateRoute element={<BookingCompleted />} />} />
             <Route path="Bookinglist" element={<PrivateRoute element={<Bookinglist />} />} />
+            <Route path="prepackedorders" element={<PrivateRoute element={<PrepackedOrderList />} />} />
+            <Route path="prepacked/list" element={<PrivateRoute element={<PrepackedProductList />} />} />
+            <Route path="prepacked/add" element={<PrivateRoute element={<PrepackedProductAdd />} />} />
+            <Route path="prepacked/edit/:id" element={<PrivateRoute element={<PrepackedProductEdit />} />} />
           </Route>
         </Routes>
       </AdminAssetsLoader>

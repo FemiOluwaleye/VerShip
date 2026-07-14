@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import Commonbanner from '../components/Commonbanner';
 import { getPrepackedBarrel, createPrepackedOrder } from '../api/cms';
 import { API_URL } from '../api/axios';
+import prepackedBarrelImg from '../assets/prepacked-barrel.png';
 
 // The 14 parishes of Jamaica — delivery is Jamaica-only for this product.
 const JAMAICA_PARISHES = [
@@ -14,12 +15,66 @@ const JAMAICA_PARISHES = [
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Uploaded images are stored with a leading slash (e.g. `/images/x.png`).
+// Naively doing `${API_URL}/${img}` with the same-origin default (API_URL='')
+// produces `//images/x.png` — a protocol-relative URL the browser reads as the
+// host `images`, so nothing loads. Trim leading slashes before joining.
+const resolveImageUrl = (img) => {
+    if (!img) return null;
+    if (/^https?:\/\//.test(img)) return img;
+    return `${API_URL}/${img.replace(/^\/+/, '')}`;
+};
+
+// A barrel's media can be a still image or a video/animation (e.g. an uploaded
+// .mp4). Detect by extension so we can render the right element.
+const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov)(\?|#|$)/i.test(url || '');
+
+// Renders a barrel's media: a looping muted video for animations, an <img> for
+// stills, and the bundled placeholder when there's nothing (or the media fails
+// to load). `mediaClass` styles the loaded media; `placeholderClass` the
+// centered-placeholder wrapper.
+const BarrelMedia = ({ src, alt, mediaClass, placeholderClass }) => {
+    if (src && isVideoUrl(src)) {
+        return (
+            <video
+                src={src}
+                className={mediaClass}
+                autoPlay
+                loop
+                muted
+                playsInline
+                aria-label={alt}
+            />
+        );
+    }
+    if (src) {
+        return (
+            <img
+                src={src}
+                alt={alt}
+                className={mediaClass}
+                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = prepackedBarrelImg; }}
+            />
+        );
+    }
+    return (
+        <div className={placeholderClass}>
+            <img src={prepackedBarrelImg} alt={alt} className="h-full w-auto object-contain" />
+        </div>
+    );
+};
+
 const PrepackedBarrel = () => {
     const navigate = useNavigate();
 
-    const [product, setProduct] = useState(null);
+    const [products, setProducts] = useState([]);
+    const [selected, setSelected] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState('');
+
+    // Rest of the page is written against a single `product`; when one barrel is
+    // picked from the grid it becomes the active product for detail + checkout.
+    const product = selected;
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [confirmation, setConfirmation] = useState(null); // { order, accountExists }
@@ -45,8 +100,12 @@ const PrepackedBarrel = () => {
             try {
                 const res = await getPrepackedBarrel();
                 if (!active) return;
-                if (res?.success && res?.body) {
-                    setProduct(res.body);
+                // `body` is now an array of featured barrels (see webController).
+                const list = Array.isArray(res?.body) ? res.body : res?.body ? [res.body] : [];
+                if (res?.success && list.length) {
+                    setProducts(list);
+                    // Skip the grid when there's only one barrel to choose.
+                    if (list.length === 1) setSelected(list[0]);
                 } else {
                     setLoadError(res?.message || 'No pre-packed barrel is available right now.');
                 }
@@ -64,9 +123,7 @@ const PrepackedBarrel = () => {
     const currency = product?.currency || 'USD';
     const qty = Math.max(1, parseInt(form.quantity, 10) || 1);
     const total = (unitPrice * qty).toFixed(2);
-    const imageSrc = product?.image
-        ? (product.image.startsWith('http') ? product.image : `${API_URL}/${product.image}`)
-        : null;
+    const imageSrc = resolveImageUrl(product?.image);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -154,13 +211,13 @@ const PrepackedBarrel = () => {
         );
     }
 
-    if (loadError || !product) {
+    if (loadError || products.length === 0) {
         return (
             <div className="min-h-screen bg-[#F8FAFA]">
                 <Commonbanner title="VerShip Pre-Packed Food Barrels" />
                 <div className="max-w-3xl mx-auto px-4 py-20 text-center">
                     <p className="text-[#071618] text-lg font-semibold mb-4">
-                        {loadError || 'This product is not available right now.'}
+                        {loadError || 'No pre-packed barrels are available right now.'}
                     </p>
                     <button
                         onClick={() => navigate('/')}
@@ -221,15 +278,65 @@ const PrepackedBarrel = () => {
         <div className="min-h-screen bg-[#F8FAFA]">
             <Commonbanner title="VerShip Pre-Packed Food Barrels" />
 
-            <div className="max-w-6xl mx-auto px-4 py-10 md:py-14 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+            {!selected ? (
+                /* ---------- Barrel grid (choose one) ---------- */
+                <div className="max-w-6xl mx-auto px-4 py-10 md:py-14">
+                    <h2 className="text-xl md:text-2xl font-bold text-[#071618] mb-6">Choose your barrel</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {products.map((p) => {
+                            const src = resolveImageUrl(p.image);
+                            return (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => { setSelected(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                    className="text-left bg-white rounded-[22px] border border-[#0D4D4D]/10 overflow-hidden shadow-sm hover:shadow-md hover:border-[#C1A35E]/60 transition-all"
+                                >
+                                    <BarrelMedia
+                                        src={src}
+                                        alt={p.name}
+                                        mediaClass="w-full h-44 object-cover"
+                                        placeholderClass="w-full h-44 bg-[#0D4D4D]/5 flex items-center justify-center p-4"
+                                    />
+                                    <div className="p-5">
+                                        <h3 className="text-lg font-bold text-[#071618]">{p.name}</h3>
+                                        {p.tagline && <p className="text-[#595d5e] text-sm mt-1 line-clamp-2">{p.tagline}</p>}
+                                        <div className="flex items-baseline justify-between mt-4">
+                                            <span className="text-2xl font-bold text-[#0D4D4D]">{p.currency || 'USD'} {(parseFloat(p.price) || 0).toFixed(2)}</span>
+                                            {Array.isArray(p.contents) && p.contents.length > 0 && (
+                                                <span className="text-xs text-[#595d5e]">{p.contents.length} items</span>
+                                            )}
+                                        </div>
+                                        <span className="mt-4 inline-flex w-full items-center justify-center bg-[#C1A35E] text-[#071618] h-[44px] rounded-full font-bold hover:bg-[#E5C78A] transition-all">
+                                            Select
+                                        </span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            ) : (
+            <div className="max-w-6xl mx-auto px-4 py-10 md:py-14">
+                {products.length > 1 && (
+                    <button
+                        type="button"
+                        onClick={() => setSelected(null)}
+                        className="mb-6 inline-flex items-center gap-2 text-[#0D4D4D] font-semibold hover:underline"
+                    >
+                        ← Choose a different barrel
+                    </button>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
                 {/* ---------- Product ---------- */}
                 <div>
                     <div className="bg-white rounded-[22px] border border-[#0D4D4D]/10 overflow-hidden shadow-sm">
-                        {imageSrc ? (
-                            <img src={imageSrc} alt={product.name} className="w-full h-64 object-cover" />
-                        ) : (
-                            <div className="w-full h-64 bg-[#0D4D4D]/5 flex items-center justify-center text-7xl" aria-hidden="true">🛢️</div>
-                        )}
+                        <BarrelMedia
+                            src={imageSrc}
+                            alt={product?.name || 'VerShip pre-packed barrel'}
+                            mediaClass="w-full h-64 object-cover"
+                            placeholderClass="w-full h-64 bg-[#0D4D4D]/5 flex items-center justify-center p-4"
+                        />
                         <div className="p-6 md:p-8">
                             <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0D4D4D]/80 mb-3">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#C1A35E]" aria-hidden="true" />
@@ -364,7 +471,9 @@ const PrepackedBarrel = () => {
                         </p>
                     </form>
                 </div>
+                </div>
             </div>
+            )}
         </div>
     );
 };

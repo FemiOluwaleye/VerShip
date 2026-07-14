@@ -48,22 +48,22 @@ const Footer = () => {
 
             {/* Middle Column - MAIN */}
             <div className="md:col-span-2 lg:col-span-2 mx-8">
-              <h4 className="text-[10px] md:text-[11px] font-bold text-white/30 uppercase tracking-[2px] mb-6 md:mb-8">Main</h4>
+              <h4 className="text-[10px] md:text-[11px] font-bold text-white/50 uppercase tracking-[2px] mb-6 md:mb-8">Main</h4>
               <ul className="flex flex-col gap-3 md:gap-4">
-                <li className="cursor-pointer text-[12px] md:text-[13px] font-medium text-white/60 hover:text-[#C1A35E] transition-colors" onClick={() => navigate("/about")}>About us</li>
-                <li className="cursor-pointer text-[12px] md:text-[13px] font-medium text-white/60 hover:text-[#C1A35E] transition-colors" onClick={() => scrollToSection("how-it-works")}>How it works</li>
-                <li className="cursor-pointer text-[12px] md:text-[13px] font-medium text-white/60 hover:text-[#C1A35E] transition-colors" onClick={() => navigate("/contact")}>Contact us</li>
-                <li className="cursor-pointer text-[12px] md:text-[13px] font-medium text-white/60 hover:text-[#C1A35E] transition-colors" onClick={() => navigate("/login")}>Login</li>
+                <li><button type="button" onClick={() => navigate("/about")} className="text-left cursor-pointer text-[12px] md:text-[13px] font-medium text-white/70 hover:text-[#C1A35E] transition-colors">About us</button></li>
+                <li><button type="button" onClick={() => scrollToSection("how-it-works")} className="text-left cursor-pointer text-[12px] md:text-[13px] font-medium text-white/70 hover:text-[#C1A35E] transition-colors">How it works</button></li>
+                <li><button type="button" onClick={() => navigate("/contact")} className="text-left cursor-pointer text-[12px] md:text-[13px] font-medium text-white/70 hover:text-[#C1A35E] transition-colors">Contact us</button></li>
+                <li><button type="button" onClick={() => navigate("/login")} className="text-left cursor-pointer text-[12px] md:text-[13px] font-medium text-white/70 hover:text-[#C1A35E] transition-colors">Login</button></li>
               </ul>
             </div>
 
             {/* Support Column */}
             <div className="md:col-span-2 lg:col-span-2 mx-8">
-              <h4 className="text-[10px] md:text-[11px] font-bold text-white/30 uppercase tracking-[2px] mb-6 md:mb-8">Support</h4>
+              <h4 className="text-[10px] md:text-[11px] font-bold text-white/50 uppercase tracking-[2px] mb-6 md:mb-8">Support</h4>
               <ul className="flex flex-col gap-3 md:gap-4">
-                <li className="cursor-pointer text-[12px] md:text-[13px] font-medium text-white/60 hover:text-[#C1A35E] transition-colors" onClick={() => navigate("/faqs")}>FAQs</li>
-                <li className="cursor-pointer text-[12px] md:text-[13px] font-medium text-white/60 hover:text-[#C1A35E] transition-colors" onClick={() => navigate("/cookie-policy")}>Cookies policy</li>
-                <li className="cursor-pointer text-[12px] md:text-[13px] font-medium text-white/60 hover:text-[#C1A35E] transition-colors" onClick={() => navigate("/refund-policy")}>Refund policy</li>
+                <li><button type="button" onClick={() => navigate("/faqs")} className="text-left cursor-pointer text-[12px] md:text-[13px] font-medium text-white/70 hover:text-[#C1A35E] transition-colors">FAQs</button></li>
+                <li><button type="button" onClick={() => navigate("/cookie-policy")} className="text-left cursor-pointer text-[12px] md:text-[13px] font-medium text-white/70 hover:text-[#C1A35E] transition-colors">Cookies policy</button></li>
+                <li><button type="button" onClick={() => navigate("/refund-policy")} className="text-left cursor-pointer text-[12px] md:text-[13px] font-medium text-white/70 hover:text-[#C1A35E] transition-colors">Refund policy</button></li>
               </ul>
             </div>
 
@@ -85,12 +85,12 @@ const Footer = () => {
           </div>
 
           {/* Bottom Bar */}
-          <div className="flex flex-col md:flex-row items-center justify-between pt-8 mt-8 text-[10px] md:text-[12px] font-medium text-white/40 border-t border-white/5 gap-4 md:gap-0">
+          <div className="flex flex-col md:flex-row items-center justify-between pt-8 mt-8 text-[10px] md:text-[12px] font-medium text-white/70 border-t border-white/5 gap-4 md:gap-0">
             <p>Copyright © {new Date().getFullYear()} VerShip. All rights reserved.</p>
-            <div className="flex gap-4 md:gap-6">
-              <span onClick={() => navigate("/terms")} className="cursor-pointer hover:text-white transition-colors">Terms & conditions</span>
+            <div className="flex gap-4 md:gap-6 items-center">
+              <button type="button" onClick={() => navigate("/terms")} className="cursor-pointer hover:text-white transition-colors">Terms & conditions</button>
               <span className="hidden md:block w-1 h-1 rounded-full bg-white/20 my-auto"></span>
-              <span onClick={() => navigate("/privacy")} className="cursor-pointer hover:text-white transition-colors">Privacy policy</span>
+              <button type="button" onClick={() => navigate("/privacy")} className="cursor-pointer hover:text-white transition-colors">Privacy policy</button>
             </div>
           </div>
 

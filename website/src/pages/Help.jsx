@@ -1,6 +1,7 @@
 
 import React from 'react'
 import Commonbanner from "../components/Commonbanner";
+import Seo from "../components/Seo";
 import { men } from "../common/common-assets/assets-images";
 import { useNavigate } from 'react-router-dom';
 
@@ -8,6 +9,7 @@ const Help = () => {
   const navigate = useNavigate();
   return (
     <div>
+            <Seo title="24x7 Support" path="/help" description="VerShip support — get help with quotes, bookings, and shipping barrels from the USA to Jamaica, any time." />
             <Commonbanner title="24X7 Support" />
              <div className=" flex pt-10 pb-15 items-center justify-center bg-gradient-to-b from-[#1f3b2f] to-[#0b1a14] px-4">
       <div className="w-full max-w-[722px] text-center">
