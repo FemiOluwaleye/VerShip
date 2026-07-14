@@ -8,11 +8,18 @@ const SuccessPopup = ({ isOpen, onClose, title, message, buttonText }) => {
   if (!isOpen) return null;
   const navigate = useNavigate();
   return createPortal(
-    <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-black/30 z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title || "Notification"}
+    >
       <div className="bg-white rounded-[35px] shadow-lg px-6 py-8 w-[320px] sm:w-[400px] text-center relative">
 
         {/* Close Button */}
         <button
+          type="button"
+          aria-label="Close"
           onClick={(e) => {
             e.stopPropagation();
             onClose();

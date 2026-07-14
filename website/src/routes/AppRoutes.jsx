@@ -54,10 +54,12 @@ import EditTimelineNext from '../pages/EditTimelineNext';
 import BusinessUploadNext from '../pages/BusinessUploadNext';
 import BusinessVerification from '../pages/BusinessVerification';
 import BarrelRequestForm from '../pages/BarrelRequestForm';
+import PrepackedBarrel from '../pages/PrepackedBarrel';
 import ForgotPasswordReset from '../pages/ForgotPasswordReset';
 import ForgotVerification from '../pages/ForgotVerification';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AllForwarders from '../pages/AllForwarders';
+import NotFound from '../pages/NotFound';
 
 const AppRoutes = () => {
     /* ---------- ROLE FROM LOCAL STORAGE ---------- */
@@ -126,7 +128,7 @@ const AppRoutes = () => {
             <Route path="/edit" element={<ProtectedRoute><Edit /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
             <Route path="/cards" element={<ProtectedRoute><Cards /></ProtectedRoute>} />
-            <Route path="/faqs" element={<ProtectedRoute><Faqs /></ProtectedRoute>} />
+            <Route path="/faqs" element={<Faqs />} />
             <Route path="/notifications" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
 
             {/* ---------- STATIC ---------- */}
@@ -194,7 +196,9 @@ const AppRoutes = () => {
             <Route path="/businessuploadnext" element={<ProtectedRoute><BusinessUploadNext /></ProtectedRoute>} />
             <Route path="/businessverification" element={<BusinessVerification />} />
             <Route path="/barrel-request/:id" element={<BarrelRequestForm />} />
+            <Route path="/prepacked-barrel" element={<PrepackedBarrel />} />
 
+            <Route path="*" element={<NotFound />} />
         </Routes>
     );
 };

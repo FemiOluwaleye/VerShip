@@ -271,33 +271,36 @@ const Signup = () => {
     >
       {/* Card */}
       <div
-        className="flex flex-col items-center text-white gap-6
+        className="flex flex-col items-center text-white gap-4
         bg-[#2D413F] backdrop-blur-md
         rounded-[22px]
         shadow-[0_25px_80px_rgba(0,0,0,0.6)]
-        w-[90vw] sm:w-[500px] lg:w-[600px]
-        px-6 sm:px-15 py-10 mb-20 mt-35"
+        w-[90vw] sm:w-[560px] lg:w-[760px]
+        px-6 sm:px-12 py-8 my-12"
       >
         {/* Heading */}
-        <h1 className="text-[26px] lg:text-[32px] text-nowrap font-semibold">
+        <h1 className="text-[24px] lg:text-[28px] text-nowrap font-semibold">
           Create Your Account
         </h1>
-        <p className="text-sm text-white/70 -mt-3">
+        <p className="text-sm text-white/70 -mt-2">
           Please enter required details.
         </p>
 
-        <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
+        <form className="w-full grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3" onSubmit={handleSubmit}>
           {/* First Name */}
           <div>
-            <label className="text-lg font-medium">First Name</label>
+            <label htmlFor="signup-name" className="text-sm font-medium">First Name</label>
             <input
+              id="signup-name"
               type="text"
               name="name"
               placeholder="Enter"
               required
+              aria-required="true"
+              aria-invalid={errors.name ? "true" : "false"}
               className="w-full bg-transparent border border-white/20
               text-white placeholder:text-white/40
-              rounded-md px-4 py-2.5
+              rounded-md px-4 py-2
               focus:outline-none focus:border-yellow-400"
               value={formData.name}
               onChange={(e) => {
@@ -325,15 +328,18 @@ const Signup = () => {
 
           {/* Last Name */}
           <div>
-            <label className="text-lg font-medium">Last Name</label>
+            <label htmlFor="signup-lastName" className="text-sm font-medium">Last Name</label>
             <input
+              id="signup-lastName"
               type="text"
               name="lastName"
               placeholder="Enter"
               required
+              aria-required="true"
+              aria-invalid={errors.lastName ? "true" : "false"}
               className="w-full bg-transparent border border-white/20
               text-white placeholder:text-white/40
-              rounded-md px-4 py-2.5
+              rounded-md px-4 py-2
               focus:outline-none focus:border-yellow-400"
               value={formData.lastName}
               onChange={(e) => {
@@ -360,16 +366,19 @@ const Signup = () => {
           </div>
 
           {/* Email */}
-          <div>
-            <label className="text-lg font-medium">Email</label>
+          <div className="sm:col-span-2">
+            <label htmlFor="signup-email" className="text-sm font-medium">Email</label>
             <input
+              id="signup-email"
               type="email"
               name="email"
               placeholder="Enter"
               required
+              aria-required="true"
+              aria-invalid={errors.email ? "true" : "false"}
               className="w-full bg-transparent border border-white/20
               text-white placeholder:text-white/40
-              rounded-md px-4 py-2.5
+              rounded-md px-4 py-2
               focus:outline-none focus:border-yellow-400"
               value={formData.email}
               onChange={handleChange}
@@ -380,7 +389,7 @@ const Signup = () => {
           </div>
 
           {/* Phone Input */}
-          <div>
+          <div className="sm:col-span-2">
             <PhoneInput
               label="Mobile Number"
               value={formData.number}
@@ -399,11 +408,14 @@ const Signup = () => {
           </div>
 
           {/* Street Address of Main Location with Autocomplete */}
-          <div>
-            <label className="text-lg font-medium">Street Address of Main Location</label>
+          <div className="sm:col-span-2">
+            <label htmlFor="signup-address" className="text-sm font-medium">Street Address of Main Location</label>
             <div className="relative">
               {apiLoaded ? (
                 <Autocomplete
+                  id="signup-address"
+                  aria-required="true"
+                  aria-invalid={errors.main_address ? "true" : "false"}
                   onPlaceSelected={(place) => {
                     let streetAddress = '';
                     let city = '';
@@ -481,7 +493,7 @@ const Signup = () => {
                   placeholder="Enter"
                   className="w-full bg-transparent border border-white/20
                   text-white placeholder:text-white/40
-                  rounded-md px-4 py-2.5 pr-10
+                  rounded-md px-4 py-2 pr-10
                   focus:outline-none focus:border-yellow-400"
                   onChange={(e) => {
                     const value = e.target.value;
@@ -491,14 +503,17 @@ const Signup = () => {
                 />
               ) : (
                 <input
+                  id="signup-address"
                   type="text"
                   name="main_address"
                   value={formData.main_address}
                   onChange={handleChange}
+                  aria-required="true"
+                  aria-invalid={errors.main_address ? "true" : "false"}
                   placeholder="Enter"
                   className="w-full bg-transparent border border-white/20
                   text-white placeholder:text-white/40
-                  rounded-md px-4 py-2.5 pr-10
+                  rounded-md px-4 py-2 pr-10
                   focus:outline-none focus:border-yellow-400"
                 />
               )}
@@ -511,16 +526,19 @@ const Signup = () => {
 
           {/* City */}
           <div>
-            <label className="text-lg font-medium">City</label>
+            <label htmlFor="signup-city" className="text-sm font-medium">City</label>
             <input
+              id="signup-city"
               type="text"
               name="city"
               value={formData.city}
               onChange={handleChange}
+              aria-required="true"
+              aria-invalid={errors.city ? "true" : "false"}
               placeholder="Enter city"
               className="w-full bg-transparent border border-white/20
               text-white placeholder:text-white/40
-              rounded-md px-4 py-2.5
+              rounded-md px-4 py-2
               focus:outline-none focus:border-yellow-400"
             />
             {errors.city && (
@@ -530,16 +548,19 @@ const Signup = () => {
 
           {/* State */}
           <div>
-            <label className="text-lg font-medium">State</label>
+            <label htmlFor="signup-state" className="text-sm font-medium">State</label>
             <input
+              id="signup-state"
               type="text"
               name="state"
               value={formData.state}
               onChange={handleChange}
+              aria-required="true"
+              aria-invalid={errors.state ? "true" : "false"}
               placeholder="Enter state"
               className="w-full bg-transparent border border-white/20
               text-white placeholder:text-white/40
-              rounded-md px-4 py-2.5
+              rounded-md px-4 py-2
               focus:outline-none focus:border-yellow-400"
             />
             {errors.state && (
@@ -549,26 +570,31 @@ const Signup = () => {
 
           {/* Password */}
           <div className="flex flex-col">
-            <label className="text-lg font-medium">Password</label>
+            <label htmlFor="signup-password" className="text-sm font-medium">Password</label>
             <div className="relative">
               <input
+                id="signup-password"
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="********"
                 required
+                aria-required="true"
+                aria-invalid={errors.password ? "true" : "false"}
                 className="w-full bg-transparent border border-white/20
                 text-white placeholder:text-white/40
-                rounded-md px-4 pr-12 py-2.5
+                rounded-md px-4 pr-12 py-2
                 focus:outline-none focus:border-yellow-400"
               />
-              <div
+              <button
+                type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
                 className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-white/50 hover:text-white"
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </div>
+              </button>
             </div>
             {errors.password && (
               <p className="text-red-400 text-sm mt-1">{errors.password}</p>
@@ -577,26 +603,31 @@ const Signup = () => {
 
           {/* Confirm Password */}
           <div className="flex flex-col">
-            <label className="text-lg font-medium">Confirm Password</label>
+            <label htmlFor="signup-confirmPassword" className="text-sm font-medium">Confirm Password</label>
             <div className="relative">
               <input
+                id="signup-confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="********"
                 required
+                aria-required="true"
+                aria-invalid={errors.confirmPassword ? "true" : "false"}
                 className="w-full bg-transparent border border-white/20
                 text-white placeholder:text-white/40
-                rounded-md px-4 pr-12 py-2.5
+                rounded-md px-4 pr-12 py-2
                 focus:outline-none focus:border-yellow-400"
               />
-              <div
+              <button
+                type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-white/50 hover:text-white"
               >
                 {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-              </div>
+              </button>
             </div>
             {errors.confirmPassword && (
               <p className="text-red-400 text-sm mt-1">{errors.confirmPassword}</p>
@@ -604,11 +635,14 @@ const Signup = () => {
           </div>
 
           {/* Terms */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 sm:col-span-2">
             <div className="flex items-start gap-2 text-sm text-white/80">
               <input
                 type="checkbox"
                 name="agreeTerms"
+                aria-label="I agree to the Terms and conditions and Privacy Policy"
+                aria-required="true"
+                aria-invalid={errors.agreeTerms ? "true" : "false"}
                 className="w-[16px] h-[16px] accent-yellow-400 mt-1"
                 checked={formData.agreeTerms}
                 onChange={handleChange}
@@ -630,7 +664,7 @@ const Signup = () => {
           </div>
 
           {/* Button */}
-          <div className="flex justify-center mt-4">
+          <div className="flex justify-center mt-2 sm:col-span-2">
             <button
               type="submit"
               disabled={isUploading}

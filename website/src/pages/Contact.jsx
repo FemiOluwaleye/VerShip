@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { map } from "../common/common-assets/assets-images";
 import Commonbanner from '../components/Commonbanner';
+import Seo from "../components/Seo";
 import { contactUs } from "../api/cms";
 import { toast } from "sonner";
 import { FaSpinner } from "react-icons/fa";
@@ -104,14 +105,19 @@ const Contact = () => {
 
   return (
     <section className='bg-[linear-gradient(180deg,#2C4736_0%,#09120F_100%)] pb-10 lg:pb-20'>
+      <Seo title="Contact Us" path="/contact" description="Get in touch with the VerShip team for help with barrel shipping from the USA to Jamaica." />
       <Commonbanner title="Contact Us" />
       <div className="container mx-auto text-white mt-10 lg:mt-20">
         <div className="mx-auto flex flex-col lg:flex-row pb-10 justify-center bg-[#2D413F] rounded-[18px] p-8 gap-5 lg:gap-10">
           <form className="w-full rounded-[20px] space-y-6" onSubmit={handleSubmit}>
 
             <div>
-              <label className="block text-[18px] font-medium mb-1">First Name</label>
+              <label htmlFor="contact-first_name" className="block text-[18px] font-medium mb-1">First Name</label>
               <input
+                id="contact-first_name"
+                aria-required="true"
+                aria-invalid={errors.first_name ? "true" : "false"}
+                aria-describedby={errors.first_name ? "contact-first_name-error" : undefined}
                 type="text"
                 name="first_name"
                 value={formData.first_name}
@@ -136,14 +142,18 @@ const Contact = () => {
                 placeholder="Enter your First Name"
               />
               {errors.first_name && (
-                <p className="text-red-400 text-sm mt-1">{errors.first_name}</p>
+                <p id="contact-first_name-error" role="alert" className="text-red-400 text-sm mt-1">{errors.first_name}</p>
               )}
             </div>
 
 
             <div>
-              <label className="block text-[18px] font-medium mb-1">Last Name</label>
+              <label htmlFor="contact-last_name" className="block text-[18px] font-medium mb-1">Last Name</label>
               <input
+                id="contact-last_name"
+                aria-required="true"
+                aria-invalid={errors.last_name ? "true" : "false"}
+                aria-describedby={errors.last_name ? "contact-last_name-error" : undefined}
                 type="text"
                 name="last_name"
                 value={formData.last_name}
@@ -167,13 +177,17 @@ const Contact = () => {
                 placeholder="Enter your Last Name"
               />
               {errors.last_name && (
-                <p className="text-red-400 text-sm mt-1">{errors.last_name}</p>
+                <p id="contact-last_name-error" role="alert" className="text-red-400 text-sm mt-1">{errors.last_name}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-[18px] font-medium mb-1">Email</label>
+              <label htmlFor="contact-email" className="block text-[18px] font-medium mb-1">Email</label>
               <input
+                id="contact-email"
+                aria-required="true"
+                aria-invalid={errors.email ? "true" : "false"}
+                aria-describedby={errors.email ? "contact-email-error" : undefined}
                 type="email"
                 name="email"
                 value={formData.email}
@@ -182,7 +196,7 @@ const Contact = () => {
                 placeholder="Enter your Email"
               />
               {errors.email && (
-                <p className="text-red-400 text-sm mt-1">{errors.email}</p>
+                <p id="contact-email-error" role="alert" className="text-red-400 text-sm mt-1">{errors.email}</p>
               )}
             </div>
 
@@ -204,8 +218,12 @@ const Contact = () => {
             </div>
 
             <div>
-              <label className="block text-[18px] font-medium mb-1">Message</label>
+              <label htmlFor="contact-message" className="block text-[18px] font-medium mb-1">Message</label>
               <textarea
+                id="contact-message"
+                aria-required="true"
+                aria-invalid={errors.textarea ? "true" : "false"}
+                aria-describedby={errors.textarea ? "contact-message-error" : undefined}
                 name="textarea"
                 value={formData.textarea}
                 onChange={(e) => {
@@ -228,7 +246,7 @@ const Contact = () => {
                 placeholder="Write here..."
               />
               {errors.textarea && (
-                <p className="text-red-400 text-sm mt-1">{errors.textarea}</p>
+                <p id="contact-message-error" role="alert" className="text-red-400 text-sm mt-1">{errors.textarea}</p>
               )}
             </div>
 

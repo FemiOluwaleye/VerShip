@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import Commonbanner from "./Commonbanner";
 import { tick } from "../common/common-assets/assets-images";
 import { check } from "../common/common-assets/assets-images";
 import { box, card, close } from "../common/common-assets/assets-images";
@@ -32,7 +33,7 @@ const ShipmentDetailsSection = () => {
                     <h4 className="font-bold text-[25px]">Kylie Transportation</h4>
                     <div className="flex items-center gap-2 text-sm text-white">
                       <i class="fa-solid fa-star text-[#FFBF00]"></i> <i class="fa-solid fa-star text-[#FFBF00]"></i> <i class="fa-solid fa-star text-[#FFBF00]"></i> <i class="fa-solid fa-star text-[#FFBF00]"></i> 4.5
-                      <span className="ms-5 text-[13px] font-semibold gap-1 flex align-middle"><img src={tick}></img> Verified  Freight Forwarder</span>
+                      <span className="ms-5 text-[13px] font-semibold gap-1 flex align-middle"><img src={tick} alt="" /> Verified  Freight Forwarder</span>
                     </div>
                   </div>
                 </div>
@@ -62,9 +63,9 @@ const ShipmentDetailsSection = () => {
             <div className=" text-white">
               <h5 className="font-bold text-lg mb-3 text-lg">Customs Handling Policies</h5>
               <ul className="space-y-2 text-sm text-gray-300">
-                <li className='flex text-[16px] items-center gap-3'><img src={check}></img> Standard: Handles all necessary customs declarations.</li>
-                <li className='flex text-[16px] items-center gap-3 mb-4'><img src={check}></img> Premium: Expedited customs clearance ($75 fee).</li>
-                <li className="text-yellow-400 flex items-center  gap-3 text-lg ps-1"><img src={box}></img> Delivery Service Available</li>
+                <li className='flex text-[16px] items-center gap-3'><img src={check} alt="" /> Standard: Handles all necessary customs declarations.</li>
+                <li className='flex text-[16px] items-center gap-3 mb-4'><img src={check} alt="" /> Premium: Expedited customs clearance ($75 fee).</li>
+                <li className="text-yellow-400 flex items-center  gap-3 text-lg ps-1"><img src={box} alt="" /> Delivery Service Available</li>
               </ul>
             </div>
 
@@ -184,7 +185,7 @@ const ShipmentDetailsSection = () => {
             <div className='bg-[#2D413F] rounded-xl p-5'>
               <div className='flex justify-between items-center'>
                 <p className='m-0 text-lg font-bold text-white'>Payment Method</p>
-                <img src={card}></img>
+                <img src={card} alt="" />
               </div>
             </div>
             <button
@@ -204,7 +205,7 @@ const ShipmentDetailsSection = () => {
 
             {/* Header */}
             <div className="flex justify-center items-center mb-1 flex-col">
-              <img src={close}></img>
+              <img src={close} alt="" />
               <h3 className="text-[28px] font-bold text-black">Cancel</h3>
               <button
                 onClick={() => setOpenModal(false)}

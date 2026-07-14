@@ -97,6 +97,11 @@ function Sidebar({ isOpen }) {
       pathname.startsWith("/updatecookie")
     ) {
       setActiveMenu("support");
+    } else if (
+      pathname.includes("/prepackedorders") ||
+      pathname.includes("/prepacked/")
+    ) {
+      setActiveMenu("prepacked");
     } else if (pathname.includes("/password")) {
       setActiveMenu("settings");
     } else {
@@ -337,6 +342,38 @@ function Sidebar({ isOpen }) {
                       onClick={handleLinkClick}
                     >
                       Cookies List
+                    </Link>
+                  </li>
+                </ul>
+              )}
+            </li>
+
+            <li className={activeMenu === "prepacked" ? "mm-active" : ""}>
+              <Link
+                className="has-arrow waves-effect"
+                onClick={() => toggleMenu("prepacked")}
+              >
+                <i className="ri-archive-2-line" />
+                <span>Pre-Packed Barrels</span>
+              </Link>
+              {isSidebarExpanded && activeMenu === "prepacked" && (
+                <ul className="sub-menu mm-show">
+                  <li>
+                    <Link
+                      className={isActive("/prepacked/") ? "active" : ""}
+                      to="/admin/prepacked/list"
+                      onClick={handleLinkClick}
+                    >
+                      Barrels
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      className={isActive("/prepackedorders") ? "active" : ""}
+                      to="/admin/prepackedorders"
+                      onClick={handleLinkClick}
+                    >
+                      Orders
                     </Link>
                   </li>
                 </ul>

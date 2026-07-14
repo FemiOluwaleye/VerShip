@@ -56,10 +56,10 @@ module.exports = function (sequelize, DataTypes) {
       comment: "0=>not assigned,1=>done,2=>not done"
     },
     status: {
-      type: DataTypes.ENUM('0', '1', '2', '3'),
+      type: DataTypes.ENUM('0', '1', '2', '3', '4'),
       allowNull: false,
       defaultValue: "0",
-      comment: "0=>pending,1=>shiped,2=>delivered,3=> dispatched"
+      comment: "0=>pending,1=>shiped,2=>delivered,3=>dispatched,4=>cancelled/rejected"
     },
     total_distance: {
       type: DataTypes.DECIMAL(10, 2),

@@ -16,9 +16,12 @@ module.exports = {
         attributes: { exclude: ["password"] },
       });
 
-      // if (findUser.role === '3' && findUser.requestStatus !== '1') {
-      //   return helper.failure(res, "You are not eligible to access this resource. Please wait.");
-      // }
+      // Admin routes are for admins only. Website/mobile logins are signed with
+      // the same JWT_SECRET, so without this check any authenticated user could
+      // replay their token against the admin API. role: 0=>admin.
+      if (!findUser || String(findUser.role) !== "0") {
+        return helper.error(res, "Access denied. Admins only.", 403);
+      }
 
       req.admin = findUser;
       next();

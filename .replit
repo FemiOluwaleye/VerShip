@@ -3,6 +3,10 @@ modules = ["nodejs-24"]
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
+# Fresh deploy env has no node_modules: install + build the frontend, install
+# server deps, then start Express (serves website/dist + API + Socket.IO :5000).
+build = ["sh", "-c", "cd website && pnpm install --ignore-workspace && pnpm run build && cd ../server && pnpm install --ignore-workspace"]
+run = ["sh", "-c", "cd server && node shipone.js"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]

@@ -60,8 +60,18 @@ Object.keys(db).forEach(modelName => {
 });
 
 sequelize.sync({ alter: false })
-  .then(() => {
+  .then(async () => {
     console.log('Database synced successfully');
+    // Additive column guards: sync runs with alter:false, so columns added to a
+    // model after its table already exists are NOT applied. Add them here
+    // idempotently (Postgres ADD COLUMN IF NOT EXISTS is a no-op if present).
+    try {
+      await sequelize.query(
+        'ALTER TABLE prepacked_barrel ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT false'
+      );
+    } catch (err) {
+      console.error('Column guard (prepacked_barrel.featured) failed:', err.message);
+    }
   })
   .catch((err) => {
     console.error('Error syncing the database:', err);
@@ -124,6 +134,13 @@ db.chat_constant.belongsTo(db.users, { foreignKey: 'sender_id', as: 'sender' });
 db.chat_constant.belongsTo(db.users, { foreignKey: 'reciever_id', as: 'receiver' });
 db.message.belongsTo(db.users, { foreignKey: 'sender_id', as: 'sender' });
 db.message.belongsTo(db.users, { foreignKey: 'reciever_id', as: 'receiver' });
+
+// Pre-packed barrel product + its contents + direct orders (owner-sold product,
+// decoupled from the provider bookings/quote flow).
+db.prepacked_barrel.hasMany(db.prepacked_barrel_items, { foreignKey: 'prepacked_barrel_id', as: 'contents' });
+db.prepacked_barrel_items.belongsTo(db.prepacked_barrel, { foreignKey: 'prepacked_barrel_id', as: 'barrel' });
+db.prepacked_orders.belongsTo(db.users, { foreignKey: 'userId', as: 'buyer' });
+db.prepacked_orders.belongsTo(db.prepacked_barrel, { foreignKey: 'prepacked_barrel_id', as: 'barrel' });
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;

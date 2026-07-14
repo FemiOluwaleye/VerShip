@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, Calendar, Info, MapPin, Search, Star, ArrowUpRight, Target, Flag } from "lucide-react";
+import { ChevronDown, Calendar, Info, MapPin, Search, ArrowUpRight, Target, Flag } from "lucide-react";
 import { container, profile1, loc, calender, iccon } from "../common/common-assets/assets-images";
 import { useNavigate, useLocation } from "react-router-dom";
-import { saveBookingRequest, getRatings, getProviderList } from "../api/cms";
+import { saveBookingRequest, getProviderList } from "../api/cms";
 import { toast } from "sonner";
 import { API_URL } from "../api/axios";
 
@@ -72,12 +72,6 @@ const Banner = () => {
     }
   }, [activeSubTab, providersList, origin]);
 
-  const [ratingsData, setRatingsData] = useState({
-    averageRating: 4.9,
-    totalReviews: 146822,
-    loading: true
-  });
-
   const getMinPickupDate = () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -96,7 +90,6 @@ const Banner = () => {
   // REMOVED the auto-selection useEffect - no automatic selection
 
   useEffect(() => {
-    fetchRatings();
     fetchProviders();
   }, []);
 
@@ -117,66 +110,6 @@ const Banner = () => {
       setProvidersList(providers);
     } catch (error) {
       console.error("Failed to fetch providers:", error);
-    }
-  };
-
-  const fetchRatings = async () => {
-    try {
-      const response = await getRatings();
-
-      let statsData = { averageRating: 0, totalReviews: 0 };
-      let ratingsArray = [];
-
-      if (response && response.body) {
-        if (response.body.stats) {
-          statsData = response.body.stats;
-        }
-        if (response.body.ratings && Array.isArray(response.body.ratings)) {
-          ratingsArray = response.body.ratings;
-        }
-      } else if (response && response.data) {
-        if (response.data.stats) {
-          statsData = response.data.stats;
-        }
-        if (response.data.ratings && Array.isArray(response.data.ratings)) {
-          ratingsArray = response.data.ratings;
-        } else if (Array.isArray(response.data)) {
-          ratingsArray = response.data;
-        }
-      }
-
-      if (ratingsArray.length > 0) {
-        let totalRating = 0;
-        let validRatingCount = 0;
-
-        ratingsArray.forEach(rating => {
-          if (rating.rating) {
-            totalRating += parseFloat(rating.rating);
-            validRatingCount++;
-          }
-        });
-
-        const calculatedAverage = validRatingCount > 0 ? totalRating / validRatingCount : 0;
-
-        setRatingsData({
-          averageRating: statsData.averageRating > 0 ? parseFloat(statsData.averageRating.toFixed(1)) : parseFloat(calculatedAverage.toFixed(1)),
-          totalReviews: statsData.totalReviews > 0 ? statsData.totalReviews : validRatingCount,
-          loading: false
-        });
-      } else {
-        setRatingsData({
-          averageRating: 4.9,
-          totalReviews: 146822,
-          loading: false
-        });
-      }
-    } catch (error) {
-      console.error("Failed to fetch ratings:", error);
-      setRatingsData({
-        averageRating: 4.9,
-        totalReviews: 146822,
-        loading: false
-      });
     }
   };
 
@@ -297,27 +230,47 @@ const Banner = () => {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="bg-[#F8FAFA] pt-12 md:pt-20 pb-8 md:pb-6 px-4 md:px-6 flex flex-col items-center overflow-hidden relative">
+      <section className="bg-[#F8FAFA] pt-4 md:pt-5 pb-2 md:pb-3 px-4 md:px-6 flex flex-col items-center overflow-hidden relative">
 
         {/* Container Image (Layered on top) */}
-        <div className="relative mt-0 md:mt-[-80px] mb-8 md:mb-12 z-30 w-full max-w-[850px] flex justify-center">
+        <div className="relative mt-0 md:mt-[-28px] mb-1 md:mb-2 z-30 w-full max-w-[400px] flex justify-center">
           <img
             src={container}
-            alt="Shipping Container"
-            className="w-full md:w-[850px] object-contain drop-shadow-[0_20px_20px_rgba(0,0,0,0.15)] md:drop-shadow-[0_40px_40px_rgba(0,0,0,0.15)]"
+            alt="VerShip — shipping barrels to Jamaica made easy"
+            className="w-full object-contain drop-shadow-[0_16px_18px_rgba(0,0,0,0.15)]"
           />
         </div>
 
-        {/* Reviews and Social Proof */}
-        <div className="flex flex-col items-center gap-4 relative z-40">
-          <div className="text-[#595d5e] text-base md:text-[19px] text-center max-w-2xl leading-snug font-normal px-4">
-            Compare rates from trusted shipping companies, book the best option and ship your barrel all through one platform
-          </div>
+        {/* Brand copy & social proof */}
+        <div className="flex flex-col items-center gap-2 md:gap-2.5 relative z-40 max-w-2xl text-center px-4">
+          {/* Eyebrow / context kicker */}
+          <span className="inline-flex items-center gap-2 text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-[#0D4D4D]/80">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#C1A35E]" aria-hidden="true" />
+            USA to Jamaica · Door to door
+          </span>
 
-          <div className="mt-4 md:mt-2 p-2 rounded-full bg-[#073737]/10">
+          {/* Headline */}
+          <h1 className="text-[#071618] font-bold tracking-tight text-[24px] leading-[1.1] md:text-[34px] md:leading-[1.05]">
+            Barrel shipping to Jamaica,{" "}
+            <span className="text-[#0D4D4D]">simplified.</span>
+          </h1>
+
+          {/* Supporting copy */}
+          <p className="text-[#595d5e] text-sm md:text-[17px] leading-snug font-normal">
+            Compare rates from trusted shipping companies, book the best option, and ship your barrel — all on one platform.
+          </p>
+
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-0.5">
+            <button
+              onClick={() => navigate("/prepacked-barrel")}
+              className="bg-[#C1A35E] text-[#071618] px-6 h-[42px] rounded-full font-bold text-sm md:text-base hover:bg-[#E5C78A] transition-all flex items-center justify-center shadow-[0_8px_16px_rgba(193,163,94,0.25)]"
+            >
+              Order VerShip Pre-Packed Barrel Now
+            </button>
             <button
               onClick={scrollToForm}
-              className="bg-[#0D4D4D] text-white w-[168px] h-[48px] rounded-full font-bold text-base md:text-lg hover:bg-[#0A3D3D] transition-all flex items-center justify-center"
+              className="bg-[#0D4D4D] text-white w-[168px] h-[42px] rounded-full font-bold text-sm md:text-base hover:bg-[#0A3D3D] transition-all flex items-center justify-center"
             >
               Get quotes
             </button>
@@ -326,7 +279,7 @@ const Banner = () => {
       </section>
 
       {/* Form Section */}
-      <section id="booking-form" ref={formRef} className="bg-[#071618] pt-12 pb-9 md:pt-24 md:pb-16 px-4 md:px-6">
+      <section id="booking-form" ref={formRef} className="bg-[#071618] pt-4 pb-6 md:pt-5 md:pb-8 px-4 md:px-6">
         <div className="max-w-[1326px] mx-auto">
           {/* Tabs */}
           <div className="flex justify-center mb-[-1px] relative z-20">
@@ -334,7 +287,7 @@ const Banner = () => {
               <div className="relative">
                 <button
                   onClick={() => setActiveSubTab("Ship Your Own Barrel")}
-                  className={`px-8 md:px-12 py-4 md:py-5 font-medium text-sm md:text-[22px] transition-all relative z-10 ${activeSubTab === "Ship Your Own Barrel"
+                  className={`px-8 md:px-12 py-3 md:py-4 font-medium text-sm md:text-[20px] transition-all relative z-10 ${activeSubTab === "Ship Your Own Barrel"
                     ? "text-[#D4B97C]"
                     : "text-white hover:text-white/80"
                     }`}
@@ -357,7 +310,7 @@ const Banner = () => {
               <div className="relative">
                 <button
                   onClick={() => setActiveSubTab("Request Barrel Drop-Off")}
-                  className={`px-8 md:px-12 py-4 md:py-5 font-medium text-sm md:text-[22px] transition-all relative z-10 ${activeSubTab === "Request Barrel Drop-Off"
+                  className={`px-8 md:px-12 py-3 md:py-4 font-medium text-sm md:text-[20px] transition-all relative z-10 ${activeSubTab === "Request Barrel Drop-Off"
                     ? "text-[#D4B97C]"
                     : "text-white hover:text-white/80"
                     }`}
@@ -380,84 +333,95 @@ const Banner = () => {
           </div>
 
           {/* Form Container */}
-          <div className="bg-[#051111] border border-white/10 rounded-[16px] md:rounded-[20px] p-6 md:p-10 pb-10 md:pb-12 shadow-2xl relative z-10">
+          <div className="bg-[#051111] border border-white/10 rounded-[16px] md:rounded-[20px] p-5 md:p-7 pb-6 md:pb-8 shadow-2xl relative z-10">
             {/* Top Row: Origin & Destination */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div ref={originRef} className="relative">
-                <div
+                <button
+                  type="button"
                   onClick={() => setOpenOrigin(!openOrigin)}
-                  className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4 cursor-pointer hover:border-[#D4B97C]/30 transition-all flex items-center justify-between"
+                  aria-haspopup="listbox"
+                  aria-expanded={openOrigin}
+                  aria-label="Select origin"
+                  className="w-full text-left bg-[#0a1b1d] border border-white/5 rounded-xl p-4 cursor-pointer hover:border-[#D4B97C]/30 transition-all flex items-center justify-between"
                 >
                   <span className={`text-sm md:text-base ${origin ? 'text-white/70' : 'text-white/30'}`}>
                     {origin || "Select origin"}
                   </span>
                   <img
                     src={loc}
-                    alt="target"
+                    alt=""
                     className="w-5 h-5 object-contain"
                   />
-                </div>
+                </button>
                 {openOrigin && (
-                  <div className="absolute top-full left-0 w-full mt-2 bg-[#121A19] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
+                  <ul role="listbox" aria-label="Origin" className="absolute top-full left-0 w-full mt-2 bg-[#121A19] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
                     {ORIGINS.map((item) => {
                       // Check if this origin is available from any provider OR is always available
                       const isAvailable = availableOrigins.includes(item) || ALWAYS_AVAILABLE_ORIGINS.includes(item);
-                      
+
                       return (
-                        <div
-                          key={item}
-                          onClick={() => {
-                            if (isAvailable) { 
-                              setOrigin(item); 
-                              setOpenOrigin(false); 
-                            }
-                          }}
-                          className={`px-6 py-3 font-medium transition-colors text-sm md:text-base
+                        <li key={item} role="option" aria-selected={origin === item} aria-disabled={!isAvailable}>
+                          <button
+                            type="button"
+                            disabled={!isAvailable}
+                            onClick={() => {
+                              setOrigin(item);
+                              setOpenOrigin(false);
+                            }}
+                            className={`w-full text-left px-6 py-3 font-medium transition-colors text-sm md:text-base
                           ${!isAvailable
-                              ? "text-white/25 cursor-not-allowed"
-                              : "text-white/80 hover:bg-[#C1A35E] hover:text-black cursor-pointer"
-                            }`}
-                        >
-                          {item} {!isAvailable}
-                        </div>
+                                ? "text-white/25 cursor-not-allowed"
+                                : "text-white/80 hover:bg-[#C1A35E] hover:text-black cursor-pointer"
+                              }`}
+                          >
+                            {item}
+                          </button>
+                        </li>
                       );
                     })}
-                  </div>
+                  </ul>
                 )}
               </div>
 
               <div ref={destinationRef} className="relative">
-                <div
+                <button
+                  type="button"
                   onClick={() => setOpenDestination(!openDestination)}
-                  className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4 cursor-pointer hover:border-[#D4B97C]/30 transition-all flex items-center justify-between"
+                  aria-haspopup="listbox"
+                  aria-expanded={openDestination}
+                  aria-label="Select destination"
+                  className="w-full text-left bg-[#0a1b1d] border border-white/5 rounded-xl p-4 cursor-pointer hover:border-[#D4B97C]/30 transition-all flex items-center justify-between"
                 >
                   <span className={`text-sm md:text-base ${destination ? 'text-white/70' : 'text-white/30'}`}>
                     {destination || "Select destination"}
                   </span>
                   <img
                     src={iccon}
-                    alt="target"
+                    alt=""
                     className="w-5 h-5 object-contain"
                   />
-                </div>
+                </button>
                 {openDestination && (
-                  <div className="absolute top-full left-0 w-full mt-2 bg-[#121A19] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
+                  <ul role="listbox" aria-label="Destination" className="absolute top-full left-0 w-full mt-2 bg-[#121A19] border border-white/10 rounded-lg shadow-2xl overflow-hidden z-50 max-h-60 overflow-y-auto">
                     {DESTINATIONS.map((item) => (
-                      <div
-                        key={item}
-                        onClick={() => { setDestination(item); setOpenDestination(false); }}
-                        className="px-6 py-3 text-white/80 hover:bg-[#C1A35E] hover:text-black cursor-pointer font-medium transition-colors text-sm md:text-base"
-                      >
-                        {item}
-                      </div>
+                      <li key={item} role="option" aria-selected={destination === item}>
+                        <button
+                          type="button"
+                          onClick={() => { setDestination(item); setOpenDestination(false); }}
+                          className="w-full text-left px-6 py-3 text-white/80 hover:bg-[#C1A35E] hover:text-black cursor-pointer font-medium transition-colors text-sm md:text-base"
+                        >
+                          {item}
+                        </button>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 )}
               </div>
             </div>
 
             {/* Bottom Row: Quantity & Dates */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6 md:mb-10">
+            <div className="flex flex-col md:flex-row gap-4 mb-4 md:mb-6">
               {/* Quantity Field - No label for both tabs */}
               <div className="flex-grow md:w-[20%]">
                 <div className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4">
@@ -475,6 +439,7 @@ const Banner = () => {
                       }
                     }}
                     className="bg-transparent text-white/70 text-sm md:text-base outline-none w-full placeholder-white/30"
+                    aria-label="Barrel quantity"
                     placeholder="Enter barrel quantity e.g. 2"
                     min="1"
                     max="25"
@@ -487,20 +452,25 @@ const Banner = () => {
                 <>
                   {/* Pickup Date Field with Label */}
                   <div className="flex-grow md:w-[40%]">
-                    <div
-                      onClick={() => pickupDateRef.current?.showPicker()}
-                      className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#D4B97C]/30 transition-all"
-                    >
-                      <span className={`text-sm md:text-base ${pickupDate ? 'text-white/70' : 'text-white/30'}`}>
-                        {pickupDate ? formatDate(pickupDate) : "Select pickup date"}
-                      </span>
-                      <img
-                        src={calender}
-                        alt="calendar"
-                        className="w-5 h-5 object-contain"
-                      />
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => pickupDateRef.current?.showPicker()}
+                        aria-label={`Choose pickup date${pickupDate ? `, currently ${formatDate(pickupDate)}` : ""}`}
+                        className="w-full text-left bg-[#0a1b1d] border border-white/5 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#D4B97C]/30 transition-all"
+                      >
+                        <span className={`text-sm md:text-base ${pickupDate ? 'text-white/70' : 'text-white/30'}`}>
+                          {pickupDate ? formatDate(pickupDate) : "Select pickup date"}
+                        </span>
+                        <img
+                          src={calender}
+                          alt=""
+                          className="w-5 h-5 object-contain"
+                        />
+                      </button>
                       <input
                         type="date"
+                        aria-label="Pickup date"
                         ref={pickupDateRef}
                         value={pickupDate}
                         min={getMinPickupDate()}
@@ -515,16 +485,21 @@ const Banner = () => {
 
                   {/* Delivery Date Field with Label */}
                   <div className="flex-grow md:w-[40%]">
-                    <div
-                      onClick={() => deliveryDateRef.current?.showPicker()}
-                      className="bg-[#0a1b1d] border border-white/5 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#D4B97C]/30 transition-all"
-                    >
-                      <span className={`text-sm md:text-base ${deliveryDate ? 'text-white/70' : 'text-white/30'}`}>
-                        {deliveryDate ? formatDate(deliveryDate) : "Select delivery date"}
-                      </span>
-                      <Calendar className="text-[#D4B97C] w-5 h-5" />
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => deliveryDateRef.current?.showPicker()}
+                        aria-label={`Choose delivery date${deliveryDate ? `, currently ${formatDate(deliveryDate)}` : ""}`}
+                        className="w-full text-left bg-[#0a1b1d] border border-white/5 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#D4B97C]/30 transition-all"
+                      >
+                        <span className={`text-sm md:text-base ${deliveryDate ? 'text-white/70' : 'text-white/30'}`}>
+                          {deliveryDate ? formatDate(deliveryDate) : "Select delivery date"}
+                        </span>
+                        <Calendar className="text-[#D4B97C] w-5 h-5" aria-hidden="true" />
+                      </button>
                       <input
                         type="date"
+                        aria-label="Delivery date"
                         ref={deliveryDateRef}
                         value={deliveryDate}
                         min={getMinDeliveryDate()}
@@ -547,7 +522,7 @@ const Banner = () => {
                       </span>
                       <img
                         src={calender}
-                        alt="calendar"
+                        alt=""
                         className="w-5 h-5 object-contain opacity-50"
                       />
                     </div>
@@ -566,7 +541,7 @@ const Banner = () => {
               )}
             </div>
 
-            <div className="flex justify-center mt-4 md:mt-8">
+            <div className="flex justify-center mt-2 md:mt-4">
               <div className="p-2 bg-[#DCD5C5]/5 rounded-2xl md:rounded-[14px]">
                 <button
                   onClick={handleSubmit}

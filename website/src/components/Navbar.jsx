@@ -64,18 +64,25 @@ export default function Navbar() {
 
   return (
     <div className="w-full relative z-50 bg-white">
-      <nav className="w-full border-b border-[#E5E7EB]">
+      <nav aria-label="Main" className="w-full border-b border-[#E5E7EB]">
         <div className=" mx-auto flex items-stretch">
 
           {/* Mobile View Toggle & Logo */}
           <div className="lg:hidden w-full flex items-center justify-between px-4 py-4">
-            <img
-              src={logo}
-              alt="Logo"
-              className="h-12 cursor-pointer"
-              onClick={() => navigate(homePath)}
-            />
-            <button onClick={() => setIsOpen(!isOpen)}>
+            <button type="button" onClick={() => navigate(homePath)} aria-label="VerShip home">
+              <img
+                src={logo}
+                alt=""
+                className="h-12 cursor-pointer"
+              />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label={isOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isOpen}
+              aria-controls="mobile-menu"
+            >
               {isOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
             </button>
           </div>
@@ -85,13 +92,15 @@ export default function Navbar() {
             <div className="hidden lg:grid grid-cols-3 w-full items-stretch divide-x divide-[#E5E7EB]">
               {/* Left Column: Navigation Links */}
               <div className="flex items-stretch divide-x divide-[#E5E7EB]">
-                <div
+                <button
+                  type="button"
                   onClick={() => navigate("/about")}
                   className="flex-1 flex items-center justify-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg"
                 >
                   About
-                </div>
-                <div
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     if (location.pathname === "/") {
                       document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
@@ -102,46 +111,60 @@ export default function Navbar() {
                   className="flex-1 flex items-center justify-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg"
                 >
                   How it works
-                </div>
-                <div
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/prepacked-barrel")}
+                  className="flex-1 flex items-center justify-center text-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg whitespace-nowrap px-2"
+                >
+                  Pre-Packed Barrels
+                </button>
+                <button
+                  type="button"
                   onClick={() => navigate("/contact")}
                   className="flex-1 flex items-center justify-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg"
                 >
                   Contact
-                </div>
+                </button>
               </div>
 
               {/* Center Column: Logo */}
               <div className="flex items-center justify-center py-2 px-12 bg-[#F8FAFA]">
-                <img
-                  src={logo}
-                  alt="Logo"
-                  className="h-[44px] cursor-pointer"
-                  onClick={() => navigate(homePath)}
-                />
+                <button type="button" onClick={() => navigate(homePath)} aria-label="VerShip home">
+                  <img
+                    src={logo}
+                    alt=""
+                    className="h-[44px] cursor-pointer"
+                  />
+                </button>
               </div>
 
               {/* Right Column: Auth/Profile */}
               <div className="flex items-stretch divide-x divide-[#E5E7EB]">
                 {!is_login ? (
                   <>
-                    <div
+                    <button
+                      type="button"
                       onClick={() => navigate("/type", { state: { mode: "login" } })}
                       className="flex-1 flex items-center justify-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg group"
                     >
                       Login <ArrowUpRight className="ml-2 w-5 h-5 text-[#FFBF00] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </div>
-                    <div
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => navigate("/type", { state: { mode: "signup" } })}
                       className="flex-1 flex items-center justify-center py-4.5 bg-[#0D4D4D] hover:bg-[#0A3D3D] transition-colors cursor-pointer text-white font-medium text-lg group"
                     >
                       Get started <ArrowUpRight className="ml-2 w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </div>
+                    </button>
                   </>
                 ) : (
                   <div className="flex-1 flex items-center justify-center py-4 bg-[#F8FAFA] relative" ref={dropdownRef}>
-                    <div
+                    <button
+                      type="button"
                       onClick={() => setShowDropdown(!showDropdown)}
+                      aria-haspopup="menu"
+                      aria-expanded={showDropdown}
                       className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
                     >
                       {userData.image && userData.image.trim() !== "" ? (
@@ -160,24 +183,24 @@ export default function Navbar() {
                         <span className="text-xs text-gray-500">Profile</span>
                       </div>
                       <ChevronDown className={`w-4 h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
-                    </div>
+                    </button>
 
                     {showDropdown && (
-                      <div className="absolute top-full right-0 mt-1 bg-white shadow-2xl rounded-xl w-[200px] py-3 z-[60] border border-gray-100">
+                      <div role="menu" className="absolute top-full right-0 mt-1 bg-white shadow-2xl rounded-xl w-[200px] py-3 z-[60] border border-gray-100">
                         {role === "user" ? (
                           <>
-                            <div onClick={() => { navigate("/profile"); setShowDropdown(false); }} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">My Profile</div>
-                            <div onClick={() => { navigate("/history"); setShowDropdown(false); }} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">My History</div>
+                            <button type="button" role="menuitem" onClick={() => { navigate("/profile"); setShowDropdown(false); }} className="block w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">My Profile</button>
+                            <button type="button" role="menuitem" onClick={() => { navigate("/history"); setShowDropdown(false); }} className="block w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">My History</button>
                           </>
                         ) : (
                           <>
-                            <div onClick={() => { navigate("/businessProfile"); setShowDropdown(false); }} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">My Profiles</div>
-                            <div onClick={() => { navigate("/history"); setShowDropdown(false); }} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">My History</div>
-                            <div onClick={() => { navigate("/earning"); setShowDropdown(false); }} className="px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">Payment & Earning</div>
+                            <button type="button" role="menuitem" onClick={() => { navigate("/businessProfile"); setShowDropdown(false); }} className="block w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">My Profiles</button>
+                            <button type="button" role="menuitem" onClick={() => { navigate("/history"); setShowDropdown(false); }} className="block w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">My History</button>
+                            <button type="button" role="menuitem" onClick={() => { navigate("/earning"); setShowDropdown(false); }} className="block w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer text-[#1A1A1A] text-sm font-medium">Payment & Earning</button>
                           </>
                         )}
                         <div className="h-[1px] bg-gray-100 my-2 mx-4"></div>
-                        <div onClick={() => setIsLogoutOpen(true)} className="px-4 py-3 hover:bg-red-50 cursor-pointer text-red-500 text-sm font-semibold">Logout</div>
+                        <button type="button" role="menuitem" onClick={() => setIsLogoutOpen(true)} className="block w-full text-left px-4 py-3 hover:bg-red-50 cursor-pointer text-red-500 text-sm font-semibold">Logout</button>
                       </div>
                     )}
                   </div>
@@ -191,7 +214,7 @@ export default function Navbar() {
             <div className="w-full flex justify-center py-6 bg-[#F8FAFA]">
               <img
                 src={logo}
-                alt="Logo"
+                alt="VerShip"
                 className="h-20"
               />
             </div>
@@ -201,18 +224,19 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {isOpen && !isSignupOnlyNavbar && (
-        <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-gray-200 shadow-xl py-6 px-6 space-y-6 animate-in slide-in-from-top duration-300">
+        <div id="mobile-menu" className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-gray-200 shadow-xl py-6 px-6 space-y-6 animate-in slide-in-from-top duration-300">
           <div className="flex flex-col space-y-4">
-            <div onClick={() => { navigate("/about"); setIsOpen(false); }} className="text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">About</div>
-            <div onClick={() => {
+            <button type="button" onClick={() => { navigate("/about"); setIsOpen(false); }} className="block w-full text-left text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">About</button>
+            <button type="button" onClick={() => {
               if (location.pathname === "/") {
                 document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
               } else {
                 navigate("/", { state: { scrollTo: "how-it-works" } });
               }
               setIsOpen(false);
-            }} className="text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">How it works</div>
-            <div onClick={() => { navigate("/contact"); setIsOpen(false); }} className="text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">Contact</div>
+            }} className="block w-full text-left text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">How it works</button>
+            <button type="button" onClick={() => { navigate("/prepacked-barrel"); setIsOpen(false); }} className="block w-full text-left text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">Pre-Packed Barrels</button>
+            <button type="button" onClick={() => { navigate("/contact"); setIsOpen(false); }} className="block w-full text-left text-xl font-medium text-[#1A1A1A] py-2 border-b border-gray-100">Contact</button>
           </div>
 
           {!is_login ? (

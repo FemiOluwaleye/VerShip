@@ -28,6 +28,27 @@ export const getAboutUs = async () => {
     }
 };
 
+// Pre-packed food barrel (owner-sold fixed product)
+export const getPrepackedBarrel = async () => {
+    try {
+        const response = await axios.get('/website/prepacked-barrel');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching pre-packed barrel:', error);
+        throw error;
+    }
+};
+
+export const createPrepackedOrder = async (data) => {
+    try {
+        const response = await axios.post('/website/prepacked-order', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating pre-packed order:', error);
+        throw error;
+    }
+};
+
 export const getTermsAndConditions = async () => {
     try {
         const response = await axios.get('/website/terms');

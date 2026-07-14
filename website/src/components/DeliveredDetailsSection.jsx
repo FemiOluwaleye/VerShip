@@ -193,7 +193,7 @@ const DeliveredDetailsSection = () => {
             <div className='bg-[#2D413F] rounded-xl p-5'>
               <div className='flex justify-between items-center'>
                 <p className='m-0 text-lg font-bold text-white'>Payment Method</p>
-                <img src={card}></img>
+                <img src={card} alt="" />
               </div>
             </div>
             <button

@@ -14,6 +14,13 @@ const socketIO = require('socket.io');
 const cors = require('cors');
 // const admin = require("firebase-admin");
 
+// Safety net for the consolidated single-service architecture: a stray
+// un-awaited promise rejection (e.g. a mail/DB call missing .catch) must not
+// take down the API + admin + public site for every user. Log and stay up.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason && reason.stack ? reason.stack : reason);
+});
+
 /*
 // Initialize Firebase Admin
 try {
@@ -56,9 +63,16 @@ app.post('/stripe/webhook', bodyParser.raw({ type: 'application/json' }), async 
   console.log('[WEBHOOK] Stripe signature captured:', sig ? 'Present' : 'Missing');
 
   try {
-    console.log('[WEBHOOK] Parsing request body');
-    let event = JSON.parse(req.body.toString());
-    console.log('[WEBHOOK] Event parsed successfully, type:', event.type);
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!endpointSecret) {
+      console.error('[WEBHOOK] STRIPE_WEBHOOK_SECRET is not configured — rejecting unverifiable webhook');
+      return res.status(500).send('Webhook secret not configured');
+    }
+    // Verify the event genuinely came from Stripe using the raw request body.
+    // Without this, anyone could POST a forged payment_intent.succeeded and mark
+    // bookings as paid.
+    const event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    console.log('[WEBHOOK] Event verified, type:', event.type);
 
     if (event.type === 'account.updated') {
       console.log('[WEBHOOK] Processing account.updated event');
@@ -143,6 +157,61 @@ app.use(cookieParser());
 app.use(fileupload());
 app.use(cors());
 
+// --- Security headers (dependency-free; no CSP to avoid breaking the SPA's
+// Stripe/Apple/Firebase/Google integrations). Hardens against clickjacking,
+// MIME sniffing, referrer leakage and protocol downgrade. ---
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  // Only assert HSTS when the request actually arrived over TLS (via proxy).
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
+  next();
+});
+
+// --- Basic in-memory rate limiter for auth-sensitive endpoints (brute-force
+// mitigation). Generous enough never to affect real users; keyed by client IP.
+// In-memory is fine for a single instance; swap for Redis if scaled out. ---
+const authAttempts = new Map();
+const AUTH_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const AUTH_MAX = 40;                   // attempts per window per IP
+const authRateLimiter = (req, res, next) => {
+  const ip = (req.headers['x-forwarded-for'] || req.ip || req.connection?.remoteAddress || 'unknown')
+    .toString().split(',')[0].trim();
+  const now = Date.now();
+  const entry = authAttempts.get(ip);
+  if (!entry || now - entry.start > AUTH_WINDOW_MS) {
+    authAttempts.set(ip, { start: now, count: 1 });
+    return next();
+  }
+  entry.count += 1;
+  if (entry.count > AUTH_MAX) {
+    return res.status(429).json({
+      success: false,
+      status: 429,
+      message: 'Too many attempts. Please try again in a few minutes.',
+    });
+  }
+  next();
+};
+// Opportunistic cleanup so the Map can't grow unbounded.
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, e] of authAttempts) {
+    if (now - e.start > AUTH_WINDOW_MS) authAttempts.delete(ip);
+  }
+}, AUTH_WINDOW_MS).unref?.();
+
+app.use([
+  '/website/login', '/website/register', '/website/verify', '/website/resend-otp',
+  '/website/forgot-password', '/website/reset-password', '/website/social-login',
+  '/api/admin/login', '/api/login',
+], authRateLimiter);
+
 // Frontend serving. On Replit (staging) the SPAs are built into these folders
 // and served here so the whole app previews at one URL. On Render the frontends
 // deploy as separate CDN Static Sites, so these folders are absent in the API
@@ -161,7 +230,9 @@ const uploadRoot = process.env.UPLOAD_DIR || path.join(__dirname, "public");
 app.use('/images', express.static(path.join(uploadRoot, "images")));
 app.use('/admin/images', express.static(path.join(uploadRoot, "images")));
 
-if (serveApp) app.use(express.static(appBuildPath));
+// redirect:false so a prerendered directory route (e.g. dist/about/) isn't
+// auto-redirected to a trailing slash before the catch-all can serve it cleanly.
+if (serveApp) app.use(express.static(appBuildPath, { redirect: false }));
 
 // Prevent caching for specific routes
 app.use((req, res, next) => {
@@ -201,6 +272,16 @@ app.use('/website', websiteRouter);
 // unmatched routes fall through to the 404 handler instead of erroring.
 if (serveApp) {
   app.get('*', (req, res) => {
+    // Prefer a prerendered per-route page (from `npm run prerender`) so crawlers
+    // get real content + per-page metadata; otherwise serve the SPA shell.
+    // Falls back safely when no prerendered files exist.
+    const cleanPath = req.path.replace(/\/+$/, "");
+    if (cleanPath && !path.extname(cleanPath)) {
+      const candidate = path.resolve(appBuildPath, "." + cleanPath, "index.html");
+      if (candidate.startsWith(appBuildPath + path.sep) && fs.existsSync(candidate)) {
+        return res.sendFile(candidate);
+      }
+    }
     res.sendFile(path.join(appBuildPath, "index.html"));
   });
 }

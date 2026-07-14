@@ -17,7 +17,8 @@ const MoveBusinessForward = ({ variant }) => {
                     <div className="absolute inset-0">
                         <img
                             src={largeCargoShip}
-                            alt="Shipping"
+                            alt=""
+                            aria-hidden="true"
                             className="w-full h-full object-cover"
                         />
                         {/* Dark Overlay */}
@@ -66,7 +67,8 @@ const MoveBusinessForward = ({ variant }) => {
                 <div className="absolute inset-0">
                     <img
                         src={newTop}
-                        alt="Shipping Container"
+                        alt=""
+                        aria-hidden="true"
                         className="w-full h-full object-cover"
                     />
                 </div>

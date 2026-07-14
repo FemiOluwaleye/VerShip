@@ -130,7 +130,7 @@ import { COUNTRY_LIST } from "../utils/countryPhoneData";
 
 const PhoneInput = ({
   label,
-  labelClassName = "text-lg font-medium",
+  labelClassName = "text-sm font-medium",
   inputClassName = "",
   buttonClassName = "",
   placeholder = "Enter phone number",

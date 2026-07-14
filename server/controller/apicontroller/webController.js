@@ -567,11 +567,12 @@ module.exports = {
             user.loginTime = loginTime;
             await user.save();
 
-            try {
-                sendOtpEmail(email, otp);
-            } catch (mailError) {
+            // Fire-and-forget: do NOT await (registration must not block on email),
+            // but attach a .catch so a mail failure can't become an unhandled
+            // rejection that crashes the whole process. (sendOtpEmail rethrows.)
+            sendOtpEmail(email, otp).catch((mailError) => {
                 console.error("OTP Email sending failed:", mailError.message);
-            }
+            });
 
             let authtoken = await jwt.sign({ id: user.id, loginTime: loginTime }, process.env.JWT_SECRET);
 
@@ -579,6 +580,134 @@ module.exports = {
         } catch (error) {
             console.log("error=------regiter----------------->>>>>", error);
             return helper.failure(res, error);
+        }
+    },
+
+    // ---------------- PRE-PACKED FOOD BARREL (owner-sold fixed product) ----------------
+    // Public: return the active product + its contents for the landing page.
+    // Public: the barrels shown on the landing page — all ACTIVE + FEATURED ones.
+    // Falls back to the single newest active barrel when nothing is featured, so
+    // the page is never empty for setups that haven't marked a barrel featured.
+    // Returns an ARRAY in `body` (the page renders a selectable grid).
+    getPrepackedBarrel: async (req, res) => {
+        try {
+            const include = [{ model: db.prepacked_barrel_items, as: 'contents' }];
+            const order = [
+                ['id', 'DESC'],
+                [{ model: db.prepacked_barrel_items, as: 'contents' }, 'sort_order', 'ASC'],
+            ];
+
+            let products = await db.prepacked_barrel.findAll({
+                where: { status: "1", featured: true },
+                include,
+                order,
+            });
+
+            if (!products.length) {
+                products = await db.prepacked_barrel.findAll({
+                    where: { status: "1" },
+                    include,
+                    order,
+                    limit: 1,
+                });
+            }
+
+            if (!products.length) {
+                return helper.failure(res, "No pre-packed barrel is available right now.");
+            }
+            return helper.success(res, "Pre-packed barrels fetched successfully.", products);
+        } catch (error) {
+            console.log("error=------getPrepackedBarrel-------->>>>>", error);
+            return helper.failure(res, error.message);
+        }
+    },
+
+    // Public: quick checkout. Auto-creates a profile (and logs the buyer in) when
+    // the email is new; records the order with no online charge (v1). If the email
+    // already belongs to a registered account, the order is still saved to it but
+    // NO token is issued (guest-checkout account-takeover guard) — the buyer is
+    // told to log in to track it. Price is snapshotted server-side.
+    createPrepackedOrder: async (req, res) => {
+        try {
+            const {
+                product_id, quantity,
+                firstName, lastName, email, phone, countryCode,
+                recipient_name, recipient_phone, recipient_email,
+                delivery_street, delivery_town, delivery_parish, delivery_country,
+                notes,
+            } = req.body;
+
+            if (!email) return helper.failure(res, "Email is required to place your order.");
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return helper.failure(res, "Please enter a valid email.");
+            if (!delivery_street || !delivery_town || !delivery_parish) {
+                return helper.failure(res, "A full Jamaican delivery address (street, town/city, parish) is required.");
+            }
+
+            const product = product_id
+                ? await db.prepacked_barrel.findOne({ where: { id: product_id } })
+                : await db.prepacked_barrel.findOne({ where: { status: "1" }, order: [['id', 'DESC']] });
+            if (!product) return helper.failure(res, "That product is no longer available.");
+
+            const qty = Math.max(1, parseInt(quantity, 10) || 1);
+            const unitPrice = parseFloat(product.price) || 0;
+            const totalPrice = (unitPrice * qty).toFixed(2);
+
+            let authtoken = null;
+            let accountExists = false;
+            let user = await db.users.findOne({ where: { email, otpVerify: "1" } });
+
+            if (!user) {
+                const tempPassword = await bcrypt.hash("Vership-" + Date.now() + "-" + Math.random(), 10);
+                user = await db.users.create({
+                    role: "1",
+                    firstName: firstName || recipient_name || "VerShip",
+                    lastName: lastName || "Customer",
+                    email,
+                    countryCode: countryCode || "+1",
+                    phoneNumber: phone || recipient_phone || "",
+                    password: tempPassword,
+                    otpVerify: "1",   // guest checkout: skip OTP, account usable immediately
+                    status: "1",
+                    survey: "",
+                });
+                const loginTime = helper.unixTimestamp() + Math.floor(Math.random() * 10000000);
+                user.loginTime = loginTime;
+                await user.save();
+                authtoken = await jwt.sign({ id: user.id, loginTime }, process.env.JWT_SECRET);
+            } else {
+                accountExists = true;
+            }
+
+            const orderId = "ORD-PP-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+            const order = await db.prepacked_orders.create({
+                orderId,
+                userId: user.id,
+                prepacked_barrel_id: product.id,
+                quantity: qty,
+                unit_price: String(unitPrice),
+                total_price: String(totalPrice),
+                currency: product.currency || "USD",
+                recipient_name: recipient_name || "",
+                recipient_phone: recipient_phone || "",
+                recipient_email: recipient_email || email,
+                delivery_street: delivery_street || "",
+                delivery_town: delivery_town || "",
+                delivery_parish: delivery_parish || "",
+                delivery_country: delivery_country || "Jamaica",
+                notes: notes || "",
+                status: "0",
+                payment_status: 0,
+            });
+
+            return helper.success(res, "Order placed successfully.", {
+                order,
+                accountExists,
+                authtoken,
+                user: accountExists ? null : user,
+            });
+        } catch (error) {
+            console.log("error=------createPrepackedOrder-------->>>>>", error);
+            return helper.failure(res, error.message);
         }
     },
 
@@ -2011,7 +2140,8 @@ module.exports = {
             const reqItemTypes = finalItems.map(i => (i.sub_type || i.item_type || "").toLowerCase());
 
             const providers = await db.providerDetails.findAll({
-                where: { deletedAt: null },
+                // providerDetails is not paranoid and has no deletedAt column in Postgres,
+                // so there is no soft-delete to filter on — query all providers.
                 include: [
                     { model: db.provider_shipment_item_types, as: 'shipmentItemTypes' },
                     { model: db.barrelsprices, as: 'barrelPrices' }
@@ -2303,9 +2433,8 @@ module.exports = {
             };
 
             const providers = await db.providerDetails.findAll({
-                where: {
-                    deletedAt: null,
-                },
+                // providerDetails is not paranoid and has no deletedAt column in Postgres,
+                // so there is no soft-delete to filter on — query all providers.
                 include: [
                     { model: db.provider_shipment_item_types, as: 'shipmentItemTypes' },
                     { model: db.barrelsprices, as: 'barrelPrices' }
@@ -2365,11 +2494,14 @@ module.exports = {
                     if (!typeMatch) return false;
                 }
 
-                // 3. Distance Calculation (internal state for setting distance)
+                // 3. Distance is intentionally NOT used for provider matching.
+                // Pickup/delivery mileage pricing is computed client-side in
+                // ShipmentDetailsSection using the Google Distance Matrix (real
+                // driving miles) against each forwarder's per-mile config. This
+                // server path filters by country/type only; `distance` stays 0
+                // as a stable sort key. See calculateDistance() above if server
+                // authoritative distance is ever needed.
                 let distance = 0;
-                if (drop_off_lat && drop_off_long && p.originLat && p.originLong) {
-                    // distance = calculateDistance(...)
-                }
                 p.setDataValue('distance', distance);
 
                 return true;
@@ -3392,6 +3524,16 @@ module.exports = {
                 return v;
             };
 
+            // Coerce values destined for numeric/DECIMAL columns. Barrel prices are
+            // stored as strings and can be empty (""), which Postgres rejects with
+            // "invalid input syntax for type numeric". Empty/non-numeric => fallback.
+            const toDecimal = (val, fallback = null) => {
+                if (val === null || val === undefined) return fallback;
+                const s = String(val).trim();
+                if (s === '' || isNaN(Number(s))) return fallback;
+                return s;
+            };
+
             /* ---------------- EMAIL VALIDATION ---------------- */
 
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -3609,13 +3751,13 @@ module.exports = {
                     consignee_full_address: consignee_full_address || `${consignee_address || ''} ${consignee_suite_apt_building || ''}`.trim(),
                     consignee_lat,
                     consignee_lng,
-                    bookingPrice: String(bookingPrice),
-                    base_price: barrelBasePrice,
+                    bookingPrice: toDecimal(bookingPrice, "0"),
+                    base_price: toDecimal(barrelBasePrice, null),
                     isVolumeDiscount: barrelIsVolumeDiscount,
                     discountAfter: barrelDiscountAfter,
                     discountPercent: barrelDiscountPercent,
                     freeMiles: barrelFreeMiles,
-                    adminCommission: String(adminCommission),
+                    adminCommission: toDecimal(adminCommission, "0"),
                     addOns: JSON.stringify(Array.isArray(addOns) ? addOns : []),
                     paymentMethod: '0',
                     bookingDate: new Date(),
@@ -4166,7 +4308,33 @@ module.exports = {
                 return helper.failure(res, "Booking not found.");
             }
 
-            const paidTotal = total ?? pay_now;
+            // Ownership: only the booking's own user may confirm its payment (IDOR guard).
+            if (booking.userId != null && String(booking.userId) !== String(req.user.id)) {
+                return helper.forbidden(res, "You are not allowed to update this booking.");
+            }
+
+            // Verify the payment actually happened via Stripe rather than trusting the
+            // client. Prevents marking a booking paid without paying, and amount tampering.
+            const paymentId = req.body.paymentId;
+            if (!paymentId) {
+                return helper.failure(res, "paymentId is required.");
+            }
+            const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+            let paymentIntent;
+            try {
+                paymentIntent = await stripe.paymentIntents.retrieve(paymentId);
+            } catch (e) {
+                return helper.failure(res, "Payment verification failed.");
+            }
+            if (!paymentIntent || paymentIntent.status !== "succeeded") {
+                return helper.failure(res, "Payment has not been completed.");
+            }
+            if (String(paymentIntent.metadata?.bookingId || "") !== String(booking.id)) {
+                return helper.failure(res, "Payment does not match this booking.");
+            }
+
+            // Authoritative amount comes from Stripe (in cents), not the request body.
+            const paidTotal = Number(((paymentIntent.amount_received || paymentIntent.amount) / 100).toFixed(2));
 
             await booking.update({
                 pay_now_price: paidTotal,

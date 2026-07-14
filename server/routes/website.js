@@ -4,6 +4,14 @@ const webController = require('../controller/apicontroller/webController');
 
 const { verifyUser } = require('../middleware/authtoken');
 
+// Pre-packed food barrel (owner-sold fixed product) — public, no auth.
+router.get('/prepacked-barrel', (req, res, next) => {
+    webController.getPrepackedBarrel(req, res);
+});
+router.post('/prepacked-order', (req, res, next) => {
+    webController.createPrepackedOrder(req, res);
+});
+
 // Website CMS Routes
 router.get('/privacy', (req, res, next) => {
     req.query.type = 1;

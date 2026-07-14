@@ -57,25 +57,35 @@ const MultiSelect = ({
       >
         {value.length > 0 ? (
           value.map(item => (
-            <div 
+            <div
               key={item}
               className="bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm"
             >
               {item}
-              <X 
-                size={14} 
-                className="cursor-pointer hover:scale-125 transition-transform" 
+              <button
+                type="button"
+                aria-label={`Remove ${item}`}
                 onClick={(e) => removeItem(e, item)}
-              />
+                className="cursor-pointer hover:scale-125 transition-transform flex items-center"
+              >
+                <X size={14} />
+              </button>
             </div>
           ))
         ) : (
-          <span className="text-white/40 text-sm ml-1">{placeholder}</span>
+          <span className="text-white/50 text-sm ml-1">{placeholder}</span>
         )}
-        
-        <div className="ml-auto pr-1">
+
+        <button
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          aria-label={label || placeholder}
+          onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+          className="ml-auto pr-1 flex items-center"
+        >
           <ChevronDown size={18} className={`text-white/60 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-        </div>
+        </button>
       </div>
 
       {/* Dropdown Menu */}
@@ -96,24 +106,27 @@ const MultiSelect = ({
           </div>
 
           {/* Options List */}
-          <div className="max-h-[250px] overflow-y-auto custom-scrollbar p-1">
+          <div role="listbox" aria-multiselectable="true" aria-label={label || placeholder} className="max-h-[250px] overflow-y-auto custom-scrollbar p-1">
             {filteredOptions.length > 0 ? (
               filteredOptions.map(opt => {
                 const isSelected = value.includes(opt);
                 return (
-                  <div
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
                     key={opt}
                     onClick={() => toggleOption(opt)}
                     className={`
-                      px-4 py-2.5 rounded-lg text-sm cursor-pointer flex items-center justify-between transition-colors mb-0.5
-                      ${isSelected 
-                        ? "bg-yellow-400 text-black font-bold" 
+                      w-full text-left px-4 py-2.5 rounded-lg text-sm cursor-pointer flex items-center justify-between transition-colors mb-0.5
+                      ${isSelected
+                        ? "bg-yellow-400 text-black font-bold"
                         : "text-white/80 hover:bg-white/10 hover:text-white"}
                     `}
                   >
                     {opt}
                     {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
-                  </div>
+                  </button>
                 );
               })
             ) : (

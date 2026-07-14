@@ -37,6 +37,7 @@ module.exports = {
 
             const { count, rows } = await db.users.findAndCountAll({
                 where: whereCondition,
+                attributes: { exclude: ["password"] },
                 offset,
                 limit,
                 order: [["id", "DESC"]],

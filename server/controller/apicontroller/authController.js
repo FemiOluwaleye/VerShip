@@ -122,7 +122,10 @@ module.exports = {
                 ...updatedUser.toJSON(),
                 token: token
             };
-            responseData.otp = otp;
+            // Never return the OTP to the client. NOTE: this mobile flow still uses a
+            // placeholder OTP and issues a token before verification — replace with a
+            // random, SMS-delivered OTP and gate the token on verifyOtp.
+            delete responseData.otp;
             if (isNewUser) {
                 return helper.success(res, 'Account created successfully. OTP sent for verification.', responseData);
             }

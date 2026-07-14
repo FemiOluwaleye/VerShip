@@ -216,6 +216,7 @@ const UserList = () => {
                             <th>First Name</th>
                             <th>Last Name</th>
                             <th>Email Address</th>
+                            <th>Phone</th>
                             <th>Location</th>
                             {/* <th>Blocked</th>
                             <th>Suspended</th> */}
@@ -246,6 +247,11 @@ const UserList = () => {
                                 <td>{user.firstName || ""}</td>
                                 <td>{user.lastName || ""}</td>
                                 <td>{user.email || ""}</td>
+                                <td style={{ whiteSpace: "nowrap" }}>
+                                  {user.phoneNumber
+                                    ? `${user.countryCode ? `+${String(user.countryCode).replace(/^\+/, "")} ` : ""}${user.phoneNumber}`
+                                    : "-"}
+                                </td>
                                 <td
                                   style={{
                                     whiteSpace: "normal",

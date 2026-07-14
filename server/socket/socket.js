@@ -973,13 +973,20 @@ module.exports = function (io) {
     socket.on("user_constant_list", async (get_data) => {
       try {
 
+        // sender_id is interpolated into raw SQL below, so it MUST be a validated
+        // integer to prevent SQL injection from the socket payload.
+        const senderId = parseInt(get_data.sender_id, 10);
+        if (!Number.isInteger(senderId)) {
+          return socket.emit("user_constant_list", { success: false, message: "Invalid sender_id" });
+        }
+
         let whereCondition = {
           [Op.or]: [
-            { sender_id: get_data.sender_id },
-            { reciever_id: get_data.sender_id },
+            { sender_id: senderId },
+            { reciever_id: senderId },
           ],
           deletedId: {
-            [Op.not]: get_data.sender_id,
+            [Op.not]: senderId,
           },
         };
 
@@ -990,7 +997,7 @@ module.exports = function (io) {
         // Postgres cannot reference a SELECT-list alias (Receiver_user_id) inside
         // sibling subqueries the way MySQL does, so the CASE expression is defined
         // once and inlined everywhere the "other participant" id is needed.
-        const receiverExpr = `(CASE WHEN chat_constant.reciever_id = ${get_data.sender_id} THEN chat_constant.sender_id ELSE chat_constant.reciever_id END)`;
+        const receiverExpr = `(CASE WHEN chat_constant.reciever_id = ${senderId} THEN chat_constant.sender_id ELSE chat_constant.reciever_id END)`;
 
         let constantList = await db.chat_constant.findAll({
           attributes: {
@@ -1001,7 +1008,7 @@ module.exports = function (io) {
               ],
               [
                 Sequelize.literal(
-                  `COALESCE((SELECT message FROM message WHERE message.id = chat_constant."lastMessage_id" AND "deletedId" != ${get_data.sender_id}),'')`
+                  `COALESCE((SELECT message FROM message WHERE message.id = chat_constant."lastMessage_id" AND "deletedId" != ${senderId}),'')`
                 ),
                 "last_msg",
               ],
@@ -1014,7 +1021,7 @@ module.exports = function (io) {
               [
                 Sequelize.literal(
                   `(SELECT COUNT(*) FROM message
-                    WHERE message.reciever_id = ${get_data.sender_id}
+                    WHERE message.reciever_id = ${senderId}
                     AND message.sender_id = ${receiverExpr}
                     AND message."readStatus" = 0 )`
                 ),

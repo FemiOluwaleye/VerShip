@@ -217,12 +217,25 @@ exports.stripeReturn = async (req, res) => {
     try {
         const userId = req.params.userId;
 
-        await db.users.update(
-            { hashAccount: "1" },
-            { where: { id: userId } }
-        );
-
-        console.log(`✅ hashAccount updated to "1" for user: ${userId}`);
+        // This return URL is public, so don't trust it to mean onboarding succeeded.
+        // Confirm with Stripe that the connected account can actually receive funds
+        // before marking the provider payout-ready.
+        const user = await db.users.findOne({ where: { id: userId } });
+        if (user && user.accountId) {
+            try {
+                const account = await stripe.accounts.retrieve(user.accountId);
+                const transfersActive = account.capabilities?.transfers === "active";
+                const legacyPaymentsActive = account.capabilities?.legacy_payments === "active";
+                if (account.details_submitted && (transfersActive || legacyPaymentsActive)) {
+                    await db.users.update({ hashAccount: "1" }, { where: { id: userId } });
+                    console.log(`✅ hashAccount verified & set to "1" for user: ${userId}`);
+                } else {
+                    console.log(`⏳ Stripe onboarding not complete for user ${userId}; hashAccount unchanged`);
+                }
+            } catch (stripeErr) {
+                console.error("stripeReturn account verification failed:", stripeErr.message);
+            }
+        }
 
         return res.redirect('https://vershipgo.com');
 
