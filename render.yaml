@@ -22,7 +22,16 @@ services:
     # website/dist, which shipone.js serves at / (public) and /admin (admin).
     # website/ is a standalone app that lives inside a pnpm workspace root, so it
     # must install with --ignore-workspace (a plain install prunes its deps).
-    buildCommand: npm install && cd ../website && corepack enable && pnpm install --ignore-workspace && pnpm run build
+    #
+    # After the build, the SEO prerender writes real per-route HTML into dist/ so
+    # crawlers get titles/meta/canonical instead of an empty shell. It is run
+    # BEST-EFFORT (`|| echo …`): if Chromium can't launch in the native build
+    # image it skips without failing the deploy. Verify from the build log
+    # ("N/N routes prerendered" = worked; "Could not launch Chromium … Skipping"
+    # = falls back to the plain SPA — switch this service to a Docker runtime
+    # with the Chromium libs if you need prerender to run). Puppeteer's Chromium
+    # download is enabled via website/package.json > pnpm.onlyBuiltDependencies.
+    buildCommand: npm install && cd ../website && corepack enable && pnpm install --ignore-workspace && pnpm run build && (node scripts/prerender.mjs || echo '[prerender] skipped — Chromium could not launch in this build image; serving plain SPA')
     startCommand: node shipone.js
     healthCheckPath: /
     disk:
@@ -39,8 +48,8 @@ services:
       - key: UPLOAD_DIR
         value: /var/data
       # PORT is injected by Render automatically; shipone.js reads process.env.PORT.
-      # The frontend calls the API same-origin, so no VITE_API_URL/REACT_APP_API_URL
-      # build vars are needed.
+      # The frontend calls the API same-origin, so the VITE_API_URL / admin URL
+      # build vars default to '' and '/admin' — no need to set them here.
       - key: PUBLIC_BASE_URL
         sync: false # set to the service's public URL / custom domain
       - key: JWT_SECRET
@@ -48,6 +57,18 @@ services:
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      # Required by the hardened Stripe webhook handler (shipone.js): unverifiable
+      # webhooks are REJECTED, so an unset secret breaks all webhooks in prod.
+      # Set this to the signing secret Stripe shows when you add the webhook
+      # endpoint (https://<domain>/api/stripe/webhook or your configured path).
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Build-time (Vite) key baked into the bundle. Used by geocoding + the
+      # Google driving-distance calc that now drives pickup/delivery billing, so
+      # it MUST be present when the frontend builds or distance pricing breaks.
+      # Restrict this key to the prod domain(s) in the Google Cloud console.
+      - key: VITE_GOOGLE_MAPS_API_KEY
         sync: false
       - key: SMTP_HOST
         sync: false
