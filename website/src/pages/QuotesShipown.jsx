@@ -464,17 +464,15 @@ const QuotesShipown = () => {
         let state = "";
 
         if (checked) {
-            if (userDetails?.streetAddress && userDetails?.city && userDetails?.state) {
-                city = userDetails.city || "";
-                state = userDetails.state || "";
-                fullAddress = `${userDetails.streetAddress}, ${userDetails.city}, ${userDetails.state}`.replace(/^, |, $|, ,/g, '').trim();
-            } else if (bookingRequest?.origin) {
-                fullAddress = bookingRequest.origin;
-                const parts = bookingRequest.origin.split(',');
-                if (parts.length >= 2) {
-                    city = parts[0]?.trim() || "";
-                    state = parts[1]?.trim() || "";
-                }
+            // Copy the account owner's saved street address. Only the street is
+            // required — city/state are appended when present. If the owner has no
+            // saved street address, copy nothing for the address (leave it empty)
+            // rather than substituting the booking origin city.
+            const savedStreet = userDetails?.streetAddress || userDetails?.address || "";
+            if (savedStreet) {
+                city = userDetails?.city || "";
+                state = userDetails?.state || "";
+                fullAddress = [savedStreet, city, state].filter(Boolean).join(", ").trim();
             }
         }
 
@@ -503,8 +501,8 @@ const QuotesShipown = () => {
             address: checked ? fullAddress : "",
             city: checked ? city : "",
             state: checked ? state : "",
-            lat: checked ? (userLat || "") : "",
-            lng: checked ? (userLng || "") : "",
+            lat: checked && fullAddress ? (userLat || "") : "",
+            lng: checked && fullAddress ? (userLng || "") : "",
         }));
     };
 
@@ -882,8 +880,8 @@ const QuotesShipown = () => {
 
                             <div className="grid grid-cols-1 gap-4 mb-3">
                                 <AddressField
-                                    label="Address"
-                                    placeholder="e.g. 5 VerShip Close"
+                                    label="Street Address"
+                                    placeholder="e.g. 15 Molynes Road"
                                     value={primaryContact.address}
                                     onChange={setPrimary("address")}
                                     onAddressExtract={handlePrimaryAddressSelect}
@@ -895,8 +893,8 @@ const QuotesShipown = () => {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                                 <Field
-                                    label="City"
-                                    placeholder="e.g. Kingston"
+                                    label="Town / City"
+                                    placeholder="e.g. Kingston 10"
                                     value={primaryContact.city || ""}
                                     onChange={(val) => {
                                         setPrimaryContact(prev => ({ ...prev, city: val }));
@@ -905,9 +903,8 @@ const QuotesShipown = () => {
                                     errorKey="primary_city"
                                     errors={errors}
                                 />
-                                <Field
-                                    label="State"
-                                    placeholder="e.g. NY"
+                                <ParishField
+                                    label="Parish"
                                     value={primaryContact.state || ""}
                                     onChange={(val) => {
                                         setPrimaryContact(prev => ({ ...prev, state: val }));
@@ -941,8 +938,8 @@ const QuotesShipown = () => {
 
                                 <div className="grid grid-cols-1 gap-4 mb-3">
                                     <AddressField
-                                        label="Address"
-                                        placeholder="e.g. 5 VerShip Close"
+                                        label="Street Address"
+                                        placeholder="e.g. 15 Molynes Road"
                                         value={secondaryContact.address}
                                         onChange={setSecondary("address")}
                                         onAddressExtract={handleSecondaryAddressSelect}
@@ -954,8 +951,8 @@ const QuotesShipown = () => {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                                     <Field
-                                        label="City"
-                                        placeholder="e.g. Kingston"
+                                        label="Town / City"
+                                        placeholder="e.g. Kingston 10"
                                         value={secondaryContact.city || ""}
                                         onChange={(val) => {
                                             setSecondaryContact(prev => ({ ...prev, city: val }));
@@ -964,9 +961,8 @@ const QuotesShipown = () => {
                                         errorKey="secondary_city"
                                         errors={errors}
                                     />
-                                    <Field
-                                        label="State"
-                                        placeholder="e.g. NY"
+                                    <ParishField
+                                        label="Parish"
                                         value={secondaryContact.state || ""}
                                         onChange={(val) => {
                                             setSecondaryContact(prev => ({ ...prev, state: val }));

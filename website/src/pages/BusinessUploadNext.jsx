@@ -49,6 +49,21 @@ const normCustoms = (val) => {
   return Array(25).fill("").join(",");
 };
 
+// Validate a 25-slot per-barrel price string. Entries are optional (a freight
+// user may price only the first N barrels), but whatever is entered must be
+// filled sequentially from Barrel 1 with no gaps. Returns "" when valid.
+const validateSequentialBarrelPrices = (value) => {
+  const parts = String(value ?? "").split(",").map(v => (v ?? "").trim());
+  const lastFilled = parts.reduce((acc, v, i) => (v !== "" ? i : acc), -1);
+  if (lastFilled < 0) return ""; // fully optional: no entries is allowed
+  const upto = parts.slice(0, lastFilled + 1);
+  if (upto.some(v => v === "")) return "Enter barrel prices in order, with no gaps";
+  if (upto.some(v => isNaN(v) || Number(v) < 0)) return "Enter a valid price";
+  if (upto.some(v => Number(v) > MAX_CUSTOMS)) return `Price cannot exceed ${MAX_CUSTOMS.toLocaleString()}`;
+  if (upto.some(v => { const d = v.split('.')[1]; return d && d.length > 2; })) return "Max 2 decimal places allowed";
+  return "";
+};
+
 const customsDisplay = (raw, n) => {
   if (!raw) return "";
   const v = String(raw).split(",")[n - 1] ?? "";
@@ -289,43 +304,15 @@ const BusinessUploadNext = () => {
           else if (Number(strValue) === 0) error = "Price must be greater than 0";
           break;
         case "customsAndHandling": {
-          const cParts = (strValue || "").split(",");
-          const missing = cParts.length === 25 ? cParts.filter(v => !v.trim() || isNaN(v) || Number(v) < 0).length : 25;
-          if (missing > 0) {
-            error = `${missing} fields remaining`;
-          } else if (cParts.some(v => Number(v) > MAX_CUSTOMS)) {
-            error = `Price cannot exceed ${MAX_CUSTOMS.toLocaleString()}`;
-          } else if (cParts.some(v => { const d = v.split('.')[1]; return d && d.length > 2; })) {
-            error = "Max 2 decimal places allowed";
-          }
+          error = validateSequentialBarrelPrices(strValue);
           break;
         }
         case "flatPickupCharge": {
-          if (!isDropOff) {
-            const cParts = (strValue || "").split(",");
-            const missing = cParts.length === 25 ? cParts.filter(v => !v.trim() || isNaN(v) || Number(v) < 0).length : 25;
-            if (missing > 0) {
-              error = `${missing} fields remaining`;
-            } else if (cParts.some(v => Number(v) > MAX_CUSTOMS)) {
-              error = `Price cannot exceed ${MAX_CUSTOMS.toLocaleString()}`;
-            } else if (cParts.some(v => { const d = v.split('.')[1]; return d && d.length > 2; })) {
-              error = "Max 2 decimal places allowed";
-            }
-          }
+          if (!isDropOff) error = validateSequentialBarrelPrices(strValue);
           break;
         }
         case "flatDeliveryCharge": {
-          if (!isDropOff) {
-            const cParts = (strValue || "").split(",");
-            const missing = cParts.length === 25 ? cParts.filter(v => !v.trim() || isNaN(v) || Number(v) < 0).length : 25;
-            if (missing > 0) {
-              error = `${missing} fields remaining`;
-            } else if (cParts.some(v => Number(v) > MAX_CUSTOMS)) {
-              error = `Price cannot exceed ${MAX_CUSTOMS.toLocaleString()}`;
-            } else if (cParts.some(v => { const d = v.split('.')[1]; return d && d.length > 2; })) {
-              error = "Max 2 decimal places allowed";
-            }
-          }
+          if (!isDropOff) error = validateSequentialBarrelPrices(strValue);
           break;
         }
         case "transitTime":
@@ -686,7 +673,7 @@ const BusinessUploadNext = () => {
             className="absolute left-0 right-0 mt-1 p-4 rounded-lg border border-white/20 shadow-2xl"
             style={{ background: '#152b20', top: '100%', zIndex: 50 }}
           >
-            <p className="text-[11px] text-white/40 mb-3">Enter price for each barrel quantity. All 25 are required.</p>
+            <p className="text-[11px] text-white/40 mb-3">Optional — enter prices starting at Barrel 1 with no gaps. You can stop at any barrel; any order larger than your last entry is charged at your last entered price.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
               {Array.from({ length: 25 }, (_, i) => {
                 const bn = i + 1;

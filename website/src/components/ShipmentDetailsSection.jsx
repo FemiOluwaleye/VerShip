@@ -20,6 +20,15 @@ const DESTINATION_COORDINATES = {
   "Kingston, Jamaica": { lat: "17.9712", lng: "-76.7924" },
 };
 
+// Fixed Jamaica delivery origin — the port every shipment is delivered from:
+// 95 Second Street, Newport West, Kingston 13, St. Andrew, Jamaica.
+// Delivery miles are measured from here to the recipient (drives per-mile billing).
+// Coordinate triangulated from web sources: the Newport West port estate sits
+// just south of Tinson Pen Aerodrome (17.9890, -76.8251), and Second Street is a
+// confirmed corridor there (Kingston Wharves #195, MTS #40, Laparkan #10). For a
+// to-the-metre pin, replace with the exact lat/lng from Google Maps.
+const PORT_COORDINATES = { lat: 17.966, lng: -76.829 };
+
 const CITY_COORDINATES = {
   "Fort Lauderdale, FL": { lat: "26.1224", lng: "-80.1373" },
   "Miami, FL": { lat: "25.7617", lng: "-80.1918" },
@@ -33,7 +42,13 @@ const getValueForQuantity = (rawVal, qty) => {
   const parts = str.split(",");
   if (parts.length === 25) {
     const index = Math.min(Math.max(1, qty), 25) - 1;
-    return parseFloat(parts[index] || 0) || 0;
+    // Freight users may price only the first N barrels; any larger order is
+    // charged at the last entered (highest) barrel price. Walk back to it.
+    for (let i = index; i >= 0; i--) {
+      const v = String(parts[i] ?? "").trim();
+      if (v !== "") return parseFloat(v) || 0;
+    }
+    return 0;
   }
   return parseFloat(parts[0] || 0) || 0;
 };
@@ -161,9 +176,10 @@ const ShipmentDetailsSection = () => {
     shipperLng
   );
 
+  // Delivery is measured from the fixed Jamaica port, not the destination city.
   const deliveryDistance = calculateDistance(
-    parseFloat(destCoords.lat),
-    parseFloat(destCoords.lng),
+    PORT_COORDINATES.lat,
+    PORT_COORDINATES.lng,
     consigneeLat,
     consigneeLng
   );
@@ -263,8 +279,8 @@ const ShipmentDetailsSection = () => {
           };
 
           const deliveryStart = {
-            lat: parseFloat(destCoords.lat || 0),
-            lng: parseFloat(destCoords.lng || 0)
+            lat: PORT_COORDINATES.lat,
+            lng: PORT_COORDINATES.lng
           };
           const deliveryEnd = {
             lat: parseFloat(booking?.consignee_lat || 0),

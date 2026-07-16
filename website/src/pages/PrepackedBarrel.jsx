@@ -340,7 +340,7 @@ const PrepackedBarrel = () => {
                         <div className="p-6 md:p-8">
                             <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0D4D4D]/80 mb-3">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#C1A35E]" aria-hidden="true" />
-                                USA to Jamaica · Door to door
+                                USA to Jamaica · Door to door in Kingston, St. Andrew &amp; Portmore
                             </span>
                             <h1 className="text-2xl md:text-3xl font-bold text-[#071618]">{product.name}</h1>
                             {product.tagline && <p className="text-[#595d5e] mt-2">{product.tagline}</p>}
