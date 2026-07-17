@@ -4,42 +4,44 @@
 require('dotenv').config();
 const db = require('./models');
 
-// Full barrel manifest (quantities are baked into each product name, so the
-// separate quantity column is left empty).
+// Full barrel manifest. `quantity` holds the count/size descriptor shown on the
+// right side of each list row (e.g. "8ct · 15oz"); `name` is the clean product
+// name shown on the left. The page renders these as an even two-column grid.
 const CONTENTS = [
-  { name: "Royal Sona Masoori 20lbs (Sam's Club)", quantity: '', icon: '🍚', sort_order: 1 },
-  { name: "Gold Medal All Purpose Flour 12lbs (Sam's Club)", quantity: '', icon: '🌾', sort_order: 2 },
-  { name: "Member's Mark G-Sugar 10lbs (Sam's Club)", quantity: '', icon: '🧂', sort_order: 3 },
-  { name: "Member's Mark Canola Oil 6qts (Sam's Club)", quantity: '', icon: '🛢️', sort_order: 4 },
-  { name: 'Del Monte Sweet Corn 8pk', quantity: '', icon: '🌽', sort_order: 5 },
-  { name: 'Le Sueur Sweet Peas 8pk', quantity: '', icon: '🫛', sort_order: 6 },
-  { name: "45 rolls Scott's Toilet Paper (Sam's Club)", quantity: '', icon: '🧻', sort_order: 7 },
-  { name: 'Crest Pro Advanced 5pk (Sam\'s Club)', quantity: '', icon: '🪥', sort_order: 8 },
-  { name: 'Irish Spring Bath Soap 20ct', quantity: '', icon: '🧼', sort_order: 9 },
-  { name: 'Genuine Joe Paper Towel 24 rolls (Walmart)', quantity: '', icon: '🧻', sort_order: 10 },
-  { name: 'Kraft Mac and Cheese 18ct (Costco)', quantity: '', icon: '🧀', sort_order: 11 },
-  { name: 'Quaker Oats 42oz', quantity: '', icon: '🥣', sort_order: 12 },
-  { name: 'Great Value Corned Beef (Walmart)', quantity: '', icon: '🥫', sort_order: 13 },
-  { name: 'Bumble Bee Sardines in Water (Walmart)', quantity: '', icon: '🐟', sort_order: 14 },
-  { name: "Starkist Tuna 12pk (Sam's Club)", quantity: '', icon: '🐟', sort_order: 15 },
-  { name: 'Great Value Spaghetti 16oz (Walmart)', quantity: '', icon: '🍝', sort_order: 16 },
-  { name: 'Great Value Light Red Kidney Beans 1lb (Walmart)', quantity: '', icon: '🫘', sort_order: 17 },
-  { name: "Kellogg's Frosted Flakes 21oz", quantity: '', icon: '🥣', sort_order: 18 },
-  { name: 'Swiss Miss Hot Chocolate 50ct (Costco)', quantity: '', icon: '☕', sort_order: 19 },
-  { name: 'Always Ultra-Thin w/Wings 76ct (Walmart)', quantity: '', icon: '🧴', sort_order: 20 },
-  { name: 'Ocean Spray Cranberry Juice 64oz (Walmart)', quantity: '', icon: '🧃', sort_order: 21 },
-  { name: 'Trash Bags 13 gal 20ct (Walmart)', quantity: '', icon: '🗑️', sort_order: 22 },
-  { name: 'Jif Peanut Butter', quantity: '', icon: '🥜', sort_order: 23 },
-  { name: 'Great Value Grape Jelly 30oz (Walmart)', quantity: '', icon: '🍇', sort_order: 24 },
-  { name: 'Armour Vienna Sausage 18ct (Costco)', quantity: '', icon: '🌭', sort_order: 25 },
-  { name: 'Equate Toothbrush 6pk (Walmart)', quantity: '', icon: '🪥', sort_order: 26 },
-  { name: 'Heinz Ketchup 44oz 3pk (Walmart)', quantity: '', icon: '🍅', sort_order: 27 },
-  { name: 'Equate Mouthwash 500ml (Walmart)', quantity: '', icon: '🧴', sort_order: 28 },
-  { name: 'Great Value BBQ Sauce 18oz (Walmart)', quantity: '', icon: '🍖', sort_order: 29 },
-  { name: 'Great Value Mayonnaise 30oz (Walmart)', quantity: '', icon: '🫙', sort_order: 30 },
-  { name: "Chef Boyardee Beef Ravioli 15oz 8pk (Sam's Club)", quantity: '', icon: '🥫', sort_order: 31 },
-  { name: 'Hills Bros French Vanilla (Walmart)', quantity: '', icon: '☕', sort_order: 32 },
-  { name: 'Great Value Condensed Milk (Walmart)', quantity: '', icon: '🥛', sort_order: 33 },
+  { name: 'White Long Grain Rice', quantity: '40lbs', icon: '🍚', sort_order: 1 },
+  { name: 'Toilet Paper', quantity: '18ct', icon: '🧻', sort_order: 2 },
+  { name: 'All Purpose Flour', quantity: '20lbs', icon: '🌾', sort_order: 3 },
+  { name: 'Colgate Toothpaste', quantity: '5ct', icon: '🪥', sort_order: 4 },
+  { name: 'Granulated Sugar', quantity: '10lbs', icon: '🧂', sort_order: 5 },
+  { name: 'Irish Spring Bath Soap', quantity: '10ct', icon: '🧼', sort_order: 6 },
+  { name: 'Yellow Cornmeal', quantity: '5lbs', icon: '🌽', sort_order: 7 },
+  { name: 'Paper Towel', quantity: '4ct', icon: '🧻', sort_order: 8 },
+  { name: 'Gallon Canola Cooking Oil', quantity: '2ct', icon: '🛢️', sort_order: 9 },
+  { name: 'Always Ultra-Thin w/Wings', quantity: '32ct', icon: '🧴', sort_order: 10 },
+  { name: 'Whole Kernel Sweet Corn', quantity: '12ct', icon: '🌽', sort_order: 11 },
+  { name: 'Adult Toothbrush', quantity: '6ct', icon: '🪥', sort_order: 12 },
+  { name: 'Sweet Green Peas', quantity: '12ct', icon: '🫛', sort_order: 13 },
+  { name: 'Equate Mouthwash', quantity: '2ct · 500ml', icon: '🧴', sort_order: 14 },
+  { name: 'Corned Beef', quantity: '6ct', icon: '🥫', sort_order: 15 },
+  { name: 'Trash Bag', quantity: '20ct · 13 gal', icon: '🗑️', sort_order: 16 },
+  { name: 'Sardines', quantity: '12ct', icon: '🐟', sort_order: 17 },
+  { name: 'Instant Oats (Quaker)', quantity: '1ct · 42oz', icon: '🥣', sort_order: 18 },
+  { name: 'Tuna', quantity: '12ct', icon: '🐟', sort_order: 19 },
+  { name: 'Mac and Cheese', quantity: '12ct · 15oz', icon: '🧀', sort_order: 20 },
+  { name: 'Chicken Vienna Sausage', quantity: '12ct', icon: '🌭', sort_order: 21 },
+  { name: 'Spaghetti', quantity: '8ct', icon: '🍝', sort_order: 22 },
+  { name: 'Chef Boyardee Beef Ravioli', quantity: '8ct · 15oz', icon: '🥫', sort_order: 23 },
+  { name: 'Light Red Kidney Beans', quantity: '3ct · 1lb', icon: '🫘', sort_order: 24 },
+  { name: 'Condensed Milk', quantity: '8ct', icon: '🥛', sort_order: 25 },
+  { name: "Kellogg's Frosted Flakes", quantity: '1ct · 21.07oz', icon: '🥣', sort_order: 26 },
+  { name: 'Evaporated Milk', quantity: '8ct', icon: '🥛', sort_order: 27 },
+  { name: 'Creamy Peanut Butter', quantity: '2ct · 16oz', icon: '🥜', sort_order: 28 },
+  { name: 'Ocean Spray Cranberry Juice', quantity: '2ct · 64oz', icon: '🧃', sort_order: 29 },
+  { name: 'Grape Jelly', quantity: '2ct · 18oz', icon: '🍇', sort_order: 30 },
+  { name: 'Swiss Miss Hot Chocolate', quantity: '20ct', icon: '☕', sort_order: 31 },
+  { name: 'BBQ Sauce', quantity: '3ct · 18oz', icon: '🍖', sort_order: 32 },
+  { name: 'Heinz Ketchup', quantity: '3ct · 44oz', icon: '🍅', sort_order: 33 },
+  { name: 'Mayonnaise', quantity: '2ct · 15oz', icon: '🫙', sort_order: 34 },
 ];
 
 (async () => {
@@ -49,19 +51,36 @@ const CONTENTS = [
     // before we query. alter:false → creates missing tables, no-ops existing ones.
     await db.sequelize.sync({ alter: false });
 
+    // `compareAtPrice` was added after the table shipped; alter:false won't add a
+    // column to an existing table, so add it idempotently before we write to it.
+    await db.sequelize.query(
+      'ALTER TABLE prepacked_barrel ADD COLUMN IF NOT EXISTS "compareAtPrice" VARCHAR(255) DEFAULT \'\''
+    );
+
     const productBase = {
-      name: 'VerShip Pre-Packed Food Barrel',
+      name: 'Packed with love. Filled with care. Delivered by VerShip.',
       tagline: 'A barrel of essentials, packed and shipped to your family in Jamaica.',
-      description:
-        'Skip the shopping. We pack a full barrel of staple foods and ship it door-to-door to Jamaica. One price, no haggling, no forwarders to compare — just order and we handle the rest.',
-      image: '',
-      price: '299',
+      description: 'Order in seconds. Countless hours saved.',
+      image: '/images/barrel-animation-v2.mp4',
+      price: '899',
+      // Regular price shown struck-through beside the $899 promo. Set this to the
+      // "was" amount (must be above 899). Left empty until confirmed → no strike.
+      compareAtPrice: '',
       currency: 'USD',
-      transitTime: '14-21 days',
+      transitTime: '14 days',
       status: '1',
+      // The canonical barrel must be featured so it's the one the public page shows.
+      featured: true,
     };
 
-    let product = await db.prepacked_barrel.findOne({ where: { name: productBase.name }, paranoid: false });
+    // Idempotent match that survives renames: try the current name, then the
+    // original seeded name, then fall back to the oldest row. Without this, a
+    // name change would insert a duplicate instead of updating the canonical row.
+    const LEGACY_NAME = 'VerShip Pre-Packed Food Barrel';
+    let product =
+      (await db.prepacked_barrel.findOne({ where: { name: productBase.name }, paranoid: false })) ||
+      (await db.prepacked_barrel.findOne({ where: { name: LEGACY_NAME }, paranoid: false })) ||
+      (await db.prepacked_barrel.findOne({ order: [['id', 'ASC']], paranoid: false }));
     if (product) {
       await product.update({ ...productBase, deletedAt: null });
     } else {

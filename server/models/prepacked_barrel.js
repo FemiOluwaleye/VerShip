@@ -34,6 +34,13 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: false,
             defaultValue: "0"
         },
+        // Optional "regular" price shown struck-through beside `price` to signal a
+        // promotional offer. Empty/null = no promo, only `price` renders.
+        compareAtPrice: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            defaultValue: ""
+        },
         currency: {
             type: DataTypes.STRING(8),
             allowNull: false,

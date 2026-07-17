@@ -25,6 +25,12 @@ const resolveImageUrl = (img) => {
     return `${API_URL}/${img.replace(/^\/+/, '')}`;
 };
 
+// Door-to-door delivery zone — highlighted red everywhere it appears so buyers
+// immediately see where we deliver to the door.
+const RedParishes = () => (
+    <span className="text-red-600 font-bold">Kingston, St. Andrew &amp; Portmore</span>
+);
+
 // A barrel's media can be a still image or a video/animation (e.g. an uploaded
 // .mp4). Detect by extension so we can render the right element.
 const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov)(\?|#|$)/i.test(url || '');
@@ -35,14 +41,19 @@ const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov)(\?|#|$)/i.test(url || '');
 // centered-placeholder wrapper.
 const BarrelMedia = ({ src, alt, mediaClass, placeholderClass }) => {
     if (src && isVideoUrl(src)) {
+        // An animation must always play and show in full wherever it renders
+        // (detail view AND the multi-barrel card grid). Force object-contain on a
+        // white backdrop so it's never cropped, and autoplay/loop so it's never a
+        // frozen frame. `!` overrides any object-cover passed by the caller.
         return (
             <video
                 src={src}
-                className={mediaClass}
+                className={`${mediaClass} !object-contain bg-white`}
                 autoPlay
                 loop
                 muted
                 playsInline
+                preload="auto"
                 aria-label={alt}
             />
         );
@@ -86,7 +97,9 @@ const PrepackedBarrel = () => {
         email: '',
         phone: '',
         recipient_name: '',
-        recipient_phone: '',
+        // Jamaican numbers all start with 1876 — prefill it as an editable default
+        // (the recipient is in Jamaica) so senders only type the rest.
+        recipient_phone: '1876',
         delivery_street: '',
         delivery_town: '',
         delivery_parish: '',
@@ -120,6 +133,8 @@ const PrepackedBarrel = () => {
     }, []);
 
     const unitPrice = parseFloat(product?.price) || 0;
+    // Optional "regular" price; only rendered (struck-through) when above unitPrice.
+    const regularPrice = parseFloat(product?.compareAtPrice) || 0;
     const currency = product?.currency || 'USD';
     const qty = Math.max(1, parseInt(form.quantity, 10) || 1);
     const total = (unitPrice * qty).toFixed(2);
@@ -334,21 +349,37 @@ const PrepackedBarrel = () => {
                         <BarrelMedia
                             src={imageSrc}
                             alt={product?.name || 'VerShip pre-packed barrel'}
-                            mediaClass="w-full h-64 object-cover"
-                            placeholderClass="w-full h-64 bg-[#0D4D4D]/5 flex items-center justify-center p-4"
+                            mediaClass="w-full h-80 md:h-[420px] object-contain bg-white"
+                            placeholderClass="w-full h-80 md:h-[420px] bg-[#0D4D4D]/5 flex items-center justify-center p-4"
                         />
                         <div className="p-6 md:p-8">
-                            <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#0D4D4D]/80 mb-3">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#C1A35E]" aria-hidden="true" />
-                                USA to Jamaica · Door to door in Kingston, St. Andrew &amp; Portmore
-                            </span>
-                            <h1 className="text-2xl md:text-3xl font-bold text-[#071618]">{product.name}</h1>
-                            {product.tagline && <p className="text-[#595d5e] mt-2">{product.tagline}</p>}
+                            <h1 className="text-2xl md:text-[28px] font-bold text-[#071618] leading-tight">
+                                Send a Pre-Packed Food Barrel to Jamaica
+                            </h1>
+                            <p className="text-base md:text-lg font-semibold text-[#0D4D4D] mt-1 leading-tight">
+                                Door-to-Door Delivery in <RedParishes />
+                            </p>
+                            {(product.name || product.tagline) && (
+                                <p className="text-sm md:text-base text-[#595d5e] mt-3 leading-relaxed">
+                                    {product.name && (
+                                        <span className="font-semibold text-[#C1A35E]">{product.name} </span>
+                                    )}
+                                    {product.tagline}
+                                </p>
+                            )}
 
-                            <div className="flex items-baseline gap-2 mt-5">
-                                <span className="text-3xl font-bold text-[#0D4D4D]">{currency} {unitPrice.toFixed(2)}</span>
+                            <div className="mt-5">
+                                <div className="flex items-center flex-wrap gap-x-3 gap-y-2">
+                                    {regularPrice > unitPrice && (
+                                        <span className="text-xl font-semibold text-[#595d5e] line-through">{currency} {regularPrice.toFixed(2)}</span>
+                                    )}
+                                    <span className="text-3xl font-bold text-[#0D4D4D]">{currency} {unitPrice.toFixed(2)}</span>
+                                    <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
+                                        Promotional offer
+                                    </span>
+                                </div>
                                 {product.transitTime && (
-                                    <span className="text-sm text-[#595d5e]">· ships in {product.transitTime}</span>
+                                    <p className="text-sm text-[#595d5e] mt-2">Delivery in {product.transitTime}</p>
                                 )}
                             </div>
 
@@ -359,12 +390,16 @@ const PrepackedBarrel = () => {
                             {Array.isArray(product.contents) && product.contents.length > 0 && (
                                 <div className="mt-6">
                                     <h2 className="text-lg font-bold text-[#071618] mb-3">What's in the barrel</h2>
-                                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
                                         {product.contents.map((item) => (
-                                            <li key={item.id} className="flex items-center gap-2 text-[#071618]">
-                                                <span aria-hidden="true">{item.icon || '•'}</span>
-                                                <span>{item.name}</span>
-                                                {item.quantity && <span className="text-[#595d5e] text-sm">× {item.quantity}</span>}
+                                            <li key={item.id} className="flex items-center justify-between gap-3 text-[#071618] border-b border-dashed border-[#0D4D4D]/15 py-1.5">
+                                                <span className="flex items-center gap-2 min-w-0">
+                                                    <span aria-hidden="true">{item.icon || '•'}</span>
+                                                    <span className="truncate">{item.name}</span>
+                                                </span>
+                                                {item.quantity && (
+                                                    <span className="text-[#0D4D4D] font-semibold text-sm whitespace-nowrap">{item.quantity}</span>
+                                                )}
                                             </li>
                                         ))}
                                     </ul>

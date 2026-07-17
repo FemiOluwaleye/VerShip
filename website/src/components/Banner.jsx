@@ -246,7 +246,7 @@ const Banner = () => {
           {/* Eyebrow / context kicker */}
           <span className="inline-flex items-center gap-2 text-[11px] md:text-xs font-semibold uppercase tracking-[0.18em] text-[#0D4D4D]/80">
             <span className="w-1.5 h-1.5 rounded-full bg-[#C1A35E]" aria-hidden="true" />
-            USA to Jamaica · Door to door
+            Door-to-door delivery to Jamaica
           </span>
 
           {/* Headline */}

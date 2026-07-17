@@ -42,7 +42,7 @@ async function replaceContents(productId, contents) {
 module.exports = {
     addProduct: async (req, res) => {
         try {
-            const { name, tagline, description, price, currency, transitTime, status } = req.body;
+            const { name, tagline, description, price, compareAtPrice, currency, transitTime, status } = req.body;
             if (!name) return helper.error(res, "Product name is required");
             if (price === undefined || price === "") return helper.error(res, "Price is required");
             const featured = req.body.featured !== undefined ? toBool(req.body.featured) : false;
@@ -58,6 +58,7 @@ module.exports = {
                 description: description || "",
                 image: imagePath,
                 price: String(price),
+                compareAtPrice: compareAtPrice !== undefined ? String(compareAtPrice) : "",
                 currency: currency || "USD",
                 transitTime: transitTime || "",
                 status: status || "1",
@@ -138,6 +139,7 @@ module.exports = {
                 tagline: req.body.tagline ?? product.tagline,
                 description: req.body.description ?? product.description,
                 price: req.body.price !== undefined && req.body.price !== "" ? String(req.body.price) : product.price,
+                compareAtPrice: req.body.compareAtPrice !== undefined ? String(req.body.compareAtPrice) : product.compareAtPrice,
                 currency: req.body.currency ?? product.currency,
                 transitTime: req.body.transitTime ?? product.transitTime,
                 status: req.body.status ?? product.status,

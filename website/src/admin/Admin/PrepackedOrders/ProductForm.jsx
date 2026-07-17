@@ -19,6 +19,7 @@ const ProductForm = ({ mode }) => {
     tagline: "",
     description: "",
     price: "",
+    compareAtPrice: "",
     currency: "USD",
     transitTime: "",
     status: "1",
@@ -43,6 +44,7 @@ const ProductForm = ({ mode }) => {
             tagline: p.tagline || "",
             description: p.description || "",
             price: p.price || "",
+            compareAtPrice: p.compareAtPrice || "",
             currency: p.currency || "USD",
             transitTime: p.transitTime || "",
             status: String(p.status ?? "1"),
@@ -124,6 +126,7 @@ const ProductForm = ({ mode }) => {
     formData.append("tagline", form.tagline);
     formData.append("description", form.description);
     formData.append("price", String(form.price));
+    formData.append("compareAtPrice", form.compareAtPrice ? String(form.compareAtPrice) : "");
     formData.append("currency", form.currency);
     formData.append("transitTime", form.transitTime);
     formData.append("status", form.status);
@@ -221,6 +224,24 @@ const ProductForm = ({ mode }) => {
                               value={form.price}
                               onChange={handleField}
                             />
+                          </div>
+                          <div className="col-md-4 mb-3">
+                            <label className="mb-1 fw-medium">
+                              Regular Price <span className="text-muted">(optional)</span>
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="form-control"
+                              name="compareAtPrice"
+                              value={form.compareAtPrice}
+                              onChange={handleField}
+                              placeholder="e.g. 1099"
+                            />
+                            <div className="text-muted" style={{ fontSize: "0.8rem" }}>
+                              Shown struck-through beside the price to signal a promo. Leave blank for none.
+                            </div>
                           </div>
                           <div className="col-md-4 mb-3">
                             <label className="mb-1 fw-medium">Currency</label>
