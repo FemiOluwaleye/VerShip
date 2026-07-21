@@ -3,7 +3,64 @@ const helper = require('../../helper/helper');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { sendResetEmail, sendSubscriptionEmail, sendBookingStatusUpdateEmailToUser, sendOtpEmail, sendOtpEmail12, sendFreightForwarderRegistrationEmail, sendNewOrderPlacedEmailToProvider, sendNewOrderPlacedEmailToProvider12 } = require('../../helper/mailHelper');
+const { sendResetEmail, sendSubscriptionEmail, sendBookingStatusUpdateEmailToUser, sendOtpEmail, sendOtpEmail12, sendVerificationOtpEmail, sendFreightForwarderRegistrationEmail, sendNewOrderPlacedEmailToProvider, sendNewOrderPlacedEmailToProvider12 } = require('../../helper/mailHelper');
+const otpHelper = require('../../helper/otpHelper');
+
+// Fields that must never be serialised back to a client — OTP/reset material and the password hash.
+const SENSITIVE_USER_FIELDS = ['password', 'otp', 'otpHash', 'otpPurpose', 'otpExpiresAt', 'otpAttempts', 'otpLastSentAt'];
+
+// Return a plain object of the user safe to send to the client.
+const sanitizeUser = (user) => {
+    if (!user) return user;
+    const obj = typeof user.toJSON === 'function' ? user.toJSON() : { ...user };
+    for (const f of SENSITIVE_USER_FIELDS) delete obj[f];
+    return obj;
+};
+
+// Recompute the post-login redirect flags for a role-1 (customer) user based on their latest
+// booking request. Shared by login and verify so the two stay in lockstep.
+const buildRedirectState = async (user) => {
+    const state = {
+        pendingRequestId: null,
+        isQuotesRedirect: false,
+        isBookingComplete: false,
+        isShipOwn: false,
+        isDropOff: false,
+    };
+    if (user.role !== '1') return state;
+
+    const latestRequest = await db.booking_requests.findOne({
+        where: { userId: user.id },
+        include: [{ model: db.booking_requests_items, as: 'items' }],
+        order: [['id', 'DESC']],
+    });
+
+    if (!latestRequest) {
+        state.isBookingComplete = true;
+        return state;
+    }
+    if (latestRequest.payment_status == 1) {
+        state.isBookingComplete = true;
+        return state;
+    }
+    const items = latestRequest.items || [];
+    state.isShipOwn = items.some((item) => (item.sub_type || '').includes('Ship Your Own Barrel'));
+    state.isDropOff = items.some((item) => (item.sub_type || '').includes('Request Barrel Drop-Off'));
+    if (state.isShipOwn) {
+        state.isQuotesRedirect = true;
+    } else if (state.isDropOff) {
+        if (!latestRequest.drop_off_address) {
+            state.pendingRequestId = latestRequest.id;
+        } else {
+            state.isQuotesRedirect = true;
+        }
+    } else if (!latestRequest.drop_off_address) {
+        state.isQuotesRedirect = true;
+    } else {
+        state.pendingRequestId = latestRequest.id;
+    }
+    return state;
+};
 module.exports = {
     logout: async (req, res) => {
         try {
@@ -53,8 +110,16 @@ module.exports = {
             // if (user) {
             //     return helper.failure(res, "User already exists.");
 
-            if (req.body.type == "reset" || req.body.type == "forgot_reset") {
-                if (req.body.type === "reset" && (!req.body.oldPassword || req.body.oldPassword == "")) {
+            // Logged-in "change my password" (old -> new). The forgotten-password reset is handled
+            // separately by the ticket-gated /reset-password endpoint. We operate strictly on the
+            // AUTHENTICATED user (req.user.id), never an email from the body, so a signed-in user
+            // can't change another account's password.
+            if (req.body.type == "reset") {
+                const authUser = await db.users.findOne({ where: { id: req.user.id } });
+                if (!authUser) {
+                    return helper.failure(res, "User not found.");
+                }
+                if (!req.body.oldPassword || req.body.oldPassword == "") {
                     return helper.failure(res, "Old password is required.");
                 }
                 if (req.body.newPassword == "" || req.body.confirmPassword == "") {
@@ -63,21 +128,19 @@ module.exports = {
                 if (req.body.newPassword !== req.body.confirmPassword) {
                     return helper.failure(res, "New password and confirm password does not match.");
                 }
-
-                if (req.body.type === "reset") {
-                    if (req.body.oldPassword === req.body.newPassword) {
-                        return helper.failure(res, "New password cannot be same as old password.");
-                    }
-                    let hashedPassword = await bcrypt.compare(req.body.oldPassword, user.password);
-                    if (!hashedPassword) {
-                        return helper.failure(res, "Incorrect old password.");
-                    }
+                if (String(req.body.newPassword).length < 8) {
+                    return helper.failure(res, "Password must be at least 8 characters.");
                 }
-                // console.log("req.body=--wr35443543543--------------------->>>>>", req.body);
-                // return
-                user.password = await bcrypt.hash(req.body.newPassword, 10);
-                await user.save();
-                return helper.success(res, "Password updated successfully.", user);
+                if (req.body.oldPassword === req.body.newPassword) {
+                    return helper.failure(res, "New password cannot be same as old password.");
+                }
+                const oldMatches = await bcrypt.compare(req.body.oldPassword, authUser.password);
+                if (!oldMatches) {
+                    return helper.failure(res, "Incorrect old password.");
+                }
+                authUser.password = await bcrypt.hash(req.body.newPassword, 10);
+                await authUser.save();
+                return helper.success(res, "Password updated successfully.", sanitizeUser(authUser));
             } else {
                 // console.log("req.body=----------------------->>>>>", req.body);
                 // return
@@ -96,13 +159,13 @@ module.exports = {
                 user.longitude = req.body.longitude || user.longitude;
                 await user.save();
                 let updateduser = await db.users.findOne({
-                    attributes: ['id', 'streetAddress', 'role', 'firstName', 'lastName', 'isProfileComplete', 'email', 'countryCode', 'phoneNumber', 'image', 'survey', 'otp', 'otpVerify', 'status', 'loginTime', 'bio', 'location', 'latitude', 'longitude', 'isNotificationOn', 'deviceToken', 'deviceType', 'socketId', 'online', 'customerId', 'accountId', 'hashAccount', 'country', 'city', 'state', 'gender', 'documentVerify', 'adminCommission', 'profile_step', 'createdAt', 'updatedAt', 'deletedAt'],
+                    attributes: ['id', 'streetAddress', 'role', 'firstName', 'lastName', 'isProfileComplete', 'email', 'countryCode', 'phoneNumber', 'image', 'survey', 'otpVerify', 'status', 'loginTime', 'bio', 'location', 'latitude', 'longitude', 'isNotificationOn', 'deviceToken', 'deviceType', 'socketId', 'online', 'customerId', 'accountId', 'hashAccount', 'country', 'city', 'state', 'gender', 'documentVerify', 'adminCommission', 'profile_step', 'createdAt', 'updatedAt', 'deletedAt'],
                     where: {
                         email,
                     },
                 });
 
-                return helper.success(res, "Profile updated successfully.", updateduser);
+                return helper.success(res, "Profile updated successfully.", sanitizeUser(updateduser));
             }
 
 
@@ -159,7 +222,6 @@ module.exports = {
                 phoneNumber: user.phoneNumber,
                 image: user.image,
                 survey: user.survey,
-                otp: user.otp,
                 otpVerify: user.otpVerify,
                 status: user.status,
                 loginTime: user.loginTime,
@@ -250,80 +312,64 @@ module.exports = {
             return helper.failure(res, error);
         }
     },
+    // Verify a 6-digit code. `purpose` selects the flow:
+    //   - 'verify_email' (default, signup): on success activates the account AND issues a session
+    //     token, since the user is legitimately logging in for the first time.
+    //   - 'reset_password' (forgot flow): on success issues a single-use, short-lived RESET TICKET
+    //     and does NOT log the user in. The reset ticket is the only thing that authorises the
+    //     subsequent /reset-password call. This decouples "proved inbox control" from "has a
+    //     session", so a guessed reset code can at most reset the password — not hijack the login.
     verify: async (req, res) => {
         try {
+            const { otp, email } = req.body;
+            const purpose = req.body.purpose === otpHelper.PURPOSE.RESET_PASSWORD
+                ? otpHelper.PURPOSE.RESET_PASSWORD
+                : otpHelper.PURPOSE.VERIFY_EMAIL;
 
-            const { otp } = req.body;
-            if (!otp) {
-                return helper.failure(res, "OTP is required.");
-            }
+            if (!otp) return helper.failure(res, "Verification code is required.");
+            if (!email) return helper.failure(res, "Email is required.");
+
             const user = await db.users.findOne({
-                where: {
-                    email: req.body.email,
-
-                },
+                where: { email },
                 order: [['createdAt', 'DESC']],
             });
-            if (user.otp === otp) {
-                if (user.role === "2") {
-                    const details = await db.providerDetails.findOne({ where: { providerId: user.id } });
-                    if (details && details.documentVerify != 1) {
-                        return helper.failure(res, "Your account is pending admin verification. Please try again later.");
-                    }
+
+            // Generic failure — do not reveal whether the account exists.
+            if (!user) return helper.failure(res, "Invalid or expired code.");
+
+            const result = await otpHelper.verifyCode(user, String(otp).trim(), purpose);
+            if (!result.ok) {
+                if (result.reason === 'locked') {
+                    return helper.failure(res, "Too many incorrect attempts. Please request a new code.");
                 }
-                user.otp = 0;
-                user.otpVerify = "1";
-                await user.save();
-                let authtoken = await jwt.sign({ id: user.id }, process.env.JWT_SECRET);
-
-                let pendingRequestId = null;
-                let isQuotesRedirect = false;
-                let isBookingComplete = false;
-                let isShipOwn = false;
-                let isDropOff = false;
-                if (user.role === "1") {
-                    const latestRequest = await db.booking_requests.findOne({
-                        where: { userId: user.id },
-                        include: [{ model: db.booking_requests_items, as: 'items' }],
-                        order: [['id', 'DESC']]
-                    });
-
-                    if (latestRequest) {
-                        if (latestRequest.payment_status == 1) {
-                            isBookingComplete = true;
-                        } else {
-                            const items = latestRequest.items || [];
-                            isShipOwn = items.some(item => (item.sub_type || "").includes("Ship Your Own Barrel"));
-                            isDropOff = items.some(item => (item.sub_type || "").includes("Request Barrel Drop-Off"));
-
-                            if (isShipOwn) {
-                                isQuotesRedirect = true;
-                            } else if (isDropOff) {
-                                if (!latestRequest.drop_off_address) {
-                                    pendingRequestId = latestRequest.id;
-                                    isQuotesRedirect = false;
-                                } else {
-                                    isQuotesRedirect = true;
-                                }
-                            } else {
-                                if (!latestRequest.drop_off_address) {
-                                    isQuotesRedirect = true;
-                                } else {
-                                    pendingRequestId = latestRequest.id;
-                                }
-                            }
-                        }
-                    } else {
-                        isBookingComplete = true;
-                    }
-                }
-                return helper.success(res, "OTP verified successfully.", { user, authtoken, pendingRequestId, isQuotesRedirect, isBookingComplete, isShipOwn, isDropOff });
-            } else {
-                return helper.failure(res, "Invalid OTP.");
+                return helper.failure(res, "Invalid or expired code.");
             }
+
+            if (purpose === otpHelper.PURPOSE.RESET_PASSWORD) {
+                // Password reset: hand back a reset ticket, no session.
+                const resetToken = await otpHelper.issueResetTicket(user);
+                return helper.success(res, "Code verified. You can now set a new password.", {
+                    email: user.email,
+                    resetToken,
+                });
+            }
+
+            // Email verification (signup): activate + log in.
+            if (user.role === "2") {
+                const details = await db.providerDetails.findOne({ where: { providerId: user.id } });
+                if (details && details.documentVerify != 1) {
+                    return helper.failure(res, "Your account is pending admin verification. Please try again later.");
+                }
+            }
+            user.otpVerify = "1";
+            await user.save();
+
+            const authtoken = await jwt.sign({ id: user.id }, process.env.JWT_SECRET);
+            const redirect = await buildRedirectState(user);
+            return helper.success(res, "OTP verified successfully.", { user: sanitizeUser(user), authtoken, ...redirect });
         } catch (error) {
             console.log("error=------verify----------------->>>>>", error);
-            return helper.failure(res, error.message);
+            return helper.failure(res, "Something went wrong.");
         }
     },
     forgotPassword12: async (req, res) => {
@@ -369,115 +415,118 @@ module.exports = {
             return helper.failure(res, error.message);
         }
     },
+    // Start a password reset. Always returns the SAME generic success whether or not the email
+    // maps to an account, so this endpoint can't be used to enumerate registered users. A code is
+    // only actually issued/sent when the account exists and isn't on send cooldown.
     forgotPassword: async (req, res) => {
+        const genericMessage = "If an account exists for that email, a verification code has been sent.";
         try {
             const { email } = req.body;
             if (!email) {
                 return helper.failure(res, "Email is required.");
             }
 
-            const user = await db.users.findOne({
-                where: {
-                    email,
-                },
-            });
+            const user = await db.users.findOne({ where: { email } });
 
-            if (!user) {
-                return helper.failure(res, "User not found.");
+            if (user && !otpHelper.isOnCooldown(user)) {
+                const otp = await otpHelper.issueCode(user, otpHelper.PURPOSE.RESET_PASSWORD);
+                try {
+                    await sendOtpEmail12(email, otp);
+                } catch (mailError) {
+                    console.error("Reset OTP email failed:", mailError.message);
+                    // Still return the generic message — don't leak send failures / existence.
+                }
             }
 
-            // Generate a 4-digit OTP
-            const otp = Math.floor(1000 + Math.random() * 9000).toString();
-
-            // Store OTP in database (expires in 10 minutes ideally)
-            user.otp = otp;
-            user.otpVerify = "0"; // Reset verification status
-            user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // Optional: add expiration
-            await user.save();
-
-            // Send OTP via email
-            try {
-                await sendOtpEmail12(email, otp);
-            } catch (mailError) {
-                console.error("Email sending failed:", mailError.message);
-                return helper.failure(res, "Failed to send OTP email. Please try again.");
-            }
-
-            return helper.success(res, "OTP sent successfully to your email.", { email });
-
+            return helper.success(res, genericMessage, { email });
         } catch (error) {
             console.log("error=------forgotPassword----------------->>>>>", error);
-            return helper.failure(res, error.message);
+            // Even on error, keep the response generic.
+            return helper.success(res, genericMessage, { email: req.body.email });
         }
     },
+    // Final step of the forgot-password flow. Requires the single-use reset ticket returned by
+    // /verify (purpose=reset_password). The ticket — not a session token and not the raw code —
+    // is what authorises the password change, and it is consumed here so it can't be replayed.
     resetPassword: async (req, res) => {
         try {
-            const { email, token, newPassword, confirmPassword } = req.body;
+            const { email, resetToken, newPassword, confirmPassword } = req.body;
+            // Accept `token` as an alias for backward compatibility with older clients.
+            const ticket = resetToken || req.body.token;
 
-            if (!email || !token || !newPassword || !confirmPassword) {
+            if (!email || !ticket || !newPassword || !confirmPassword) {
                 return helper.failure(res, "All fields are required.");
             }
-
             if (newPassword !== confirmPassword) {
                 return helper.failure(res, "Passwords do not match.");
             }
+            if (String(newPassword).length < 8) {
+                return helper.failure(res, "Password must be at least 8 characters.");
+            }
 
-            const user = await db.users.findOne({
-                where: { email }
-            });
-
+            const user = await db.users.findOne({ where: { email } });
             if (!user) {
-                return helper.failure(res, "User not found.");
+                return helper.failure(res, "Invalid or expired reset request. Please start over.");
             }
 
-            if (user.otp !== token) {
-                return helper.failure(res, "Invalid or expired reset link.");
+            const consumed = await otpHelper.consumeResetTicket(user, String(ticket));
+            if (!consumed.ok) {
+                return helper.failure(res, "Invalid or expired reset request. Please start over.");
             }
 
-            const hashedPassword = await bcrypt.hash(newPassword, 10);
-            user.password = hashedPassword;
-            user.otp = ""; // Clear token
+            user.password = await bcrypt.hash(newPassword, 10);
             user.otpVerify = "1";
+            // Invalidate any active session so a stolen token can't outlive the reset.
+            user.loginTime = helper.unixTimestamp() + Math.floor(Math.random() * 10000000);
             await user.save();
 
-            return helper.success(res, "Password reset successfully.");
-
+            return helper.success(res, "Password reset successfully. Please log in with your new password.");
         } catch (error) {
             console.log("error=------resetPassword----------------->>>>>", error);
-            return helper.failure(res, error.message);
+            return helper.failure(res, "Something went wrong.");
         }
     },
+    // Re-issue a code for whichever flow the account is currently in (defaults to email
+    // verification). Enforces the per-account send cooldown, returns a generic message and never
+    // echoes the user record or the code.
     resendOtp: async (req, res) => {
+        const genericMessage = "If an account exists for that email, a new verification code has been sent.";
         try {
-            console.log(req.body, "==============>resendOtp");
-
             const { email } = req.body;
             if (!email) {
                 return helper.failure(res, "Email is required.");
             }
-            const user = await db.users.findOne({
-                where: {
-                    email,
-                },
-            });
+
+            const user = await db.users.findOne({ where: { email } });
             if (!user) {
-                return helper.failure(res, "User not found.");
+                return helper.success(res, genericMessage, { email });
             }
-            const otp = Math.floor(1000 + Math.random() * 9000);
-            user.otpVerify = "0";
-            user.otp = otp;
-            await user.save();
 
+            if (otpHelper.isOnCooldown(user)) {
+                const wait = otpHelper.cooldownSecondsRemaining(user);
+                return helper.failure(res, `Please wait ${wait}s before requesting another code.`);
+            }
+
+            // Resume the in-progress purpose; if none is pending, treat it as email verification.
+            const purpose = user.otpPurpose === otpHelper.PURPOSE.RESET_PASSWORD
+                ? otpHelper.PURPOSE.RESET_PASSWORD
+                : otpHelper.PURPOSE.VERIFY_EMAIL;
+
+            const otp = await otpHelper.issueCode(user, purpose);
             try {
-                await sendOtpEmail(email, otp);
+                if (purpose === otpHelper.PURPOSE.RESET_PASSWORD) {
+                    await sendOtpEmail12(email, otp);
+                } else {
+                    await sendVerificationOtpEmail(email, otp);
+                }
             } catch (mailError) {
-                console.error("OTP Email sending failed:", mailError.message);
+                console.error("Resend OTP email failed:", mailError.message);
             }
 
-            return helper.success(res, "OTP sent successfully.", user);
+            return helper.success(res, genericMessage, { email });
         } catch (error) {
             console.log("error=------resendOtp----------------->>>>>", error);
-            return helper.failure(res, error);
+            return helper.success(res, genericMessage, { email: req.body.email });
         }
     },
     register: async (req, res) => {
@@ -514,7 +563,6 @@ module.exports = {
             if (existingPhone) {
                 return helper.failure(res, "Phone number already exists.");
             }
-            let otp = Math.floor(1000 + Math.random() * 9000);
             if (req.body.role == "2") {
                 if (!req.body.main_address) {
                     return helper.failure(res, "Address is required.");
@@ -532,7 +580,6 @@ module.exports = {
                     password: hashedNewPassword,
                     working_as: req.body.working_as,
                     survey: survey,
-                    otp: otp,
                     profile_step: 1,
                     streetAddress: streetAddress || "",
                     city: city || "",
@@ -550,7 +597,6 @@ module.exports = {
                     phoneNumber: req.body.number,
                     password: hashedNewPassword,
                     survey: survey,
-                    otp: otp,
                     streetAddress: streetAddress || "",
                     city: city || "",
                     state: state || "",
@@ -565,18 +611,20 @@ module.exports = {
             const user = await db.users.create(createObj);
             const loginTime = helper.unixTimestamp() + Math.floor(Math.random() * 10000000);
             user.loginTime = loginTime;
-            await user.save();
 
-            // Fire-and-forget: do NOT await (registration must not block on email),
-            // but attach a .catch so a mail failure can't become an unhandled
-            // rejection that crashes the whole process. (sendOtpEmail rethrows.)
-            sendOtpEmail(email, otp).catch((mailError) => {
-                console.error("OTP Email sending failed:", mailError.message);
+            // Issue a cryptographically-secure 6-digit verification code (hashed at rest, 10-min
+            // expiry). This also persists the user (issueCode saves).
+            const otp = await otpHelper.issueCode(user, otpHelper.PURPOSE.VERIFY_EMAIL);
+
+            // Fire-and-forget: registration must not block on email, but attach a .catch so a mail
+            // failure can't become an unhandled rejection.
+            sendVerificationOtpEmail(email, otp).catch((mailError) => {
+                console.error("Verification OTP email failed:", mailError.message);
             });
 
             let authtoken = await jwt.sign({ id: user.id, loginTime: loginTime }, process.env.JWT_SECRET);
 
-            return helper.success(res, "Registered successfully.", { user: user, authtoken });
+            return helper.success(res, "Registered successfully.", { user: sanitizeUser(user), authtoken });
         } catch (error) {
             console.log("error=------regiter----------------->>>>>", error);
             return helper.failure(res, error);

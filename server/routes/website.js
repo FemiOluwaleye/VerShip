@@ -3,6 +3,7 @@ const router = express.Router();
 const webController = require('../controller/apicontroller/webController');
 
 const { verifyUser } = require('../middleware/authtoken');
+const { otpRequestLimiter, otpVerifyLimiter, loginLimiter } = require('../middleware/rateLimiters');
 
 // Pre-packed food barrel (owner-sold fixed product) — public, no auth.
 router.get('/prepacked-barrel', (req, res, next) => {
@@ -57,7 +58,7 @@ router.post('/contact/us', (req, res, next) => {
 router.get('/ratings', (req, res, next) => {
     webController.ratinglist(req, res);
 });
-router.post('/login', (req, res, next) => {
+router.post('/login', loginLimiter, (req, res, next) => {
     webController.login(req, res);
 });
 router.post('/logout', verifyUser, (req, res, next) => {
@@ -66,19 +67,19 @@ router.post('/logout', verifyUser, (req, res, next) => {
 router.post('/social-login', (req, res, next) => {
     webController.socialLogin(req, res);
 });
-router.post('/register', (req, res, next) => {
+router.post('/register', otpRequestLimiter, (req, res, next) => {
     webController.register(req, res);
 });
-router.post('/verify', (req, res, next) => {
+router.post('/verify', otpVerifyLimiter, (req, res, next) => {
     webController.verify(req, res);
 });
-router.post('/resend-otp', (req, res, next) => {
+router.post('/resend-otp', otpRequestLimiter, (req, res, next) => {
     webController.resendOtp(req, res);
 });
-router.post('/forgot-password', (req, res, next) => {
+router.post('/forgot-password', otpRequestLimiter, (req, res, next) => {
     webController.forgotPassword(req, res);
 });
-router.post('/reset-password', (req, res, next) => {
+router.post('/reset-password', otpVerifyLimiter, (req, res, next) => {
     webController.resetPassword(req, res);
 });
 router.post('/update-profile', verifyUser, (req, res, next) => {

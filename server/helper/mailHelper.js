@@ -10,6 +10,24 @@ const escapeHtml = (value) => {
         .replace(/'/g, '&#39;');
 };
 
+const DEFAULT_FROM = process.env.MAIL_FROM || 'VerShip <no-reply@vershipgo.com>';
+
+// --- Email transport seam -------------------------------------------------------------------
+// Prefer Resend when RESEND_API_KEY is configured; otherwise fall back to SMTP/nodemailer so
+// existing environments keep working. All senders funnel through deliver() below, so switching
+// providers is a single decision made here, not in each template.
+const resendApiKey = process.env.RESEND_API_KEY;
+let resendClient = null;
+if (resendApiKey) {
+    try {
+        const { Resend } = require('resend');
+        resendClient = new Resend(resendApiKey);
+        console.log('📧 Mailer: using Resend transport');
+    } catch (err) {
+        console.error('Failed to init Resend, falling back to SMTP:', err.message);
+    }
+}
+
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: process.env.SMTP_PORT || 587,
@@ -20,7 +38,86 @@ const transporter = nodemailer.createTransport({
     },
 });
 
+// Strip HTML to a reasonable plaintext alternative for clients that prefer it (and for
+// deliverability — multipart mail scores better than HTML-only).
+const htmlToText = (html) =>
+    String(html || '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+// Unified send. Uses Resend when available, else nodemailer. Returns the provider response.
+const deliver = async ({ to, subject, html, text, from, replyTo }) => {
+    const fromAddr = from || DEFAULT_FROM;
+    const plain = text || htmlToText(html);
+
+    if (resendClient) {
+        const { data, error } = await resendClient.emails.send({
+            from: fromAddr,
+            to: Array.isArray(to) ? to : [to],
+            subject,
+            html,
+            text: plain,
+            ...(replyTo ? { replyTo } : {}),
+        });
+        if (error) {
+            // Normalise Resend's error object into a thrown Error so callers' try/catch works.
+            throw new Error(error.message || 'Resend send failed');
+        }
+        console.log('📧 Email sent via Resend: %s', data && data.id);
+        return data;
+    }
+
+    const info = await transporter.sendMail({
+        from: fromAddr,
+        to,
+        subject,
+        html,
+        text: plain,
+        ...(replyTo ? { replyTo } : {}),
+    });
+    console.log('📧 Email sent via SMTP: %s', info.messageId);
+    return info;
+};
+
 module.exports = {
+    // Signup email-verification code. Purpose-specific copy so a reset code and a verify code
+    // never look interchangeable to the recipient.
+    sendVerificationOtpEmail: async (email, otp) => {
+        const mailOptions = {
+            from: DEFAULT_FROM,
+            to: email,
+            subject: 'Verify your email — VerShip',
+            html: `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 550px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.15);">
+                <div style="background: linear-gradient(135deg, #FFBF00 0%, #FFD864 100%); padding: 30px 20px; text-align: center;">
+                    <h1 style="margin: 0; color: #2D413F; font-size: 28px; font-weight: bold;">VerShip</h1>
+                    <p style="margin: 10px 0 0; color: #2D413F; font-size: 14px; opacity: 0.85;">Confirm your email address</p>
+                </div>
+                <div style="padding: 40px 30px; background: white;">
+                    <h2 style="color: #2D413F; margin: 0 0 10px 0; font-size: 24px;">Welcome to VerShip</h2>
+                    <p style="color: #666; line-height: 1.6; margin: 0 0 15px 0; font-size: 15px;">Use the code below to verify your email and activate your account:</p>
+                    <div style="text-align: center; margin: 35px 0;">
+                        <div style="background: #f8f9fa; border: 2px dashed #FFBF00; border-radius: 15px; padding: 25px; display: inline-block; min-width: 250px;">
+                            <p style="margin: 0 0 10px 0; color: #666; font-size: 13px; letter-spacing: 1px;">YOUR VERIFICATION CODE</p>
+                            <div style="font-size: 44px; font-weight: bold; color: #2D413F; letter-spacing: 8px; font-family: monospace;">${escapeHtml(otp)}</div>
+                            <p style="margin: 15px 0 0 0; color: #999; font-size: 12px;">Valid for 10 minutes</p>
+                        </div>
+                    </div>
+                    <p style="color: #666; line-height: 1.6; margin: 0; font-size: 14px;">If you didn't create a VerShip account, you can safely ignore this email.</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+                    <p style="margin: 0; font-size: 12px; color: #999;">&copy; ${new Date().getFullYear()} VerShip. All rights reserved.</p>
+                </div>
+            </div>`,
+        };
+        const info = await deliver(mailOptions);
+        console.log('✅ Verification OTP email sent to: %s', email);
+        return info;
+    },
     sendResetEmail12: async (email, link) => {
         try {
             const mailOptions = {
@@ -43,7 +140,7 @@ module.exports = {
                 `,
             };
 
-            const info = await transporter.sendMail(mailOptions);
+            const info = await deliver(mailOptions);
             console.log('Message sent: %s', info.messageId);
             return info;
         } catch (error) {
@@ -97,7 +194,7 @@ module.exports = {
             `,
             };
 
-            const info = await transporter.sendMail(mailOptions);
+            const info = await deliver(mailOptions);
             console.log('✅ OTP email sent successfully to: %s', email);
             console.log('📧 Message ID: %s', info.messageId);
             return info;
@@ -133,7 +230,7 @@ module.exports = {
                 `,
             };
 
-            const info = await transporter.sendMail(mailOptions);
+            const info = await deliver(mailOptions);
             return info;
         } catch (error) {
             console.error('Error sending subscription email:', error);
@@ -230,7 +327,7 @@ module.exports = {
                 `,
             };
 
-            const info = await transporter.sendMail(mailOptions);
+            const info = await deliver(mailOptions);
             console.log('Freight forwarder registration email sent to: %s', adminEmail);
             return info;
         } catch (error) {
@@ -257,7 +354,7 @@ module.exports = {
                 `,
             };
 
-            const info = await transporter.sendMail(mailOptions);
+            const info = await deliver(mailOptions);
             console.log('Message sent: %s', info.messageId);
             return info;
         } catch (error) {
@@ -329,7 +426,7 @@ module.exports = {
                 `,
             };
 
-            const info = await transporter.sendMail(mailOptions);
+            const info = await deliver(mailOptions);
             console.log('New order email sent to provider: %s', email);
             return info;
         } catch (error) {
@@ -378,7 +475,7 @@ module.exports = {
             `,
             };
 
-            const info = await transporter.sendMail(mailOptions);
+            const info = await deliver(mailOptions);
             console.log('✅ New order email sent to provider: %s', email);
             return info;
         } catch (error) {
@@ -428,7 +525,7 @@ module.exports = {
             `,
         };
 
-        const info = await transporter.sendMail(mailOptions);
+        const info = await deliver(mailOptions);
         console.log('✅ Status update email sent to customer: %s', email);
         return info;
     } catch (error) {

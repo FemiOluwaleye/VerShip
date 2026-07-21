@@ -197,6 +197,17 @@ export const resendOtp = async (data) => {
         throw error;
     }
 };
+// Final step of the forgot-password flow. Expects { email, resetToken, newPassword, confirmPassword }.
+// The resetToken is the single-use ticket returned by verify({ purpose: 'reset_password' }).
+export const resetPassword = async (data) => {
+    try {
+        const response = await axios.post('/website/reset-password', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error in reset password:', error);
+        throw error;
+    }
+};
 export const deleteAccount = async (data) => {
     try {
         console.log("Delete data:", data);

@@ -5,6 +5,13 @@ const { Validator } = require('node-input-validator');
 const jwt = require("jsonwebtoken");
 const { Op } = require("sequelize");
 const { Sequelize } = require('sequelize');
+const otpHelper = require('../../helper/otpHelper');
+const mailHelper = require('../../helper/mailHelper');
+
+// A random 4-digit delivery PIN (rideOtp). This is the code a customer hands the
+// driver on delivery — unrelated to the login/email OTP, but it must not be a
+// hardcoded '1111'. Mirrors the generation already used in createAccount().
+const generateRideOtp = () => Math.floor(1000 + Math.random() * 9000).toString();
 
 module.exports = {
     login: async (req, res) => {
@@ -12,7 +19,10 @@ module.exports = {
             const v = new Validator(req.body, {
                 countryCode: "required",
                 phoneNumber: "required",
-                role: "required"
+                role: "required",
+                // Email is required because the OTP is delivered by email (Resend). Without a
+                // real SMS provider this is how the mobile code reaches the user.
+                email: "required|email",
             });
 
             const errorsResponse = await helper.checkValidation(v);
@@ -27,6 +37,7 @@ module.exports = {
                 countryCode,
                 role,
             } = req.body;
+            const email = String(req.body.email).trim().toLowerCase();
 
             const existingUser = await db.users.findOne({
                 where: {
@@ -40,9 +51,6 @@ module.exports = {
             let user;
             let isNewUser = false;
 
-            const otp = '1111';
-            const rideOtp = '1111'
-
             if (existingUser) {
                 if (existingUser.status === "0") {
                     return helper.failure(res, 'Your account has been deactivated by admin.');
@@ -52,19 +60,6 @@ module.exports = {
                 // }
 
                 user = existingUser;
-
-                await db.users.update(
-                    {
-                        otp: otp,
-                        rideOtp:rideOtp,
-                        updatedAt: helper.unixTimestamp()
-                    },
-                    { where: { id: user.id } }
-                );
-
-                user = await db.users.findOne({
-                    where: { id: user.id, deletedAt: null }
-                });
             } else {
                 const userWithSamePhone = await db.users.findOne({
                     where: {
@@ -84,53 +79,46 @@ module.exports = {
                     role: role,
                     deviceToken: deviceToken || null,
                     deviceType: deviceType || null,
-                    loginTime: helper.unixTimestamp(),
-                    otp: otp,
-                    rideOtp:rideOtp,
                     status: "1"
                 });
 
                 isNewUser = true;
             }
 
-            const loginTime = helper.unixTimestamp();
-            const token = jwt.sign(
-                { loginTime: loginTime, id: user.id },
-                process.env.JWT_SECRET
-            );
-
-            const updateData = {
-                loginTime: loginTime,
-                updatedAt: helper.unixTimestamp()
-            };
-
+            // Keep contact + device details current, and refresh the delivery PIN.
+            user.email = email;
+            user.rideOtp = generateRideOtp();
             if (deviceToken) {
-                updateData.deviceToken = deviceToken;
-                updateData.deviceType = deviceType || null;
+                user.deviceToken = deviceToken;
+                user.deviceType = deviceType || null;
+            }
+            user.otpVerify = "0";
+            user.updatedAt = helper.unixTimestamp();
+
+            // Generate + persist a hashed, expiring code (issueCode saves the instance, so the
+            // email/rideOtp/device changes above are persisted in the same write).
+            const code = await otpHelper.issueCode(user, otpHelper.PURPOSE.VERIFY_EMAIL);
+
+            try {
+                await mailHelper.sendVerificationOtpEmail(email, code);
+            } catch (mailErr) {
+                console.error('Failed to send login OTP email:', mailErr.message);
+                return helper.failure(res, 'Could not send verification code. Please try again.');
             }
 
-            await db.users.update(
-                updateData,
-                { where: { id: user.id } }
-            );
-
-            const updatedUser = await db.users.findOne({
-                where: { id: user.id, deletedAt: null }
-            });
-
+            // NOTE: no token is issued here. The client must call /verifyOtp with the emailed
+            // code to obtain a session — proving control of the inbox before authentication.
             const responseData = {
-                ...updatedUser.toJSON(),
-                token: token
+                phoneNumber,
+                countryCode,
+                email,
+                role,
+                isNewUser,
             };
-            // Never return the OTP to the client. NOTE: this mobile flow still uses a
-            // placeholder OTP and issues a token before verification — replace with a
-            // random, SMS-delivered OTP and gate the token on verifyOtp.
-            delete responseData.otp;
             if (isNewUser) {
-                return helper.success(res, 'Account created successfully. OTP sent for verification.', responseData);
+                return helper.success(res, 'Account created. A verification code has been sent to your email.', responseData);
             }
-
-            return helper.success(res, 'OTP sent successfully for verification', responseData);
+            return helper.success(res, 'A verification code has been sent to your email.', responseData);
 
         } catch (error) {
             console.error('Login error:', error);
@@ -162,43 +150,43 @@ module.exports = {
                 return helper.failure(res, 'User not found.');
             }
 
-            if (user.status === 0) {
-                return helper.failure(res, "Your account is in-active by Admin. Please contact the admin for assistance."); // Changed from failure to failure
+            if (user.status === 0 || user.status === "0") {
+                return helper.failure(res, "Your account is in-active by Admin. Please contact the admin for assistance.");
             }
 
-            if (req.body.otp == user.otp) {
-                const loginTime = helper.unixTimestamp();
-
-                const token = jwt.sign(
-                    { loginTime: loginTime, id: user.id },
-                    process.env.JWT_SECRET
-                );
-
-                await db.users.update(
-                    {
-                        otpVerify: "1",
-                        otp: 0,
-                        loginTime: loginTime
-                    },
-                    { where: { id: user.id } }
-                );
-
-                const updated = await db.users.findOne({
-                    where: {
-                        phoneNumber: req.body.phoneNumber,
-                        countryCode: req.body.countryCode
-                    }
-                });
-
-                return helper.success(res, 'OTP verified successfully.', {
-                    ...updated.toJSON(),
-                    token: token
-                });
-
-            } else {
-                return helper.failure(res, 'OTP does not match.');
+            const result = await otpHelper.verifyCode(user, req.body.otp, otpHelper.PURPOSE.VERIFY_EMAIL);
+            if (!result.ok) {
+                if (result.reason === 'locked') {
+                    return helper.failure(res, 'Too many incorrect attempts. Please request a new code.');
+                }
+                if (result.reason === 'expired' || result.reason === 'no_code') {
+                    return helper.failure(res, 'Your code has expired. Please request a new one.');
+                }
+                return helper.failure(res, 'Incorrect verification code.');
             }
+
+            // Code verified — NOW issue the session token, signed with the loginTime we persist
+            // so the single-session check in verifyUser stays consistent.
+            const loginTime = helper.unixTimestamp();
+            user.otpVerify = "1";
+            user.loginTime = loginTime;
+            await user.save();
+
+            const token = jwt.sign(
+                { loginTime: loginTime, id: user.id },
+                process.env.JWT_SECRET
+            );
+
+            const responseData = user.toJSON();
+            delete responseData.password;
+            delete responseData.otpHash;
+
+            return helper.success(res, 'OTP verified successfully.', {
+                ...responseData,
+                token: token
+            });
         } catch (error) {
+            console.error('verifyOtp error:', error);
             return helper.failure(res, 'Something went wrong');
         }
     },
@@ -216,35 +204,42 @@ module.exports = {
 
             const { countryCode, phoneNumber } = req.body;
 
+            // Model instance (not raw) so otpHelper can persist via save().
             const user = await db.users.findOne({
                 where: {
                     phoneNumber,
                     countryCode,
                     deletedAt: null
                 },
-                raw: true
             });
 
             if (!user) {
                 return helper.failure(res, "User not found");
             }
 
-            const otp = '1111';
+            if (!user.email) {
+                return helper.failure(res, "No email on file for this account. Please log in again.");
+            }
 
-            await db.users.update(
-                {
-                    otp: otp,
-                    otpVerify: "0",
-                },
-                {
-                    where: {
-                        id: user.id,
-                    },
-                }
-            );
+            // Throttle resends per account.
+            if (otpHelper.isOnCooldown(user)) {
+                const wait = otpHelper.cooldownSecondsRemaining(user);
+                return helper.failure(res, `Please wait ${wait}s before requesting another code.`);
+            }
 
-            return helper.success(res, "OTP Re-sent Successfully");
+            user.otpVerify = "0";
+            const code = await otpHelper.issueCode(user, otpHelper.PURPOSE.VERIFY_EMAIL);
+
+            try {
+                await mailHelper.sendVerificationOtpEmail(user.email, code);
+            } catch (mailErr) {
+                console.error('Failed to resend OTP email:', mailErr.message);
+                return helper.failure(res, "OTP Not Sent!");
+            }
+
+            return helper.success(res, "A new verification code has been sent to your email.");
         } catch (error) {
+            console.error('resendOTP error:', error);
             return helper.failure(res, "OTP Not Sent!");
         }
     },

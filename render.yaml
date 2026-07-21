@@ -54,6 +54,10 @@ services:
         sync: false # set to the service's public URL / custom domain
       - key: JWT_SECRET
         sync: false
+      # Pepper mixed into OTP / password-reset-ticket hashes (helper/otpHelper.js). Falls back to
+      # JWT_SECRET if unset, but set a distinct long random value here.
+      - key: OTP_PEPPER
+        sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_PUBLISHABLE_KEY
@@ -69,6 +73,11 @@ services:
       # it MUST be present when the frontend builds or distance pricing breaks.
       # Restrict this key to the prod domain(s) in the Google Cloud console.
       - key: VITE_GOOGLE_MAPS_API_KEY
+        sync: false
+      # Email delivery. When RESEND_API_KEY is set the app sends via Resend; the SMTP_* vars
+      # below are the fallback transport. MAIL_FROM must be a sender on a Resend-verified domain
+      # (e.g. "VerShip <no-reply@vershipgo.com>") or sends will be rejected.
+      - key: RESEND_API_KEY
         sync: false
       - key: SMTP_HOST
         sync: false

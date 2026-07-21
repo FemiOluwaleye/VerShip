@@ -43,6 +43,10 @@ const websiteRouter = require('./routes/website');
 const app = express();
 const PORT = process.env.PORT || 8182;
 
+// Behind Render/Replit's proxy: trust the first hop so req.ip reflects the real client,
+// which the auth rate limiters key on. Scoped to one proxy (not `true`) to avoid IP spoofing.
+app.set('trust proxy', 1);
+
 // View engine (required for error.ejs and legacy routes)
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');

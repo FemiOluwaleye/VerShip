@@ -1,12 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { shipp } from "../common/common-assets/assets-images";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FaEye, FaEyeSlash, FaSpinner } from "react-icons/fa";
-import { updateProfile } from "../api/cms";
+import { resetPassword } from "../api/cms";
 import { toast } from "sonner";
 
 const ForgotPasswordReset = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    // The email + single-use reset ticket are handed over from the verification step via route
+    // state. Without a ticket there's nothing to authorise the reset, so bounce back to start.
+    const email = location.state?.email || "";
+    const resetToken = location.state?.resetToken || "";
+
+    useEffect(() => {
+        if (!resetToken) {
+            toast.error("Your reset session has expired. Please start again.");
+            navigate("/forgot-password", { replace: true });
+        }
+    }, [resetToken, navigate]);
     const [formData, setFormData] = useState({
         newPassword: "",
         confirmPassword: ""
@@ -61,23 +73,24 @@ const ForgotPasswordReset = () => {
 
         if (newErr || confErr) return;
 
+        if (!resetToken) {
+            toast.error("Your reset session has expired. Please start again.");
+            navigate("/forgot-password", { replace: true });
+            return;
+        }
+
         setIsLoading(true);
         try {
-            let userStr = localStorage.getItem("user");
-            let email = "";
-            if (userStr) {
-                email = JSON.parse(userStr).email;
-            }
-
-            const response = await updateProfile({
+            const response = await resetPassword({
+                email,
+                resetToken,
                 newPassword: formData.newPassword,
                 confirmPassword: formData.confirmPassword,
-                email,
-                type: "forgot_reset"
             });
 
             if (response.success || response.status === 200) {
-                toast.success(response.message || "Password updated successfully.");
+                toast.success(response.message || "Password reset successfully.");
+                // Clear any stale session so the user re-authenticates with the new password.
                 localStorage.removeItem("token");
                 localStorage.removeItem("user");
                 navigate("/login", { replace: true });

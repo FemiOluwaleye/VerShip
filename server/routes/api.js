@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const middleware = require('../middleware/authtoken');
+const { otpRequestLimiter, otpVerifyLimiter, loginLimiter } = require('../middleware/rateLimiters');
 const authController = require('../controller/apicontroller/authController');
 const faqController = require('../controller/apicontroller/faqController');
 const bookingController = require('../controller/apicontroller/bookingController');
@@ -10,13 +11,16 @@ router.use(middleware.authenticateHeader);
 router.get("/getcms", authController.getCmsContent);
 //fileupload
 router.post('/fileupload', authController.fileUploadDriver)
-router.post('/login', authController.login);
+router.post('/login', loginLimiter, authController.login);
+
+// OTP request/verify must be reachable WITHOUT a user token — a session is only granted
+// after the emailed code is verified. They identify the account by phone + email in the body,
+// so they sit above verifyUser (which would otherwise require the very token we haven't issued).
+router.post("/verifyOtp", otpVerifyLimiter, authController.verifyOtp);
+router.post("/resendotp", otpRequestLimiter, authController.resendOTP);
 
 
 router.use(middleware.verifyUser);
-
-router.post("/verifyOtp", authController.verifyOtp);
-router.post("/resendotp", authController.resendOTP);
 router.post("/deleteaccount", authController.deleteAccount);
 router.post("/logout", authController.logout);
 router.post('/notificationOnOff', authController.notificationOnOff);

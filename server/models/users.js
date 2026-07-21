@@ -87,6 +87,37 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: true,
             defaultValue: ""
         },
+        // Hardened OTP / password-reset fields (see helper/otpHelper.js). The plaintext `otp`
+        // column above is kept for the legacy mobile flow but is no longer used by the web flow.
+        otpHash: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            defaultValue: null,
+            comment: "HMAC of the current OTP or reset ticket; never the plaintext code"
+        },
+        otpPurpose: {
+            type: DataTypes.STRING(32),
+            allowNull: true,
+            defaultValue: null,
+            comment: "verify_email | reset_password | reset_verified"
+        },
+        otpExpiresAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            defaultValue: null
+        },
+        otpAttempts: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0,
+            comment: "wrong-attempt counter for brute-force lockout"
+        },
+        otpLastSentAt: {
+            type: DataTypes.DATE,
+            allowNull: true,
+            defaultValue: null,
+            comment: "timestamp of last OTP send, for resend cooldown"
+        },
         social_id: {
             type: DataTypes.STRING(255),
             allowNull: true,

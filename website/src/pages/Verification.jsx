@@ -6,7 +6,7 @@ import { verify } from '../api/cms';
 import { resendOtp } from '../api/cms';
 const Verification = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef([]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ const Verification = () => {
     newOtp[index] = value.slice(0, 1);
     setOtp(newOtp);
 
-    if (value && index < 3) {
+    if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -51,7 +51,7 @@ const Verification = () => {
 
   // Function to reset OTP fields
   const resetOtpFields = () => {
-    setOtp(["", "", "", ""]);
+    setOtp(["", "", "", "", "", ""]);
     // Focus back to first input
     if (inputRefs.current[0]) {
       inputRefs.current[0].focus();
@@ -62,8 +62,8 @@ const Verification = () => {
     e.preventDefault();
     const otpString = otp.join('');
 
-    if (otpString.length !== 4) {
-      toast.error("Please enter complete 4-digit OTP");
+    if (otpString.length !== 6) {
+      toast.error("Please enter the complete 6-digit code");
       return;
     }
 
@@ -73,7 +73,7 @@ const Verification = () => {
     }
 
     try {
-      const response = await verify({ otp: otpString, email: emailFromRoute });
+      const response = await verify({ otp: otpString, email: emailFromRoute, purpose: 'verify_email' });
 
       if (response.success === true) {
         setIsOpen(true);
@@ -133,16 +133,16 @@ const Verification = () => {
     const handleGlobalPaste = (e) => {
       if (e.target.type !== 'text' || !e.target.hasAttribute('inputmode')) {
         const pastedText = e.clipboardData.getData('text');
-        const digits = pastedText.replace(/\D/g, '').slice(0, 4);
+        const digits = pastedText.replace(/\D/g, '').slice(0, 6);
 
-        if (digits.length === 4) {
+        if (digits.length === 6) {
           e.preventDefault();
           const newOtp = digits.split('');
           setOtp(newOtp);
 
           // Focus on last input
-          if (inputRefs.current[3]) {
-            inputRefs.current[3].focus();
+          if (inputRefs.current[5]) {
+            inputRefs.current[5].focus();
           }
         }
       }
@@ -158,15 +158,15 @@ const Verification = () => {
   const handlePaste = (e) => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData('text');
-    const digits = pastedText.replace(/\D/g, '').slice(0, 4);
+    const digits = pastedText.replace(/\D/g, '').slice(0, 6);
 
-    if (digits.length === 4) {
+    if (digits.length === 6) {
       const newOtp = digits.split('');
       setOtp(newOtp);
 
       // Focus on last input
-      if (inputRefs.current[3]) {
-        inputRefs.current[3].focus();
+      if (inputRefs.current[5]) {
+        inputRefs.current[5].focus();
       }
     }
   };
@@ -189,7 +189,7 @@ const Verification = () => {
 
           <div>
             <p className="text-center mx-[15px] sm:mx-[40px] text-[13px] sm:text-[14px] md:text-[16px] lg:text-[18px] font-semibold mt-3">
-              Enter the 4-digit code sent to you at
+              Enter the 6-digit code sent to you at
             </p>
             <p className='text-center text-[13px] sm:text-[14px] md:text-[16px] lg:text-[18px] text-yellow-400 break-all px-4'>
               {emailFromRoute || "Email not available"}
@@ -200,8 +200,8 @@ const Verification = () => {
         <form onSubmit={handleFormSubmit} className="w-full max-w-xs">
           <div>
             <div className='text-13px md:text-[16px] xl:text-[18px] mb-2'>OTP</div>
-            <div className='flex items-center justify-center gap-3 sm:gap-4 w-full'>
-              {[0, 1, 2, 3].map((index) => (
+            <div className='flex items-center justify-center gap-2 sm:gap-3 w-full'>
+              {[0, 1, 2, 3, 4, 5].map((index) => (
                 <input
                   key={index}
                   ref={(el) => (inputRefs.current[index] = el)}
@@ -213,7 +213,7 @@ const Verification = () => {
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={index === 0 ? handlePaste : undefined}
                   placeholder='-'
-                  className='px-4 py-3 sm:px-6 sm:py-4 w-14 sm:w-20 text-center text-white rounded-[16px] border border-[#4E6B5D] focus:outline-none focus:border-yellow-400 bg-transparent text-lg sm:text-xl'
+                  className='px-0 py-3 sm:py-4 w-10 sm:w-14 text-center text-white rounded-[14px] border border-[#4E6B5D] focus:outline-none focus:border-yellow-400 bg-transparent text-lg sm:text-xl'
                 />
               ))}
             </div>
