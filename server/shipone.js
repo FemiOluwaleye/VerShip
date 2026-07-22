@@ -57,7 +57,8 @@ app.use(logger('dev'));
 app.post('/stripe/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   console.log('[WEBHOOK] Stripe webhook received');
 
-  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  const { env } = require('./helper/envConfig');
+  const stripe = require('stripe')(env('STRIPE_SECRET_KEY'));
   console.log('[WEBHOOK] Stripe initialized');
 
   const db = require('./models');
@@ -67,7 +68,7 @@ app.post('/stripe/webhook', bodyParser.raw({ type: 'application/json' }), async 
   console.log('[WEBHOOK] Stripe signature captured:', sig ? 'Present' : 'Missing');
 
   try {
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const endpointSecret = env('STRIPE_WEBHOOK_SECRET');
     if (!endpointSecret) {
       console.error('[WEBHOOK] STRIPE_WEBHOOK_SECRET is not configured — rejecting unverifiable webhook');
       return res.status(500).send('Webhook secret not configured');

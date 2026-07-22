@@ -1,5 +1,5 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-// const publishkey = require('stripe')(process.env.STRIPE_PUBLISHABLE_KEY);
+const { env } = require('../../helper/envConfig');
+const stripe = require('stripe')(env('STRIPE_SECRET_KEY'));
 const helper = require('../../helper/helper');
 const db = require('../../models');
 
@@ -142,7 +142,7 @@ exports.createPaymentIntent = async (req, res) => {
         res.status(200).json({
             success: true,
             clientSecret: paymentIntent.client_secret,
-            publishkey: process.env.STRIPE_PUBLISHABLE_KEY,
+            publishkey: env('STRIPE_PUBLISHABLE_KEY'),
             paymentIntentId: paymentIntent.id,
             split: {
                 destinationAccountId,
@@ -271,7 +271,7 @@ exports.createPaymentIntent12 = async (req, res) => {
         res.status(200).json({
             success: true,
             clientSecret: paymentIntent.client_secret,
-            publishkey: process.env.STRIPE_PUBLISHABLE_KEY,
+            publishkey: env('STRIPE_PUBLISHABLE_KEY'),
 
         });
     } catch (error) {

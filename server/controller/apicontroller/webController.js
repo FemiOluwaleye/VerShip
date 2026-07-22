@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendResetEmail, sendSubscriptionEmail, sendBookingStatusUpdateEmailToUser, sendOtpEmail, sendOtpEmail12, sendVerificationOtpEmail, sendFreightForwarderRegistrationEmail, sendNewOrderPlacedEmailToProvider, sendNewOrderPlacedEmailToProvider12 } = require('../../helper/mailHelper');
 const otpHelper = require('../../helper/otpHelper');
+const { env } = require('../../helper/envConfig');
 
 // Fields that must never be serialised back to a client — OTP/reset material and the password hash.
 const SENSITIVE_USER_FIELDS = ['password', 'otp', 'otpHash', 'otpPurpose', 'otpExpiresAt', 'otpAttempts', 'otpLastSentAt'];
@@ -4367,7 +4368,7 @@ module.exports = {
             if (!paymentId) {
                 return helper.failure(res, "paymentId is required.");
             }
-            const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+            const stripe = require('stripe')(env('STRIPE_SECRET_KEY'));
             let paymentIntent;
             try {
                 paymentIntent = await stripe.paymentIntents.retrieve(paymentId);

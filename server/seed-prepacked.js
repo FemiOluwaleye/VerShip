@@ -59,9 +59,9 @@ const CONTENTS = [
 
     const productBase = {
       name: 'Packed with love. Filled with care. Delivered by VerShip.',
-      tagline: 'A barrel of essentials, packed and shipped to your family in Jamaica.',
+      tagline: '',
       description: 'Order in seconds. Countless hours saved.',
-      image: '/images/barrel-animation-v2.mp4',
+      image: '/images/barrel-animation-v3.mp4',
       price: '899',
       // Regular price shown struck-through beside the $899 promo. Set this to the
       // "was" amount (must be above 899). Left empty until confirmed → no strike.

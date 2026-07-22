@@ -83,7 +83,7 @@ const Type = () => {
           <div className="flex flex-col  gap-5 sm:gap-10 xl:gap-15   md:mx-[50px] lg:mx-[60px] xl:mx-[100px]  items-center justify-center bg-[#2D413F] backdrop-blur-md rounded-xl mt-[50px] mb-[50px] w-[80vw] py-6 px-6 sm:w-[500px]  lg:w-[600px]  2xl:w-[650px]">
             <div>
               <h1 className="text-[22px] mt-10 sm:text-[26px] lg:text-[28px] xl:text-[35px] font-semibold text-white items-center">
-                Select Users Type
+                Select User Type
               </h1>
             </div>
             <div className="flex items-stretch justify-center gap-5 sm:gap-10">
