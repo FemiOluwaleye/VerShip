@@ -5,6 +5,7 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
 import AppRoutes from './routes/AppRoutes'
+import { IS_ADMIN_HOST } from './admin/adminBase'
 // import CookieConsent from './components/CookieConsent'
 
 // The admin dashboard is a separate, code-split chunk (Redux + Bootstrap/jQuery
@@ -51,15 +52,18 @@ const App = () => {
           `}
                 </style>
                 <Routes>
+                    {/* On the admin subdomain the dashboard mounts at the root for
+                        clean URLs (admin.<domain>/dashboard) and the public site is
+                        not served at all; elsewhere it keeps its /admin prefix. */}
                     <Route
-                        path="/admin/*"
+                        path={IS_ADMIN_HOST ? "/*" : "/admin/*"}
                         element={
                             <Suspense fallback={<div style={{ padding: 40 }}>Loading admin…</div>}>
                                 <AdminApp />
                             </Suspense>
                         }
                     />
-                    <Route path="/*" element={<PublicLayout />} />
+                    {!IS_ADMIN_HOST && <Route path="/*" element={<PublicLayout />} />}
                 </Routes>
             </Router>
             <Toaster richColors position="top-right" />

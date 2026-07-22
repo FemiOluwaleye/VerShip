@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
@@ -58,7 +59,7 @@ const PrivacyPolicy = () => {
         content,
       });
       toast.success("Privacy policy updated successfully");
-      navigate("/admin/privacypolicy");
+      navigate(`${ADMIN_BASE}/privacypolicy`);
     } catch (error) {
       setSubmitError("Error submitting privacy policy. Please try again.");
       toast.error("Error submitting privacy policy. Please try again.");

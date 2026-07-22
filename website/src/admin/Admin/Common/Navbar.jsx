@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useRef, useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -98,7 +99,7 @@ function Navbar({ toggleSidebar }) {
 
   const handleProfileClick = () => {
     closeDropdown();
-    navigate("/admin/profile");
+    navigate(`${ADMIN_BASE}/profile`);
   };
 
   const navigate = useNavigate();
@@ -120,7 +121,7 @@ function Navbar({ toggleSidebar }) {
         localStorage.removeItem("admin_token");
         toast.success("Logged out successfully!");
         setTimeout(() => {
-          navigate("/admin/");
+          navigate(`${ADMIN_BASE}/`);
         }, 1500);
       } catch (error) {
         console.error("Logout error:", error);
@@ -142,7 +143,7 @@ function Navbar({ toggleSidebar }) {
                 <i className="fe-menu"></i>
               </button>
 
-              <Link to="/admin/dashboard" className="new-logo">
+              <Link to={`${ADMIN_BASE}/dashboard`} className="new-logo">
                 <img src="/vendor/images/logo-new.png" alt="" />
               </Link>
             </div>
@@ -245,11 +246,11 @@ function Navbar({ toggleSidebar }) {
                           {truncateText(email, 25)}
                         </div>
                         <Link
-                          to="/admin/profile"
+                          to={`${ADMIN_BASE}/profile`}
                           onClick={(e) => {
                             e.stopPropagation();
                             closeDropdown();
-                            navigate("/admin/profile");
+                            navigate(`${ADMIN_BASE}/profile`);
                           }}
                         >
                           Edit Profile
@@ -260,7 +261,7 @@ function Navbar({ toggleSidebar }) {
                   <div className="dropplink font-size-15 mt-2">
 
                     <Link
-                      to="/admin/password"
+                      to={`${ADMIN_BASE}/password`}
                       className="d-block text-lowdark pb-2 ps-3 pt-2"
                       style={{ borderTop: "1px solid #e9ecf0" }}
                       onClick={closeDropdown}
@@ -269,7 +270,7 @@ function Navbar({ toggleSidebar }) {
                       <span>Password</span>
                     </Link>
                     <Link
-                      to="/admin/"
+                      to={`${ADMIN_BASE}/`}
                       className="d-block text-danger ps-3 pt-2"
                       style={{ borderTop: "1px solid #e9ecf0" }}
                       onClick={(e) => {

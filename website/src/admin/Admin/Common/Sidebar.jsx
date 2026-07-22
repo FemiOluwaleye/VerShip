@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -122,7 +123,7 @@ function Sidebar({ isOpen }) {
       }}
     >
       <div className="navbar-brand-box">
-        <Link to="/admin/dashboard" className="logo" onClick={handleLinkClick}>
+        <Link to={`${ADMIN_BASE}/dashboard`} className="logo" onClick={handleLinkClick}>
           <span className="logo-lg">
             <img src="/vendor/images/shipone.png" alt="" height={20} />
           </span>
@@ -154,7 +155,7 @@ function Sidebar({ isOpen }) {
         <div id="sidebar-menu">
           <ul className="metismenu list-unstyled" id="side-menu">
             <li className={isActive("/dashboard") ? "mm-active" : ""}>
-              <Link to="/admin/dashboard" onClick={handleLinkClick}>
+              <Link to={`${ADMIN_BASE}/dashboard`} onClick={handleLinkClick}>
                 <i className="ri-pie-chart-2-fill" />
                 <span>Dashboard</span>
               </Link>
@@ -173,7 +174,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/userlist") ? "active" : ""}
-                      to="/admin/userlist"
+                      to={`${ADMIN_BASE}/userlist`}
                       onClick={handleLinkClick}
                     >
                       User listings
@@ -196,7 +197,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/providerlist") ? "active" : ""}
-                      to="/admin/providerlist"
+                      to={`${ADMIN_BASE}/providerlist`}
                       onClick={handleLinkClick}
                     >
                       Providers listings
@@ -219,7 +220,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/bookinglist") ? "active" : ""}
-                      to="/admin/bookinglist"
+                      to={`${ADMIN_BASE}/bookinglist`}
                       onClick={handleLinkClick}
                     >
                       Booking List
@@ -228,7 +229,7 @@ function Sidebar({ isOpen }) {
                   {/* <li>
                     <Link
                       className={isActive("/BookingCompleted") ? "active" : ""}
-                      to="/admin/BookingCompleted"
+                      to={`${ADMIN_BASE}/BookingCompleted`}
                       onClick={handleLinkClick}
                     >
                       Completed Bookings
@@ -253,7 +254,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/ratinglist") ? "active" : ""}
-                      to="/admin/ratinglist"
+                      to={`${ADMIN_BASE}/ratinglist`}
                       onClick={handleLinkClick}
                     >
                       Rating list
@@ -275,7 +276,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/reportlist") ? "active" : ""}
-                      to="/admin/reportlist"
+                      to={`${ADMIN_BASE}/reportlist`}
                       onClick={handleLinkClick}
                     >
                       Report list
@@ -297,7 +298,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/bannerlist") ? "active" : ""}
-                      to="/admin/bannerlist"
+                      to={`${ADMIN_BASE}/bannerlist`}
                       onClick={handleLinkClick}
                     >
                       Banner list
@@ -320,7 +321,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/contactlist") ? "active" : ""}
-                      to="/admin/contactlist"
+                      to={`${ADMIN_BASE}/contactlist`}
                       onClick={handleLinkClick}
                     >
                       Contact List
@@ -329,7 +330,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/faqlist") ? "active" : ""}
-                      to="/admin/faqlist"
+                      to={`${ADMIN_BASE}/faqlist`}
                       onClick={handleLinkClick}
                     >
                       FAQ's List
@@ -338,7 +339,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/cookielist") ? "active" : ""}
-                      to="/admin/cookielist"
+                      to={`${ADMIN_BASE}/cookielist`}
                       onClick={handleLinkClick}
                     >
                       Cookies List
@@ -361,7 +362,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/prepacked/") ? "active" : ""}
-                      to="/admin/prepacked/list"
+                      to={`${ADMIN_BASE}/prepacked/list`}
                       onClick={handleLinkClick}
                     >
                       Barrels
@@ -370,7 +371,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/prepackedorders") ? "active" : ""}
-                      to="/admin/prepackedorders"
+                      to={`${ADMIN_BASE}/prepackedorders`}
                       onClick={handleLinkClick}
                     >
                       Orders
@@ -393,7 +394,7 @@ function Sidebar({ isOpen }) {
                   <li>
                     <Link
                       className={isActive("/password") ? "active" : ""}
-                      to="/admin/password"
+                      to={`${ADMIN_BASE}/password`}
                       onClick={handleLinkClick}
                     >
                       Change Password
@@ -404,39 +405,39 @@ function Sidebar({ isOpen }) {
             </li> */}
 
             <li className={isActive("/aboutus") ? "mm-active" : ""}>
-              <Link to="/admin/aboutus" onClick={handleLinkClick}>
+              <Link to={`${ADMIN_BASE}/aboutus`} onClick={handleLinkClick}>
                 <Info />
                 <span>About Us</span>
               </Link>
             </li>
 
             <li className={isActive("/privacypolicy") ? "mm-active" : ""}>
-              <Link to="/admin/privacypolicy" onClick={handleLinkClick}>
+              <Link to={`${ADMIN_BASE}/privacypolicy`} onClick={handleLinkClick}>
                 <File />
                 <span>Privacy Policy</span>
               </Link>
             </li>
 
             <li className={isActive("/termsConditions") ? "mm-active" : ""}>
-              <Link to="/admin/termsConditions" onClick={handleLinkClick}>
+              <Link to={`${ADMIN_BASE}/termsConditions`} onClick={handleLinkClick}>
                 <CheckSquare />
                 <span>Terms & Conditions</span>
               </Link>
             </li>
             <li className={isActive("/cookiepolicy") ? "mm-active" : ""}>
-              <Link to="/admin/cookiepolicy" onClick={handleLinkClick}>
+              <Link to={`${ADMIN_BASE}/cookiepolicy`} onClick={handleLinkClick}>
                 <Database size={18} />
                 <span>Cookie Policy</span>
               </Link>
             </li>
             <li className={isActive("/freightforwarder") ? "mm-active" : ""}>
-              <Link to="/admin/freightforwarder" onClick={handleLinkClick}>
+              <Link to={`${ADMIN_BASE}/freightforwarder`} onClick={handleLinkClick}>
                 <Shield size={18} />
                 <span>Freight Forwarder Agreement</span>
               </Link>
             </li>
             <li className={isActive("/refundpolicy") ? "mm-active" : ""}>
-              <Link to="/admin/refundpolicy" onClick={handleLinkClick}>
+              <Link to={`${ADMIN_BASE}/refundpolicy`} onClick={handleLinkClick}>
                 <RotateCcw size={18} />
                 <span>Refund Policy</span>
               </Link>

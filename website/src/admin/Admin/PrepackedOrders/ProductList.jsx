@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Link } from "react-router-dom";
@@ -123,7 +124,7 @@ const ProductList = () => {
               <nav aria-label="breadcrumb" className="mt-1">
                 <ol className="breadcrumb mb-0">
                   <li className="breadcrumb-item">
-                    <Link to="/admin/dashboard" className="new">
+                    <Link to={`${ADMIN_BASE}/dashboard`} className="new">
                       <i className="ri-home-4-fill me-1" /> Home
                     </Link>
                   </li>
@@ -152,7 +153,7 @@ const ProductList = () => {
                   </div>
                   <div className="d-flex justify-content-end ms-auto">
                     <Link
-                      to="/admin/prepacked/add"
+                      to={`${ADMIN_BASE}/prepacked/add`}
                       className="btn btn-soft-primary px-2 btn-sm me-1"
                       title="Add Barrel"
                     >

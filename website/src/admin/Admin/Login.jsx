@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../adminBase";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
@@ -66,7 +67,7 @@ const Login = () => {
       setTimeout(() => {
         localStorage.setItem("admin_token", response.data.body.token);
         localStorage.setItem("admin_userData", JSON.stringify(response.data.body));
-        navigate("/admin/dashboard", { replace: true });
+        navigate(`${ADMIN_BASE}/dashboard`, { replace: true });
       }, 1500);
     } catch (error) {
       if (error.response) {

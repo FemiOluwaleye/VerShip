@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../adminBase";
 import React, { useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { axiosInstance } from "../Config";
@@ -156,7 +157,7 @@ const Password = () => {
         localStorage.setItem("admin_token", response.data.body.token);
         toast.success("Your password was reset successfully");
         setTimeout(() => {
-          window.location.href = "/admin/login";
+          window.location.href = `${ADMIN_BASE}/login`;
         }, 1500);
       } else {
         toast.error(response.data.message || "Password reset failed");
@@ -178,12 +179,12 @@ const Password = () => {
                 <nav aria-label="breadcrumb" className="mt-1">
                   <ol className="breadcrumb align-items-center mb-0">
                     <li className="breadcrumb-item">
-                      <Link to="/admin/dashboard" className="new">
+                      <Link to={`${ADMIN_BASE}/dashboard`} className="new">
                         <i className="ri-home-4-fill me-1"></i> Home
                       </Link>
                     </li>
                     <li className="breadcrumb-item">
-                      <Link to="/admin/" className="new">
+                      <Link to={`${ADMIN_BASE}/`} className="new">
                         <i className="ri-settings-3-line me-1"></i> Settings
                       </Link>
                     </li>

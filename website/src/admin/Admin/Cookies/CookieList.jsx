@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Link } from "react-router-dom";
@@ -75,7 +76,7 @@ const CookieList = () => {
                                 <nav aria-label="breadcrumb" className="mt-1">
                                     <ol className="breadcrumb mb-0">
                                         <li className="breadcrumb-item">
-                                            <Link to="/admin/dashboard" className="new"><i className="ri-home-4-fill me-1" /> Home</Link>
+                                            <Link to={`${ADMIN_BASE}/dashboard`} className="new"><i className="ri-home-4-fill me-1" /> Home</Link>
                                         </li>
                                         <li className="breadcrumb-item active" aria-current="page">Cookies</li>
                                     </ol>
@@ -96,7 +97,7 @@ const CookieList = () => {
                                             <i className="ri-search-line" />
                                         </div>
                                         <div className="d-flex justify-content-end ms-auto">
-                                            <Link to="/admin/addcookie" className="btn btn-soft-primary px-2 btn-sm me-1">
+                                            <Link to={`${ADMIN_BASE}/addcookie`} className="btn btn-soft-primary px-2 btn-sm me-1">
                                                 <i className="ri-add-fill font-size-16"></i>
                                             </Link>
                                         </div>

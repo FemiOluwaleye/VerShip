@@ -235,6 +235,28 @@ const uploadRoot = process.env.UPLOAD_DIR || path.join(__dirname, "public");
 app.use('/images', express.static(path.join(uploadRoot, "images")));
 app.use('/admin/images', express.static(path.join(uploadRoot, "images")));
 
+// ---- Admin subdomain ----
+// The dashboard is reachable at admin.<domain> with clean URLs (/dashboard).
+// The SPA detects the host itself (see website/src/admin/adminBase.js); here we
+// only handle redirects. ADMIN_HOST (e.g. "admin.vershipgo.com") additionally
+// moves the main domain's /admin/* over to the subdomain — leave it unset in
+// dev/staging where no subdomain exists and /admin keeps working as before.
+const ADMIN_HOST = process.env.ADMIN_HOST || "";
+const isAdminHost = (req) => /^admin\./i.test(req.hostname || "");
+app.use((req, res, next) => {
+  const underAdminPath = req.path === '/admin' || req.path.startsWith('/admin/');
+  if (!underAdminPath || req.path.startsWith('/admin/images')) return next();
+  if (isAdminHost(req)) {
+    // Old-style deep link on the subdomain -> clean path (/admin/x -> /x)
+    return res.redirect(301, req.originalUrl.replace(/^\/admin\/?/, '/'));
+  }
+  if (ADMIN_HOST) {
+    // Admin moved to its subdomain; keep old main-domain bookmarks working.
+    return res.redirect(301, `${req.protocol}://${ADMIN_HOST}${req.originalUrl.replace(/^\/admin/, '') || '/'}`);
+  }
+  return next();
+});
+
 // redirect:false so a prerendered directory route (e.g. dist/about/) isn't
 // auto-redirected to a trailing slash before the catch-all can serve it cleanly.
 if (serveApp) app.use(express.static(appBuildPath, { redirect: false }));
@@ -277,6 +299,9 @@ app.use('/website', websiteRouter);
 // unmatched routes fall through to the 404 handler instead of erroring.
 if (serveApp) {
   app.get('*', (req, res) => {
+    // Admin subdomain: every path is an admin SPA route — serve the shell
+    // directly and skip the public-site prerender lookup.
+    if (isAdminHost(req)) return res.sendFile(path.join(appBuildPath, "index.html"));
     // Prefer a prerendered per-route page (from `npm run prerender`) so crawlers
     // get real content + per-page metadata; otherwise serve the SPA shell.
     // Falls back safely when no prerendered files exist.

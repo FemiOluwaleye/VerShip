@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -62,7 +63,7 @@ const CookieEdit = () => {
             const response = await axiosInstance.post(`/cookieupdate/${id}`, data);
             if (response.data.success) {
                 toast.success("Cookie updated successfully!");
-                setTimeout(() => navigate("/admin/cookielist"), 1000);
+                setTimeout(() => navigate(`${ADMIN_BASE}/cookielist`), 1000);
             } else {
                 toast.error(response.data.message || "Failed to update cookie");
             }
@@ -117,7 +118,7 @@ const CookieEdit = () => {
                                                 </div>
 
                                                 <div className="text-end mb-2">
-                                                    <Link className="btn btn-secondary px-4 mx-2" to="/admin/cookielist">Back</Link>
+                                                    <Link className="btn btn-secondary px-4 mx-2" to={`${ADMIN_BASE}/cookielist`}>Back</Link>
                                                     <button type="submit" className="btn btn-primary px-4">Update Cookie</button>
                                                 </div>
                                             </form>

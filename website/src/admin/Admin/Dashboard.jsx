@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../adminBase";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -106,7 +107,7 @@ const Dashboard = () => {
               <nav aria-label="breadcrumb" className="mt-1">
                 <ol className="breadcrumb mb-0">
                   <li className="breadcrumb-item">
-                    <Link to="/admin/dashboard" className="new">
+                    <Link to={`${ADMIN_BASE}/dashboard`} className="new">
                       <i className="ri-home-4-fill me-1"></i> Home
                     </Link>
                   </li>
@@ -131,7 +132,7 @@ const Dashboard = () => {
                     </div>
                     <div className="row gx-3">
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/admin/userlist">
+                        <Link to={`${ADMIN_BASE}/userlist`}>
                           <div className="card bg-soft-blue">
                             <div
                               className="card-body"
@@ -157,7 +158,7 @@ const Dashboard = () => {
 
 
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/admin/providerlist">
+                        <Link to={`${ADMIN_BASE}/providerlist`}>
                           <div className="card bg-soft-blue">
                             <div className="card-body" style={{ paddingBottom: "13px" }}>
                               <div className="d-flex align-items-center">
@@ -179,7 +180,7 @@ const Dashboard = () => {
 
 
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/admin/Bookinglist">
+                        <Link to={`${ADMIN_BASE}/Bookinglist`}>
                           <div className="card bg-soft-blue">
                             <div
                               className="card-body"
@@ -204,7 +205,7 @@ const Dashboard = () => {
                       </div>
 
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/admin/contactlist">
+                        <Link to={`${ADMIN_BASE}/contactlist`}>
                           <div className="card bg-soft-blue">
                             <div
                               className="card-body"
@@ -232,7 +233,7 @@ const Dashboard = () => {
                       </div>
 
                       <div className="col-xl col-lg-4 col-sm-6 mb-3">
-                        <Link to="/admin/faqlist">
+                        <Link to={`${ADMIN_BASE}/faqlist`}>
                           <div className="card bg-soft-blue">
                             <div
                               className="card-body"

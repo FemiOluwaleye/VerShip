@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "./adminBase";
 import React from 'react';
 import axios from 'axios';
 
@@ -31,7 +32,7 @@ axiosInstance.interceptors.response.use(
 
       if (status === 401) {
         localStorage.removeItem('admin_token');
-        window.location.replace('/admin/login');
+        window.location.replace(`${ADMIN_BASE}/login`);
       }
     }
     return Promise.reject(error);

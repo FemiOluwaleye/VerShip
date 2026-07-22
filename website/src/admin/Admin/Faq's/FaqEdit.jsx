@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { axiosInstance } from "../../Config";
@@ -92,7 +93,7 @@ const FaqEdit = () => {
 
       if (response.data.success) {
         toast.success("FAQ updated successfully!");
-        setTimeout(() => navigate("/admin/faqlist"), 1000);
+        setTimeout(() => navigate(`${ADMIN_BASE}/faqlist`), 1000);
       } else {
         toast.error(response.data.message || "Failed to update FAQ.");
       }
@@ -153,7 +154,7 @@ const FaqEdit = () => {
                           <Link
                             type="button"
                             className="btn btn-secondary mx-2"
-                            to="/admin/faqlist"
+                            to={`${ADMIN_BASE}/faqlist`}
                           >
                             Back
                           </Link>

@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "./adminBase";
 // jquery-setup MUST be first: it puts jQuery on window before the page modules
 // below (which side-effect-import the fancybox jQuery plugin) evaluate.
 import "./jquery-setup";
@@ -71,7 +72,7 @@ const AdminApp = () => {
           <Route path="login" element={<Login />} />
           <Route
             index
-            element={isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/admin/login" replace />}
+            element={isAuthenticated ? <Navigate to={`${ADMIN_BASE}/dashboard`} replace /> : <Navigate to={`${ADMIN_BASE}/login`} replace />}
           />
           <Route element={<Layout />}>
             <Route path="dashboard" element={<PrivateRoute element={<Dashboard />} />} />

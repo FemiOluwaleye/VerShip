@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
@@ -62,7 +63,7 @@ const TermsConditions = () => {
         content,
       });
       toast.success("Terms and Conditions updated successfully");
-      navigate("/admin/termsconditions");
+      navigate(`${ADMIN_BASE}/termsconditions`);
     } catch (error) {
       setSubmitError(
         "Error submitting terms and conditions. Please try again."

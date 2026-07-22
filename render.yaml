@@ -52,6 +52,13 @@ services:
       # build vars default to '' and '/admin' — no need to set them here.
       - key: PUBLIC_BASE_URL
         sync: false # set to the service's public URL / custom domain
+      # Admin dashboard subdomain (e.g. "admin.vershipgo.com"). When set, the
+      # main domain's /admin/* 301s to this host and the dashboard serves there
+      # with clean URLs (admin.<domain>/dashboard). The subdomain must also be
+      # added as a custom domain on this service in the Render dashboard.
+      # Leave unset to keep the admin at <domain>/admin (dev/staging behavior).
+      - key: ADMIN_HOST
+        sync: false
       - key: JWT_SECRET
         sync: false
       # Pepper mixed into OTP / password-reset-ticket hashes (helper/otpHelper.js). Falls back to

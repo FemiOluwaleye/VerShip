@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../adminBase";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -214,7 +215,7 @@ const AdminBank = () => {
       });
 
       toast.success("Bank details updated successfully");
-      navigate("/admin/bankdetail");
+      navigate(`${ADMIN_BASE}/bankdetail`);
     } catch (error) {
       toast.error("Error updating bank details");
     }

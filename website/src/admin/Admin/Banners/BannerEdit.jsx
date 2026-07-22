@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { axiosInstance, BASE_URL } from "../../Config";
@@ -92,7 +93,7 @@ const BannerEdit = () => {
       const response = await axiosInstance.post(`/bannerupdate/${id}`, formData);
       if (response.data.success) {
         toast.success("Banner updated successfully!");
-        setTimeout(() => navigate("/admin/bannerlist"), 1000);
+        setTimeout(() => navigate(`${ADMIN_BASE}/bannerlist`), 1000);
       } else {
         toast.error(response.data.message || "Failed to update banner.");
       }
@@ -163,7 +164,7 @@ const BannerEdit = () => {
                           <Link
                             type="button"
                             className="btn btn-secondary mx-2"
-                            to='/admin/bannerlist'
+                            to={`${ADMIN_BASE}/bannerlist`}
                           >
                             Back
                           </Link>

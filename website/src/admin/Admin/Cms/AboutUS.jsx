@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
@@ -59,7 +60,7 @@ const AboutUs = () => {
         content,
       });
       toast.success("About Us updated successfully");
-      navigate("/admin/aboutus");
+      navigate(`${ADMIN_BASE}/aboutus`);
     } catch (error) {
       setSubmitError("Error submitting About Us content. Please try again.");
       toast.error("Error submitting About Us content. Please try again.");

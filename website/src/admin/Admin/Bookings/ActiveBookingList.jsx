@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Link } from "react-router-dom";
@@ -171,12 +172,12 @@ const ActiveBookingList = () => {
                 <nav aria-label="breadcrumb" className="mt-1">
                   <ol className="breadcrumb mb-0">
                     <li className="breadcrumb-item">
-                      <Link to="/admin/dashboard" className="new">
+                      <Link to={`${ADMIN_BASE}/dashboard`} className="new">
                         <i className="ri-home-4-fill me-1" /> Home
                       </Link>
                     </li>
                     <li className="breadcrumb-item">
-                      <Link to="/admin/" className="new">
+                      <Link to={`${ADMIN_BASE}/`} className="new">
                         <i className="ri-group-2-line me-1" /> Rides
                       </Link>
                     </li>

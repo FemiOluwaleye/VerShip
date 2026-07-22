@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -83,7 +84,7 @@ const BannerAdd = () => {
 
       if (response.status === 200 && response.data.success) {
         toast.success("Banner added successfully!");
-        setTimeout(() => navigate("/admin/bannerlist"), 1000);
+        setTimeout(() => navigate(`${ADMIN_BASE}/bannerlist`), 1000);
       } else {
         toast.error(response.data.message || "Banner creation failed.");
       }
@@ -181,7 +182,7 @@ const BannerAdd = () => {
                         <div className="text-end mb-2">
                           <Link
                             className="btn btn-secondary px-4 mx-2"
-                            to="/admin/bannerlist"
+                            to={`${ADMIN_BASE}/bannerlist`}
                           >
                             Back
                           </Link>

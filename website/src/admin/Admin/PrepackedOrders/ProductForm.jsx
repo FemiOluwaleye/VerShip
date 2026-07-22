@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -143,7 +144,7 @@ const ProductForm = ({ mode }) => {
       });
       if (response.data.success) {
         toast.success(`Barrel ${isEdit ? "updated" : "created"} successfully!`);
-        setTimeout(() => navigate("/admin/prepacked/list"), 900);
+        setTimeout(() => navigate(`${ADMIN_BASE}/prepacked/list`), 900);
       } else {
         toast.error(response.data.message || "Save failed.");
       }
@@ -454,7 +455,7 @@ const ProductForm = ({ mode }) => {
                         <div className="text-end mb-2">
                           <Link
                             className="btn btn-secondary px-4 mx-2"
-                            to="/admin/prepacked/list"
+                            to={`${ADMIN_BASE}/prepacked/list`}
                           >
                             Back
                           </Link>

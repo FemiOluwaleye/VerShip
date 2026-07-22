@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -68,7 +69,7 @@ const FaqAdd = () => {
 
       if (response.status === 200 && response.data.success) {
         toast.success("FAQ added successfully!");
-        setTimeout(() => navigate("/admin/faqlist"), 1000);
+        setTimeout(() => navigate(`${ADMIN_BASE}/faqlist`), 1000);
       } else {
         toast.error(response.data.message || "FAQ creation failed.");
       }
@@ -141,7 +142,7 @@ const FaqAdd = () => {
                         <div className="text-end mb-2">
                           <Link
                             className="btn btn-secondary px-4 mx-2"
-                            to="/admin/faqlist"
+                            to={`${ADMIN_BASE}/faqlist`}
                           >
                             Back
                           </Link>

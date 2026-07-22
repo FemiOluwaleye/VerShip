@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../adminBase";
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -255,7 +256,7 @@ const Profile = () => {
         localStorage.removeItem("admin_token");
         localStorage.removeItem("admin_userData");
         toast.success("Email updated successfully. Please log in with your new email.");
-        navigate("/admin/", {
+        navigate(`${ADMIN_BASE}/`, {
           replace: true,
           state: { email: updatedData.email || data.email.trim() },
         });
@@ -293,7 +294,7 @@ const Profile = () => {
       }
 
       toast.success("Profile updated successfully");
-      navigate("/admin/profile", { state: { updated: true } });
+      navigate(`${ADMIN_BASE}/profile`, { state: { updated: true } });
     } catch (error) {
       console.error("Update error:", error);
 

@@ -1,3 +1,4 @@
+import { ADMIN_BASE } from "../../adminBase";
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -46,7 +47,7 @@ const CookieAdd = () => {
             const response = await axiosInstance.post("/createcookie", data);
             if (response.data.success) {
                 toast.success("Cookie added successfully!");
-                setTimeout(() => navigate("/admin/cookielist"), 1000);
+                setTimeout(() => navigate(`${ADMIN_BASE}/cookielist`), 1000);
             } else {
                 toast.error(response.data.message || "Failed to add cookie");
             }
@@ -101,7 +102,7 @@ const CookieAdd = () => {
                                                 </div>
 
                                                 <div className="text-end mb-2">
-                                                    <Link className="btn btn-secondary px-4 mx-2" to="/admin/cookielist">Back</Link>
+                                                    <Link className="btn btn-secondary px-4 mx-2" to={`${ADMIN_BASE}/cookielist`}>Back</Link>
                                                     <button type="submit" className="btn btn-primary px-4">Add Cookie</button>
                                                 </div>
                                             </form>
