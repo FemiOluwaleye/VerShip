@@ -93,6 +93,11 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: true,
             defaultValue: ""
         },
+        parish: {                  // consignee destination parish (pricing v2)
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            defaultValue: ""
+        },
 
         drop_off_lat: {
             type: DataTypes.STRING(255),

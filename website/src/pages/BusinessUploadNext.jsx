@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import SuccessPopup from '../components/SuccessPopup';
 import countries from "world-countries";
 import { FaSpinner, FaPlus, FaTrash } from "react-icons/fa";
+import { JAMAICA_PARISHES } from '../utils/parishes';
 
 const ORIGIN_CITIES = [
   "Fort Lauderdale, FL",
@@ -40,71 +41,94 @@ const SHIPMENT_CONTENTS_OPTIONS = [
   "Goods for resale"
 ];
 
-const MAX_CUSTOMS = 999999999.99;
+const MAX_PRICE = 999999999.99;
 
-const normCustoms = (val) => {
-  const str = String(val ?? "");
-  const parts = str.split(",");
-  if (parts.length === 25) return str;
-  return Array(25).fill("").join(",");
+// Sanitize a money-style text input: digits + single dot, max 2 decimals, capped.
+const sanitizeMoney = (value) => {
+  let fv = String(value ?? "").replace(/^\s+/, "").replace(/[^0-9.]/g, "");
+  const pts = fv.split('.');
+  if (pts.length > 2) fv = pts[0] + '.' + pts.slice(1).join('');
+  const dec = fv.split('.')[1];
+  if (dec && dec.length > 2) fv = fv.split('.')[0] + '.' + dec.slice(0, 2);
+  if (fv !== "" && fv !== ".") {
+    const n = parseFloat(fv);
+    if (!isNaN(n) && n > MAX_PRICE) fv = MAX_PRICE.toFixed(2);
+  }
+  return fv;
 };
 
-// Validate a 25-slot per-barrel price string. Entries are optional (a freight
-// user may price only the first N barrels), but whatever is entered must be
-// filled sequentially from Barrel 1 with no gaps. Returns "" when valid.
-const validateSequentialBarrelPrices = (value) => {
-  const parts = String(value ?? "").split(",").map(v => (v ?? "").trim());
-  const lastFilled = parts.reduce((acc, v, i) => (v !== "" ? i : acc), -1);
-  if (lastFilled < 0) return ""; // fully optional: no entries is allowed
-  const upto = parts.slice(0, lastFilled + 1);
-  if (upto.some(v => v === "")) return "Enter barrel prices in order, with no gaps";
-  if (upto.some(v => isNaN(v) || Number(v) < 0)) return "Enter a valid price";
-  if (upto.some(v => Number(v) > MAX_CUSTOMS)) return `Price cannot exceed ${MAX_CUSTOMS.toLocaleString()}`;
-  if (upto.some(v => { const d = v.split('.')[1]; return d && d.length > 2; })) return "Max 2 decimal places allowed";
-  return "";
+const zeroToEmpty = (v) => {
+  const s = (v === null || v === undefined) ? "" : String(v);
+  return (s === "0" || s === "0.00") ? "" : s;
 };
 
-const customsDisplay = (raw, n) => {
-  if (!raw) return "";
-  const v = String(raw).split(",")[n - 1] ?? "";
-  return v === "" || v === "0" || v === "0.00" ? "" : v;
+const emptyParishFees = () =>
+  JAMAICA_PARISHES.reduce((acc, p) => { acc[p] = { first: "", additional: "" }; return acc; }, {});
+
+// Normalise a stored parishFees value (object or JSON string) into the
+// { parish: { first, additional } } shape the form edits, hiding "0" defaults.
+// Old scalar entries ("<amount>") are read as { first: amount, additional: "" }.
+const hydrateParishFees = (raw) => {
+  let src = raw;
+  if (typeof src === 'string') {
+    try { src = JSON.parse(src); } catch { src = {}; }
+  }
+  if (!src || typeof src !== 'object' || Array.isArray(src)) src = {};
+  return JAMAICA_PARISHES.reduce((acc, p) => {
+    const entry = src[p];
+    if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+      acc[p] = { first: zeroToEmpty(entry.first), additional: zeroToEmpty(entry.additional) };
+    } else {
+      acc[p] = { first: zeroToEmpty(entry), additional: "" };
+    }
+    return acc;
+  }, {});
 };
 
-const createBarrelConfigNext = ({
-  pricePerMile = "",
-  freeMiles = "",
-  customsAndHandling = normCustoms(""),
-  flatPickupCharge = normCustoms(""),
-  flatDeliveryCharge = normCustoms(""),
-  pickupFreeMiles = "",
-  pickupPerMileCharge = "",
-  deliveryFreeMiles = "",
-  deliveryPerMileCharge = ""
-} = {}) => ({
+const createBarrelConfigNext = () => ({
   originCountry: "",
   destinationCountry: "",
   basePrice: "",
-  pricePerPound: "",
-  pricePerMile,
-  customsAndHandling,
   transitTime: "",
   shipmentContents: "",
-  freeMiles,
   originLat: "",
   originLong: "",
   destinationLat: "",
   destinationLong: "",
-  isVolumeDiscount: false,
-  discountAfter: 5,
-  discountPercent: 10,
-  barrelPrices: [{ quantity: 1, price: "", discount: "0" }],
-  flatPickupCharge,
-  pickupFreeMiles,
-  pickupPerMileCharge,
-  flatDeliveryCharge,
-  deliveryFreeMiles,
-  deliveryPerMileCharge
+  // Simplified pricing (v2)
+  pickupCharge: "",
+  pickupRadius: "",
+  extraMileageCost: "",
+  seaFreightPrice: "",
+  discount5to9: "",
+  discount10plus: "",
+  parishFees: emptyParishFees(),
 });
+
+// Hydrate a config returned by /get-profile (v2 fields when present,
+// otherwise fall back to the legacy basePrice for the sea freight input).
+const hydrateConfigNext = (config) => {
+  const seaFreight = zeroToEmpty(config.seaFreightPrice) || zeroToEmpty(config.basePrice);
+  return {
+    ...createBarrelConfigNext(),
+    originCountry: config.originCountry || "",
+    destinationCountry: config.destinationCountry || "",
+    originLat: config.originLat || "",
+    originLong: config.originLong || "",
+    destinationLat: config.destinationLat || "",
+    destinationLong: config.destinationLong || "",
+    transitTime: config.transitTime || "",
+    shipmentContents: config.shipmentContents || "",
+    basePrice: seaFreight,
+    pickupCharge: zeroToEmpty(config.pickupCharge),
+    pickupRadius: zeroToEmpty(config.pickupRadius),
+    extraMileageCost: zeroToEmpty(config.extraMileageCost),
+    seaFreightPrice: seaFreight,
+    discount5to9: zeroToEmpty(config.discount5to9),
+    discount10plus: zeroToEmpty(config.discount10plus),
+    parishFees: hydrateParishFees(config.parishFees),
+  };
+};
 
 const BusinessUploadNext = () => {
   const navigate = useNavigate();
@@ -134,13 +158,7 @@ const BusinessUploadNext = () => {
 
   const [selectedSubTypes, setSelectedSubTypes] = useState([]);
   const [errors, setErrors] = useState({});
-  const [customsOpen, setCustomsOpen] = useState({});
-  const [flatPickupOpen, setFlatPickupOpen] = useState({});
-  const [flatDeliveryOpen, setFlatDeliveryOpen] = useState({});
-  
-  const toggleCustoms = (k) => setCustomsOpen(p => ({ ...p, [k]: !p[k] }));
-  const toggleFlatPickup = (k) => setFlatPickupOpen(p => ({ ...p, [k]: !p[k] }));
-  const toggleFlatDelivery = (k) => setFlatDeliveryOpen(p => ({ ...p, [k]: !p[k] }));
+  const [applyAllFees, setApplyAllFees] = useState({});
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -170,29 +188,7 @@ const BusinessUploadNext = () => {
 
             if (subTypes.includes("Ship Your Own Barrel")) {
               if (info.barrelOptions?.ownBarrel && Array.isArray(info.barrelOptions.ownBarrel) && info.barrelOptions.ownBarrel.length > 0) {
-                const hydrateConfig = (config) => {
-                  const dAfter = Number(config.discountAfter || 0);
-                  const dPercent = Number(config.discountPercent || 0);
-                  const hasDiscount = Boolean(config.isVolumeDiscount) || dAfter > 0 || dPercent > 0;
-                  return {
-                    ...createBarrelConfigNext(),
-                    ...config,
-                    customsAndHandling: normCustoms(config.customsAndHandling),
-                    flatPickupCharge: normCustoms(config.flatPickupCharge),
-                    flatDeliveryCharge: normCustoms(config.flatDeliveryCharge),
-                    transitTime: config.transitTime || "",
-                    shipmentContents: config.shipmentContents || "",
-                    isVolumeDiscount: hasDiscount,
-                    discountAfter: dAfter || 5,
-                    discountPercent: dPercent || 10,
-                    barrelPrices: [{ quantity: 1, price: config.basePrice || "", discount: "0" }],
-                    pickupFreeMiles: config.pickupFreeMiles || "",
-                    pickupPerMileCharge: config.pickupPerMileCharge || "",
-                    deliveryFreeMiles: config.deliveryFreeMiles || "",
-                    deliveryPerMileCharge: config.deliveryPerMileCharge || ""
-                  };
-                };
-                setOwnBarrelConfigs(info.barrelOptions.ownBarrel.map(hydrateConfig));
+                setOwnBarrelConfigs(info.barrelOptions.ownBarrel.map(hydrateConfigNext));
               } else {
                 setOwnBarrelConfigs([createBarrelConfigNext()]);
               }
@@ -202,29 +198,7 @@ const BusinessUploadNext = () => {
 
             if (subTypes.includes("Request Barrel Drop-Off")) {
               if (info.barrelOptions?.dropOffBarrel && Array.isArray(info.barrelOptions.dropOffBarrel) && info.barrelOptions.dropOffBarrel.length > 0) {
-                const hydrateConfig = (config) => {
-                  const dAfter = Number(config.discountAfter || 0);
-                  const dPercent = Number(config.discountPercent || 0);
-                  const hasDiscount = Boolean(config.isVolumeDiscount) || dAfter > 0 || dPercent > 0;
-                  return {
-                    ...createBarrelConfigNext(),
-                    ...config,
-                    customsAndHandling: normCustoms(config.customsAndHandling),
-                    flatPickupCharge: normCustoms(config.flatPickupCharge),
-                    flatDeliveryCharge: normCustoms(config.flatDeliveryCharge),
-                    transitTime: config.transitTime || "",
-                    shipmentContents: config.shipmentContents || "",
-                    isVolumeDiscount: hasDiscount,
-                    discountAfter: dAfter || 5,
-                    discountPercent: dPercent || 10,
-                    barrelPrices: [{ quantity: 1, price: config.basePrice || "", discount: "0" }],
-                    pickupFreeMiles: config.pickupFreeMiles || "",
-                    pickupPerMileCharge: config.pickupPerMileCharge || "",
-                    deliveryFreeMiles: config.deliveryFreeMiles || "",
-                    deliveryPerMileCharge: config.deliveryPerMileCharge || ""
-                  };
-                };
-                setDropOffBarrelConfigs(info.barrelOptions.dropOffBarrel.map(hydrateConfig));
+                setDropOffBarrelConfigs(info.barrelOptions.dropOffBarrel.map(hydrateConfigNext));
               } else {
                 setDropOffBarrelConfigs([createBarrelConfigNext()]);
               }
@@ -243,9 +217,6 @@ const BusinessUploadNext = () => {
   const validateField = (name, value, type = 'main') => {
     let error = "";
     const strValue = (value !== null && value !== undefined) ? String(value) : "";
-
-    if (strValue === "" && name !== "shipmentType" && name !== "sub_shipment_type" && name !== "originCountry" && name !== "destinationCountry") {
-    }
 
     if (type === 'main') {
       switch (name) {
@@ -286,9 +257,10 @@ const BusinessUploadNext = () => {
       const configIndex = parseInt(parts[1]);
 
       const isDropOff = typePrefix === 'dropOffBarrel';
-      const skipFields = ['flatPickupCharge', 'pickupFreeMiles', 'pickupPerMileCharge', 'flatDeliveryCharge', 'deliveryFreeMiles', 'deliveryPerMileCharge'];
+      // Pickup fields only apply to own-barrel configs
+      const pickupFields = ['pickupCharge', 'pickupRadius', 'extraMileageCost'];
 
-      if (isDropOff && skipFields.includes(name)) {
+      if (isDropOff && pickupFields.includes(name)) {
         return error;
       }
 
@@ -299,50 +271,23 @@ const BusinessUploadNext = () => {
         case "destinationCountry":
           if (!strValue) error = "Destination city is required";
           break;
-        case "basePrice":
-          if (!strValue.trim()) error = "Base price is required";
-          else if (Number(strValue) === 0) error = "Price must be greater than 0";
+        case "seaFreightPrice":
+          if (!strValue.trim()) error = "Sea freight price is required";
+          else if (isNaN(strValue) || Number(strValue) <= 0) error = "Price must be greater than 0";
           break;
-        case "customsAndHandling": {
-          error = validateSequentialBarrelPrices(strValue);
+        case "discount5to9":
+        case "discount10plus":
+          if (strValue && (isNaN(strValue) || Number(strValue) < 0)) error = "Enter a valid discount";
           break;
-        }
-        case "flatPickupCharge": {
-          if (!isDropOff) error = validateSequentialBarrelPrices(strValue);
+        case "pickupCharge":
+        case "extraMileageCost":
+          if (strValue && (isNaN(strValue) || Number(strValue) < 0)) error = "Enter a valid amount";
           break;
-        }
-        case "flatDeliveryCharge": {
-          if (!isDropOff) error = validateSequentialBarrelPrices(strValue);
+        case "pickupRadius":
+          if (strValue && (isNaN(strValue) || Number(strValue) < 0)) error = "Enter a valid distance";
           break;
-        }
         case "transitTime":
           if (!strValue) error = "Transit time is required";
-          break;
-        case "pickupFreeMiles":
-          if (!isDropOff) {
-            if (!strValue.trim()) error = "Pickup free miles is required";
-            else if (Number(strValue) < 0) error = "Cannot be negative";
-            else if (Number(strValue) > 30) error = "Cannot exceed 30 miles";
-          }
-          break;
-        case "pickupPerMileCharge":
-          if (!isDropOff) {
-            if (!strValue.trim()) error = "Pickup per mile charge is required";
-            else if (Number(strValue) <= 0) error = "Must be greater than 0";
-          }
-          break;
-        case "deliveryFreeMiles":
-          if (!isDropOff) {
-            if (!strValue.trim()) error = "Delivery free miles is required";
-            else if (Number(strValue) < 0) error = "Cannot be negative";
-            else if (Number(strValue) > 50) error = "Cannot exceed 50 miles";
-          }
-          break;
-        case "deliveryPerMileCharge":
-          if (!isDropOff) {
-            if (!strValue.trim()) error = "Delivery per mile charge is required";
-            else if (Number(strValue) <= 0) error = "Must be greater than 0";
-          }
           break;
         default:
           break;
@@ -353,22 +298,6 @@ const BusinessUploadNext = () => {
     }
 
     return error;
-  };
-
-  const validateBarrelPrices = (barrelPrices, typePrefix, configIndex, errorsObj = null) => {
-    const item = barrelPrices[0];
-    if (!item) return false;
-
-    const priceVal = Number(item.price);
-    if (!item.price || item.price === "" || item.price === "0") {
-      return false;
-    }
-
-    const hasError = isNaN(priceVal) || priceVal <= 0;
-    if (hasError && errorsObj) {
-      errorsObj[`${typePrefix}_${configIndex}_barrelPrice_0`] = "Price must be greater than 0";
-    }
-    return hasError;
   };
 
   const handleInputChange = (e) => {
@@ -404,85 +333,22 @@ const BusinessUploadNext = () => {
     validateField(name, formattedValue);
   };
 
-  const updateVolumePrices = (configIndex, type, basePrice) => {
-    const setter = type === 'own' ? setOwnBarrelConfigs : setDropOffBarrelConfigs;
-    setter(prev => {
-      const updated = [...prev];
-      const bPrice = parseFloat(basePrice) || 0;
-      updated[configIndex] = {
-        ...updated[configIndex],
-        barrelPrices: [{ quantity: 1, price: bPrice.toFixed(2), discount: "0" }],
-      };
-      return updated;
-    });
-  };
-
-  const handleVolumeToggle = (configIndex, type, enabled) => {
-    const setter = type === 'own' ? setOwnBarrelConfigs : setDropOffBarrelConfigs;
-    setter(prev => {
-      const updated = [...prev];
-      updated[configIndex] = { ...updated[configIndex], isVolumeDiscount: enabled };
-      return updated;
-    });
-    const configs = type === 'own' ? ownBarrelConfigs : dropOffBarrelConfigs;
-    if (configs[configIndex]?.basePrice) {
-      updateVolumePrices(configIndex, type, configs[configIndex].basePrice);
-    }
-  };
-
-  const handleVolumeChange = (configIndex, type, field, value) => {
-    const setter = type === 'own' ? setOwnBarrelConfigs : setDropOffBarrelConfigs;
-    setter(prev => {
-      const updated = [...prev];
-      updated[configIndex] = { ...updated[configIndex], [field]: Number(value) };
-      return updated;
-    });
-  };
-
-  const handleMultiFieldChange = (index, isOwn, fieldName, barrelNum, val) => {
-    let fv = val.replace(/^\s+/, "").replace(/[^0-9.]/g, "");
-    const pts = fv.split('.');
-    if (pts.length > 2) fv = pts[0] + '.' + pts.slice(1).join('');
-    if (fv !== "" && fv !== ".") {
-      const n = parseFloat(fv);
-      if (!isNaN(n) && n > MAX_CUSTOMS) fv = MAX_CUSTOMS.toFixed(2);
-    }
-    const dec = fv.split('.')[1];
-    if (dec && dec.length > 2) fv = fv.split('.')[0] + '.' + dec.slice(0, 2);
-
-    const configs = isOwn ? ownBarrelConfigs : dropOffBarrelConfigs;
-    const arr = (configs[index][fieldName] || "").split(",");
-    while (arr.length < 25) arr.push("");
-    arr[barrelNum - 1] = fv;
-    const newVal = arr.join(",");
-
-    (isOwn ? setOwnBarrelConfigs : setDropOffBarrelConfigs)(prev => {
-      const u = [...prev];
-      u[index] = { ...u[index], [fieldName]: newVal };
-      return u;
-    });
-    validateField(fieldName, newVal, isOwn ? `ownBarrel_${index}` : `dropOffBarrel_${index}`);
-  };
+  const CONFIG_PRICE_FIELDS = ["seaFreightPrice", "discount5to9", "discount10plus", "pickupCharge", "pickupRadius", "extraMileageCost"];
 
   const handleOwnBarrelChange = (index, e) => {
     const { name, value } = e.target;
     let formattedValue = value.replace(/^\s+/, "");
-    const priceFields = ["basePrice", "pricePerMile", "customsAndHandling",
-      "flatPickupCharge", "pickupFreeMiles", "pickupPerMileCharge",
-      "flatDeliveryCharge", "deliveryFreeMiles", "deliveryPerMileCharge"];
-    if (priceFields.includes(name)) {
-      formattedValue = formattedValue.replace(/[^0-9.]/g, "");
-      const numValue = parseFloat(formattedValue);
-      if (!isNaN(numValue) && formattedValue.includes('.')) {
-        const parts = formattedValue.split('.');
-        if (parts[1] && parts[1].length > 2) {
-          formattedValue = numValue.toFixed(2);
-        }
-      }
+    if (CONFIG_PRICE_FIELDS.includes(name)) {
+      formattedValue = sanitizeMoney(formattedValue);
     }
     setOwnBarrelConfigs(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [name]: formattedValue };
+      // basePrice mirrors the 1-4 barrel sea freight price so legacy quote
+      // badges keep working.
+      if (name === "seaFreightPrice") {
+        updated[index].basePrice = formattedValue;
+      }
       if (name === "originCountry" && CITY_COORDINATES[formattedValue]) {
         updated[index].originLat = CITY_COORDINATES[formattedValue].lat;
         updated[index].originLong = CITY_COORDINATES[formattedValue].lng;
@@ -499,22 +365,15 @@ const BusinessUploadNext = () => {
   const handleDropOffBarrelChange = (index, e) => {
     const { name, value } = e.target;
     let formattedValue = value.replace(/^\s+/, "");
-
-    const allowedPriceFields = ["basePrice", "customsAndHandling"];
-    if (allowedPriceFields.includes(name)) {
-      formattedValue = formattedValue.replace(/[^0-9.]/g, "");
-      const numValue = parseFloat(formattedValue);
-      if (!isNaN(numValue) && formattedValue.includes('.')) {
-        const parts = formattedValue.split('.');
-        if (parts[1] && parts[1].length > 2) {
-          formattedValue = numValue.toFixed(2);
-        }
-      }
+    if (CONFIG_PRICE_FIELDS.includes(name)) {
+      formattedValue = sanitizeMoney(formattedValue);
     }
-
     setDropOffBarrelConfigs(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [name]: formattedValue };
+      if (name === "seaFreightPrice") {
+        updated[index].basePrice = formattedValue;
+      }
       if (name === "originCountry" && CITY_COORDINATES[formattedValue]) {
         updated[index].originLat = CITY_COORDINATES[formattedValue].lat;
         updated[index].originLong = CITY_COORDINATES[formattedValue].lng;
@@ -526,6 +385,40 @@ const BusinessUploadNext = () => {
       return updated;
     });
     validateField(name, formattedValue, `dropOffBarrel_${index}`);
+  };
+
+  const handleParishFeeChange = (index, isOwn, parish, field, value) => {
+    const fv = sanitizeMoney(value);
+    (isOwn ? setOwnBarrelConfigs : setDropOffBarrelConfigs)(prev => {
+      const updated = [...prev];
+      const fees = updated[index].parishFees || {};
+      const entry = (fees[parish] && typeof fees[parish] === 'object') ? fees[parish] : { first: "", additional: "" };
+      updated[index] = {
+        ...updated[index],
+        parishFees: { ...fees, [parish]: { ...entry, [field]: fv } }
+      };
+      return updated;
+    });
+  };
+
+  const handleApplyAllParishFees = (index, isOwn) => {
+    const key = `${isOwn ? 'own' : 'do'}_${index}`;
+    const pair = applyAllFees[key] || {};
+    const first = sanitizeMoney(pair.first || "");
+    const additional = sanitizeMoney(pair.additional || "");
+    if ((first === "" || first === ".") && (additional === "" || additional === ".")) {
+      toast.error("Enter an amount to apply to all parishes");
+      return;
+    }
+    const filled = JAMAICA_PARISHES.reduce((acc, p) => {
+      acc[p] = { first, additional };
+      return acc;
+    }, {});
+    (isOwn ? setOwnBarrelConfigs : setDropOffBarrelConfigs)(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], parishFees: filled };
+      return updated;
+    });
   };
 
   const addOwnBarrelConfig = () => {
@@ -557,39 +450,9 @@ const BusinessUploadNext = () => {
 
       if (isAdding) {
         if (typeId === "Ship Your Own Barrel") {
-          setOwnBarrelConfigs(curr => {
-            if (curr.length === 0) {
-              return [createBarrelConfigNext({
-                pricePerMile: "0",
-                freeMiles: "0",
-                customsAndHandling: normCustoms(""),
-                flatPickupCharge: normCustoms(""),
-                flatDeliveryCharge: normCustoms(""),
-                pickupFreeMiles: "0",
-                pickupPerMileCharge: "0",
-                deliveryFreeMiles: "0",
-                deliveryPerMileCharge: "0"
-              })];
-            }
-            return curr;
-          });
+          setOwnBarrelConfigs(curr => curr.length === 0 ? [createBarrelConfigNext()] : curr);
         } else if (typeId === "Request Barrel Drop-Off") {
-          setDropOffBarrelConfigs(curr => {
-            if (curr.length === 0) {
-              return [createBarrelConfigNext({
-                pricePerMile: "0",
-                freeMiles: "0",
-                customsAndHandling: normCustoms(""),
-                flatPickupCharge: normCustoms(""),
-                flatDeliveryCharge: normCustoms(""),
-                pickupFreeMiles: "0",
-                pickupPerMileCharge: "0",
-                deliveryFreeMiles: "0",
-                deliveryPerMileCharge: "0"
-              })];
-            }
-            return curr;
-          });
+          setDropOffBarrelConfigs(curr => curr.length === 0 ? [createBarrelConfigNext()] : curr);
         }
       } else {
         if (!next.includes("Ship Your Own Barrel")) {
@@ -629,159 +492,190 @@ const BusinessUploadNext = () => {
     }
   };
 
-  const renderMultiFieldAccordion = ({
-    isOpen,
-    onToggle,
-    value,
-    onChange,
-    label,
-    fieldName,
-    configIndex,
-    isOwn,
-    errorKey,
-    error,
-    bgColor = 'white/5',
-    borderColor = 'white/20'
-  }) => {
-    const displayValue = (raw, n) => {
-      if (!raw) return "";
-      const v = String(raw).split(",")[n - 1] ?? "";
-      return v === "" || v === "0" || v === "0.00" ? "" : v;
-    };
-
+  const discountedHint = (config, discountField) => {
+    const sea = parseFloat(config.seaFreightPrice);
+    if (isNaN(sea) || sea <= 0) return null;
+    const disc = parseFloat(config[discountField]) || 0;
+    const per = Math.max(sea - disc, 0);
     return (
-      <div className="relative" style={{ zIndex: isOpen ? 40 : 'auto' }}>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 transition-colors"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <h3 className="text-sm font-semibold text-white/90 whitespace-nowrap">{label}</h3>
-            <span className="text-[11px] text-white/40 whitespace-nowrap">(1–25 barrels)</span>
-          </div>
-          <svg
-            className={`w-4 h-4 text-white/50 transition-transform duration-200 shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        {isOpen && (
-          <div
-            className="absolute left-0 right-0 mt-1 p-4 rounded-lg border border-white/20 shadow-2xl"
-            style={{ background: '#152b20', top: '100%', zIndex: 50 }}
-          >
-            <p className="text-[11px] text-white/40 mb-3">Optional — enter prices starting at Barrel 1 with no gaps. You can stop at any barrel; any order larger than your last entry is charged at your last entered price.</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-              {Array.from({ length: 25 }, (_, i) => {
-                const bn = i + 1;
-                return (
-                  <div key={bn} className="flex flex-col">
-                    <label className="text-[10px] text-white/50 mb-1">Barrel {bn}</label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Enter"
-                      value={displayValue(value, bn)}
-                      onChange={(e) => onChange(configIndex, isOwn, fieldName, bn, e.target.value)}
-                      className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/20 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:border-yellow-400"
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <p className="text-red-400 text-xs mt-1 font-medium">{error}</p>
-        )}
-      </div>
+      <p className="text-[11px] text-white/40 mt-1">= ${per.toFixed(2)}/barrel</p>
     );
   };
 
-  const renderBarrelPrices = (type, config, configIndex) => {
-    const isOwn = type === 'ownBarrel';
-    const typeLabel = isOwn ? 'own' : 'dropoff';
+  const renderPickupSection = (data, index, handleChange, errPrefix) => (
+    <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-4">
+      <h4 className="text-yellow-400 font-bold text-base">Pickup</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label className="text-sm mb-2 text-white/80 block">Pickup Barrel Charge ($)</label>
+          <input
+            name="pickupCharge"
+            value={data.pickupCharge}
+            onChange={(e) => handleChange(index, e)}
+            placeholder="65"
+            inputMode="decimal"
+            className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
+            type="text"
+          />
+          {errors[`${errPrefix}_${index}_pickupCharge`] && (
+            <p className="text-red-400 text-xs mt-1">{errors[`${errPrefix}_${index}_pickupCharge`]}</p>
+          )}
+        </div>
+        <div>
+          <label className="text-sm mb-2 text-white/80 block">Pickup Radius (miles)</label>
+          <input
+            name="pickupRadius"
+            value={data.pickupRadius}
+            onChange={(e) => handleChange(index, e)}
+            placeholder="15"
+            inputMode="decimal"
+            className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
+            type="text"
+          />
+          {errors[`${errPrefix}_${index}_pickupRadius`] && (
+            <p className="text-red-400 text-xs mt-1">{errors[`${errPrefix}_${index}_pickupRadius`]}</p>
+          )}
+        </div>
+        <div>
+          <label className="text-sm mb-2 text-white/80 block">Extra Mileage Cost ($/mile)</label>
+          <input
+            name="extraMileageCost"
+            value={data.extraMileageCost}
+            onChange={(e) => handleChange(index, e)}
+            placeholder="0.10"
+            inputMode="decimal"
+            className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
+            type="text"
+          />
+          {errors[`${errPrefix}_${index}_extraMileageCost`] && (
+            <p className="text-red-400 text-xs mt-1">{errors[`${errPrefix}_${index}_extraMileageCost`]}</p>
+          )}
+        </div>
+      </div>
+      <p className="text-[11px] text-white/40">Pickup within the radius is covered by the flat charge; each extra mile adds the per-mile cost.</p>
+    </div>
+  );
 
+  const renderSeaFreightSection = (data, index, handleChange, errPrefix) => (
+    <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-4">
+      <h4 className="text-yellow-400 font-bold text-base">Sea Freight (per barrel)</h4>
+      <div>
+        <label className="text-sm mb-2 text-white/80 block">Barrels 1&ndash;4 price ($)</label>
+        <input
+          name="seaFreightPrice"
+          value={data.seaFreightPrice}
+          onChange={(e) => handleChange(index, e)}
+          placeholder="80.30"
+          inputMode="decimal"
+          className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
+          type="text"
+        />
+        {errors[`${errPrefix}_${index}_seaFreightPrice`] && (
+          <p className="text-red-400 text-xs mt-1">{errors[`${errPrefix}_${index}_seaFreightPrice`]}</p>
+        )}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm mb-2 text-white/80 block">Barrels 5&ndash;9 discount ($ off per barrel)</label>
+          <input
+            name="discount5to9"
+            value={data.discount5to9}
+            onChange={(e) => handleChange(index, e)}
+            placeholder="10"
+            inputMode="decimal"
+            className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
+            type="text"
+          />
+          {discountedHint(data, 'discount5to9')}
+          {errors[`${errPrefix}_${index}_discount5to9`] && (
+            <p className="text-red-400 text-xs mt-1">{errors[`${errPrefix}_${index}_discount5to9`]}</p>
+          )}
+        </div>
+        <div>
+          <label className="text-sm mb-2 text-white/80 block">Barrels 10+ discount ($ off per barrel)</label>
+          <input
+            name="discount10plus"
+            value={data.discount10plus}
+            onChange={(e) => handleChange(index, e)}
+            placeholder="25"
+            inputMode="decimal"
+            className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
+            type="text"
+          />
+          {discountedHint(data, 'discount10plus')}
+          {errors[`${errPrefix}_${index}_discount10plus`] && (
+            <p className="text-red-400 text-xs mt-1">{errors[`${errPrefix}_${index}_discount10plus`]}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderParishFeesSection = (data, index, isOwn) => {
+    const key = `${isOwn ? 'own' : 'do'}_${index}`;
     return (
-      <div className="mt-4 p-5 bg-white/5 border border-white/10 rounded-xl">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-yellow-400 font-bold text-lg">Volume Discount</h4>
+      <div className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h4 className="text-yellow-400 font-bold text-base">Customs &amp; Delivery</h4>
+          <span className="text-[11px] text-white/40">One price per parish</span>
         </div>
-
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-3">
-            <label className="relative inline-flex items-center cursor-pointer">
+        <div className="flex items-end gap-2 flex-wrap">
+          <div className="flex-1 min-w-[110px]">
+            <label className="text-[11px] text-white/50 mb-1 block">1 Barrel ($)</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Enter"
+              value={applyAllFees[key]?.first || ""}
+              onChange={(e) => setApplyAllFees(prev => ({ ...prev, [key]: { ...(prev[key] || {}), first: sanitizeMoney(e.target.value) } }))}
+              className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/20 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-yellow-400"
+            />
+          </div>
+          <div className="flex-1 min-w-[110px]">
+            <label className="text-[11px] text-white/50 mb-1 block">Additional Barrel ($)</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              placeholder="Enter"
+              value={applyAllFees[key]?.additional || ""}
+              onChange={(e) => setApplyAllFees(prev => ({ ...prev, [key]: { ...(prev[key] || {}), additional: sanitizeMoney(e.target.value) } }))}
+              className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/20 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-yellow-400"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => handleApplyAllParishFees(index, isOwn)}
+            className="bg-yellow-400 text-black px-4 py-2 rounded-md font-bold text-xs hover:bg-yellow-500 transition-all shrink-0"
+          >
+            Apply to all
+          </button>
+        </div>
+        <div className="grid grid-cols-[minmax(0,1.1fr)_1fr_1fr] gap-x-2.5 gap-y-2 items-center">
+          <span className="text-[10px] text-white/50 font-semibold uppercase">Parish</span>
+          <span className="text-[10px] text-white/50 font-semibold uppercase">1 Barrel ($)</span>
+          <span className="text-[10px] text-white/50 font-semibold uppercase">Additional Barrel ($)</span>
+          {JAMAICA_PARISHES.map(parish => (
+            <React.Fragment key={parish}>
+              <label className="text-xs text-white/70">{parish}</label>
               <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={config.isVolumeDiscount}
-                onChange={(e) => handleVolumeToggle(configIndex, typeLabel, e.target.checked)}
+                type="text"
+                inputMode="decimal"
+                placeholder="Enter Cost"
+                value={data.parishFees?.[parish]?.first ?? ""}
+                onChange={(e) => handleParishFeeChange(index, isOwn, parish, 'first', e.target.value)}
+                className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/20 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:border-yellow-400"
               />
-              <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
-            </label>
-            <span className="text-white font-medium">Apply discount for larger orders</span>
-          </div>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="Enter Cost"
+                value={data.parishFees?.[parish]?.additional ?? ""}
+                onChange={(e) => handleParishFeeChange(index, isOwn, parish, 'additional', e.target.value)}
+                className="w-full bg-white/5 border border-white/20 text-white placeholder:text-white/20 rounded-md px-2.5 py-1.5 text-xs focus:outline-none focus:border-yellow-400"
+              />
+            </React.Fragment>
+          ))}
         </div>
-
-        {config.isVolumeDiscount && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6 transition-all duration-300">
-            <div>
-              <label className="text-sm text-white/60 block mb-2">Apply discount after how many barrels?</label>
-              <select
-                value={config.discountAfter}
-                onChange={(e) => handleVolumeChange(configIndex, typeLabel, 'discountAfter', e.target.value)}
-                className="w-full bg-white/5 border border-white/20 text-white rounded-lg px-4 h-[45px] focus:border-yellow-400 focus:outline-none"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-                  <option key={n} value={n} className="text-black">After {n} barrels</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-white/60 block mb-2">Discount per barrel (%)</label>
-              <select
-                value={config.discountPercent}
-                onChange={(e) => handleVolumeChange(configIndex, typeLabel, 'discountPercent', e.target.value)}
-                className="w-full bg-white/5 border border-white/20 text-white rounded-lg px-4 h-[45px] focus:border-yellow-400 focus:outline-none"
-              >
-                {[10, 20, 30, 40, 50].map(p => (
-                  <option key={p} value={p} className="text-black">{p}% off</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-
-        {config.basePrice && (
-          <div className="space-y-3">
-            <span className="text-sm text-white/60">Price preview per barrel</span>
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 10 }, (_, i) => {
-                const qty = i + 1;
-                const bPrice = parseFloat(config.basePrice) || 0;
-                const hasDiscount = config.isVolumeDiscount && qty > config.discountAfter;
-                const discount = hasDiscount ? config.discountPercent : 0;
-                const price = (bPrice * (1 - discount / 100)).toFixed(2);
-                return (
-                  <div
-                    key={i}
-                    className={`flex-1 min-w-[70px] p-2 rounded-lg border text-center transition-all ${hasDiscount
-                      ? 'bg-yellow-400/10 border-yellow-400/50'
-                      : 'bg-white/5 border-white/10'
-                      }`}
-                  >
-                    <div className="text-[10px] text-white/40 uppercase mb-1">{qty} bbl</div>
-                    <div className="text-sm font-bold text-white">${price}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -790,8 +684,9 @@ const BusinessUploadNext = () => {
     if (!selectedSubTypes.includes(type)) return null;
     if (configs.length === 0) return null;
 
-    const originCities = ["Fort Lauderdale, FL", "Miami, FL", "Pittsburgh, PA", "Orlando, FL"];
-    const destCities = ["Kingston, Jamaica"];
+    const originCities = ORIGIN_CITIES;
+    const destCities = DESTINATION_CITIES;
+    const errPrefix = isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel';
 
     const transitTimeNumbers = isOwnBarrel ? TRANSIT_TIME_NUMBERS_OWN_BARREL : TRANSIT_TIME_NUMBERS;
 
@@ -831,8 +726,8 @@ const BusinessUploadNext = () => {
                     </option>
                   ))}
                 </select>
-                {errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_originCountry`] && (
-                  <p className="text-red-400 text-xs mt-1">{errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_originCountry`]}</p>
+                {errors[`${errPrefix}_${index}_originCountry`] && (
+                  <p className="text-red-400 text-xs mt-1">{errors[`${errPrefix}_${index}_originCountry`]}</p>
                 )}
               </div>
               <div>
@@ -841,133 +736,17 @@ const BusinessUploadNext = () => {
                   <option value="" disabled hidden>Select destination city</option>
                   {destCities.map(city => <option key={city} value={city} className="text-black">{city}</option>)}
                 </select>
-                {errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_destinationCountry`] && (
-                  <p className="text-red-400 text-xs mt-1">{errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_destinationCountry`]}</p>
-                )}
-              </div>
-              <div>
-                <label className="text-sm mb-2 text-white/80 block">Base Price ($)</label>
-                <input name="basePrice" value={data.basePrice} onChange={(e) => handleChange(index, e)} placeholder="Enter" className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400" type="text" />
-                {errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_basePrice`] && (
-                  <p className="text-red-400 text-xs mt-1">{errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_basePrice`]}</p>
+                {errors[`${errPrefix}_${index}_destinationCountry`] && (
+                  <p className="text-red-400 text-xs mt-1">{errors[`${errPrefix}_${index}_destinationCountry`]}</p>
                 )}
               </div>
 
-              {!isOwnBarrel && (
-                <div>
-                  <label className="text-sm mb-2 text-white/80 block">Delivery ($)</label>
-                  <input name="pricePerMile" value={data.pricePerMile} onChange={(e) => handleChange(index, e)} placeholder="Enter" className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400" type="text" />
-                  {errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_pricePerMile`] && (
-                    <p className="text-red-400 text-xs mt-1">{errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_pricePerMile`]}</p>
-                  )}
-                </div>
-              )}
+              {isOwnBarrel && renderPickupSection(data, index, handleChange, errPrefix)}
 
-              {renderMultiFieldAccordion({
-                isOpen: customsOpen[`${isOwnBarrel ? 'own' : 'do'}_${index}`],
-                onToggle: () => toggleCustoms(`${isOwnBarrel ? 'own' : 'do'}_${index}`),
-                value: data.customsAndHandling,
-                onChange: handleMultiFieldChange,
-                label: "Customs & Handling ($)",
-                fieldName: "customsAndHandling",
-                configIndex: index,
-                isOwn: isOwnBarrel,
-                error: errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_customsAndHandling`]
-              })}
+              {renderSeaFreightSection(data, index, handleChange, errPrefix)}
 
-              {isOwnBarrel && (
-                <>
-                  {renderMultiFieldAccordion({
-                    isOpen: flatPickupOpen[`own_${index}`],
-                    onToggle: () => toggleFlatPickup(`own_${index}`),
-                    value: data.flatPickupCharge,
-                    onChange: handleMultiFieldChange,
-                    label: "Flat Pickup Charge ($)",
-                    fieldName: "flatPickupCharge",
-                    configIndex: index,
-                    isOwn: true,
-                    error: errors[`ownBarrel_${index}_flatPickupCharge`]
-                  })}
+              {renderParishFeesSection(data, index, isOwnBarrel)}
 
-                  <div>
-                    <label className="text-sm mb-2 text-white/80 block">Pickup Free Miles</label>
-                    <input
-                      name="pickupFreeMiles"
-                      value={data.pickupFreeMiles}
-                      onChange={(e) => handleChange(index, e)}
-                      placeholder="Enter pickup free miles"
-                      className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
-                      type="text"
-                    />
-                    {errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_pickupFreeMiles`] && (
-                      <p className="text-red-400 text-xs mt-1">{errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_pickupFreeMiles`]}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-sm mb-2 text-white/80 block">Pickup Per Mile Charge ($)</label>
-                    <input
-                      name="pickupPerMileCharge"
-                      value={data.pickupPerMileCharge}
-                      onChange={(e) => handleChange(index, e)}
-                      placeholder="Enter pickup per mile charge"
-                      className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
-                      type="text"
-                    />
-                    {errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_pickupPerMileCharge`] && (
-                      <p className="text-red-400 text-xs mt-1">{errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_pickupPerMileCharge`]}</p>
-                    )}
-                  </div>
-
-                  {renderMultiFieldAccordion({
-                    isOpen: flatDeliveryOpen[`own_${index}`],
-                    onToggle: () => toggleFlatDelivery(`own_${index}`),
-                    value: data.flatDeliveryCharge,
-                    onChange: handleMultiFieldChange,
-                    label: "Flat Delivery Charge ($)",
-                    fieldName: "flatDeliveryCharge",
-                    configIndex: index,
-                    isOwn: true,
-                    error: errors[`ownBarrel_${index}_flatDeliveryCharge`]
-                  })}
-
-                  <div>
-                    <label className="text-sm mb-2 text-white/80 block">Delivery Free Miles</label>
-                    <input
-                      name="deliveryFreeMiles"
-                      value={data.deliveryFreeMiles}
-                      onChange={(e) => handleChange(index, e)}
-                      placeholder="Enter delivery free miles"
-                      className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
-                      type="text"
-                    />
-                    {errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_deliveryFreeMiles`] && (
-                      <p className="text-red-400 text-xs mt-1">{errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_deliveryFreeMiles`]}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-sm mb-2 text-white/80 block">Delivery Per Mile Charge ($)</label>
-                    <input
-                      name="deliveryPerMileCharge"
-                      value={data.deliveryPerMileCharge}
-                      onChange={(e) => handleChange(index, e)}
-                      placeholder="Enter delivery per mile charge"
-                      className="w-full bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-md px-4 py-2.5 focus:outline-none focus:border-yellow-400"
-                      type="text"
-                    />
-                    {errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_deliveryPerMileCharge`] && (
-                      <p className="text-red-400 text-xs mt-1">{errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_deliveryPerMileCharge`]}</p>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {renderBarrelPrices(
-                isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel',
-                data,
-                index
-              )}
               <div>
                 <label className="text-sm mb-2 text-white/80 block">Transit Time</label>
                 <div className="flex gap-2">
@@ -993,8 +772,8 @@ const BusinessUploadNext = () => {
                     {TRANSIT_TIME_UNITS.map(u => <option key={u} value={u} className="text-black">{u}</option>)}
                   </select>
                 </div>
-                {errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_transitTime`] && (
-                  <p className="text-red-400 text-xs mt-1">{errors[`${isOwnBarrel ? 'ownBarrel' : 'dropOffBarrel'}_${index}_transitTime`]}</p>
+                {errors[`${errPrefix}_${index}_transitTime`] && (
+                  <p className="text-red-400 text-xs mt-1">{errors[`${errPrefix}_${index}_transitTime`]}</p>
                 )}
               </div>
             </div>
@@ -1003,6 +782,52 @@ const BusinessUploadNext = () => {
       </div>
     );
   };
+
+  const OWN_CONFIG_FIELDS = ["originCountry", "destinationCountry", "seaFreightPrice", "discount5to9", "discount10plus", "pickupCharge", "pickupRadius", "extraMileageCost", "transitTime"];
+  const DROPOFF_CONFIG_FIELDS = ["originCountry", "destinationCountry", "seaFreightPrice", "discount5to9", "discount10plus", "transitTime"];
+
+  // Map a config to the API shape: v2 simplified pricing plus zeroed legacy
+  // fields so old readers don't crash.
+  const buildConfigPayload = (config, isDropOff) => ({
+    // v2 simplified pricing
+    pickupCharge: isDropOff ? "0" : (config.pickupCharge || "0"),
+    pickupRadius: isDropOff ? "0" : (config.pickupRadius || "0"),
+    extraMileageCost: isDropOff ? "0" : (config.extraMileageCost || "0"),
+    seaFreightPrice: config.seaFreightPrice || "0",
+    discount5to9: config.discount5to9 || "0",
+    discount10plus: config.discount10plus || "0",
+    parishFees: JAMAICA_PARISHES.reduce((acc, p) => {
+      const entry = config.parishFees?.[p];
+      acc[p] = {
+        first: (entry && typeof entry === 'object' ? entry.first : entry) || "0",
+        additional: (entry && typeof entry === 'object' ? entry.additional : "") || "0",
+      };
+      return acc;
+    }, {}),
+    // legacy fields still consumed elsewhere
+    basePrice: config.seaFreightPrice || "0",
+    pricePerMile: "0",
+    customsAndHandling: "0",
+    freeMiles: "0",
+    originCountry: config.originCountry || "",
+    destinationCountry: config.destinationCountry || "",
+    originLat: config.originLat || (CITY_COORDINATES[config.originCountry]?.lat || ""),
+    originLong: config.originLong || (CITY_COORDINATES[config.originCountry]?.lng || ""),
+    destinationLat: config.destinationLat || (CITY_COORDINATES[config.destinationCountry]?.lat || ""),
+    destinationLong: config.destinationLong || (CITY_COORDINATES[config.destinationCountry]?.lng || ""),
+    transitTime: config.transitTime || "",
+    shipmentContents: config.shipmentContents || "",
+    isVolumeDiscount: false,
+    discountAfter: 0,
+    discountPercent: 0,
+    barrelPrices: [{ quantity: 1, price: config.seaFreightPrice || "0", discount: "0" }],
+    flatPickupCharge: "0",
+    pickupFreeMiles: "0",
+    pickupPerMileCharge: "0",
+    flatDeliveryCharge: "0",
+    deliveryFreeMiles: "0",
+    deliveryPerMileCharge: "0"
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1028,9 +853,7 @@ const BusinessUploadNext = () => {
     if (formData.shipmentType === 'barrel') {
       if (selectedSubTypes.includes("Ship Your Own Barrel")) {
         ownBarrelConfigs.forEach((config, index) => {
-          Object.keys(config).forEach(key => {
-            if (['originLat', 'originLong', 'destinationLat', 'destinationLong', 'barrelPrices', 'freeMiles'].includes(key)) return;
-            if (key === 'barrelPrices') return;
+          OWN_CONFIG_FIELDS.forEach(key => {
             const error = validateField(key, config[key], `ownBarrel_${index}`);
             if (error) newErrors[`ownBarrel_${index}_${key}`] = error;
           });
@@ -1038,11 +861,7 @@ const BusinessUploadNext = () => {
       }
       if (selectedSubTypes.includes("Request Barrel Drop-Off")) {
         dropOffBarrelConfigs.forEach((config, index) => {
-          Object.keys(config).forEach(key => {
-            const skipFields = ['flatPickupCharge', 'pickupFreeMiles', 'pickupPerMileCharge', 'flatDeliveryCharge', 'deliveryFreeMiles', 'deliveryPerMileCharge'];
-            if (skipFields.includes(key)) return;
-            if (['originLat', 'originLong', 'destinationLat', 'destinationLong', 'barrelPrices', 'freeMiles'].includes(key)) return;
-            if (key === 'barrelPrices') return;
+          DROPOFF_CONFIG_FIELDS.forEach(key => {
             const error = validateField(key, config[key], `dropOffBarrel_${index}`);
             if (error) newErrors[`dropOffBarrel_${index}_${key}`] = error;
           });
@@ -1070,8 +889,8 @@ const BusinessUploadNext = () => {
         providerId: user.id,
         isFinalStep: "true",
         sub_shipment_type: selectedSubTypes,
-        basePrice: barrelDetails?.basePrice || formData.basePrice || "0",
-        pricePerPound: barrelDetails?.pricePerPound || formData.pricePerPound || "0",
+        basePrice: barrelDetails?.seaFreightPrice || formData.basePrice || "0",
+        pricePerPound: formData.pricePerPound || "0",
         transitTime: barrelDetails?.transitTime || formData.transitTime || "",
         shipmentContents: barrelDetails?.shipmentContents || formData.shipmentContents || "",
         originCountry: barrelDetails?.originCountry || formData.originCountry || "",
@@ -1080,67 +899,21 @@ const BusinessUploadNext = () => {
         originLong: barrelDetails?.originLong || (barrelDetails?.originCountry ? CITY_COORDINATES[barrelDetails.originCountry]?.lng : "") || formData.originLong || "",
         destinationLat: barrelDetails?.destinationLat || (barrelDetails?.destinationCountry ? CITY_COORDINATES[barrelDetails.destinationCountry]?.lat : "") || formData.destinationLat || "",
         destinationLong: barrelDetails?.destinationLong || (barrelDetails?.destinationCountry ? CITY_COORDINATES[barrelDetails.destinationCountry]?.lng : "") || formData.destinationLong || "",
-        pricePerMile: barrelDetails?.pricePerMile || formData.pricePerMile || "0",
-        customsAndHandling: barrelDetails?.customsAndHandling || formData.customsAndHandling || "0",
-        freeMiles: barrelDetails?.freeMiles || formData.freeMiles || "0",
-        flatPickupCharge: barrelDetails?.flatPickupCharge || "0",
-        pickupFreeMiles: barrelDetails?.pickupFreeMiles || "0",
-        pickupPerMileCharge: barrelDetails?.pickupPerMileCharge || "0",
-        flatDeliveryCharge: barrelDetails?.flatDeliveryCharge || "0",
-        deliveryFreeMiles: barrelDetails?.deliveryFreeMiles || "0",
-        deliveryPerMileCharge: barrelDetails?.deliveryPerMileCharge || "0",
+        pricePerMile: "0",
+        customsAndHandling: "0",
+        freeMiles: "0",
+        flatPickupCharge: "0",
+        pickupFreeMiles: "0",
+        pickupPerMileCharge: "0",
+        flatDeliveryCharge: "0",
+        deliveryFreeMiles: "0",
+        deliveryPerMileCharge: "0",
         barrelOptions: formData.shipmentType === 'barrel' ? {
           ownBarrel: selectedSubTypes.includes("Ship Your Own Barrel")
-            ? ownBarrelConfigs.map(config => ({
-              basePrice: config.basePrice || "0",
-              pricePerMile: config.pricePerMile || "0",
-              customsAndHandling: config.customsAndHandling || "0",
-              freeMiles: config.freeMiles || "0",
-              originCountry: config.originCountry || "",
-              destinationCountry: config.destinationCountry || "",
-              originLat: config.originLat || (CITY_COORDINATES[config.originCountry]?.lat || ""),
-              originLong: config.originLong || (CITY_COORDINATES[config.originCountry]?.lng || ""),
-              destinationLat: config.destinationLat || (CITY_COORDINATES[config.destinationCountry]?.lat || ""),
-              destinationLong: config.destinationLong || (CITY_COORDINATES[config.destinationCountry]?.lng || ""),
-              transitTime: config.transitTime || "",
-              shipmentContents: config.shipmentContents || "",
-              isVolumeDiscount: Boolean(config.isVolumeDiscount),
-              discountAfter: Number(config.discountAfter || 0),
-              discountPercent: Number(config.discountPercent || 0),
-              barrelPrices: [{ quantity: 1, price: config.basePrice || "0", discount: "0" }],
-              flatPickupCharge: config.flatPickupCharge || "0",
-              pickupFreeMiles: config.pickupFreeMiles || "0",
-              pickupPerMileCharge: config.pickupPerMileCharge || "0",
-              flatDeliveryCharge: config.flatDeliveryCharge || "0",
-              deliveryFreeMiles: config.deliveryFreeMiles || "0",
-              deliveryPerMileCharge: config.deliveryPerMileCharge || "0"
-            }))
+            ? ownBarrelConfigs.map(config => buildConfigPayload(config, false))
             : null,
           dropOffBarrel: selectedSubTypes.includes("Request Barrel Drop-Off")
-            ? dropOffBarrelConfigs.map(config => ({
-              basePrice: config.basePrice || "0",
-              pricePerMile: config.pricePerMile || "0",
-              customsAndHandling: config.customsAndHandling || "0",
-              freeMiles: config.freeMiles || "0",
-              originCountry: config.originCountry || "",
-              destinationCountry: config.destinationCountry || "",
-              originLat: config.originLat || (CITY_COORDINATES[config.originCountry]?.lat || ""),
-              originLong: config.originLong || (CITY_COORDINATES[config.originCountry]?.lng || ""),
-              destinationLat: config.destinationLat || (CITY_COORDINATES[config.destinationCountry]?.lat || ""),
-              destinationLong: config.destinationLong || (CITY_COORDINATES[config.destinationCountry]?.lng || ""),
-              transitTime: config.transitTime || "",
-              shipmentContents: config.shipmentContents || "",
-              isVolumeDiscount: Boolean(config.isVolumeDiscount),
-              discountAfter: Number(config.discountAfter || 0),
-              discountPercent: Number(config.discountPercent || 0),
-              barrelPrices: [{ quantity: 1, price: config.basePrice || "0", discount: "0" }],
-              flatPickupCharge: "0",
-              pickupFreeMiles: "0",
-              pickupPerMileCharge: "0",
-              flatDeliveryCharge: "0",
-              deliveryFreeMiles: "0",
-              deliveryPerMileCharge: "0"
-            }))
+            ? dropOffBarrelConfigs.map(config => buildConfigPayload(config, true))
             : null,
         } : null
       };

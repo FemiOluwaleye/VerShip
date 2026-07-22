@@ -9,7 +9,12 @@ import {
   getServiceFeePercentFromAddons,
   calculateBarrelPricing,
   calculateBarrelBasedFees,
+  isPricingV2,
+  calculateBarrelPricingV2,
+  v2PickupCharge,
+  v2ParishFee,
 } from '../utils/pricing';
+import { JAMAICA_PARISHES, detectParish } from '../utils/parishes';
 import { toast } from 'sonner';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
@@ -68,10 +73,25 @@ const ShipmentDetailsSection = () => {
   const { bookings: bookingsState, bookingRequest, providers, isShipOwn, shipownFormData, adminCommission, serviceFeePercent } = location.state || {};
   const bookings = Array.isArray(bookingsState) ? bookingsState : bookingsState?.bookings;
   const [adminServiceFeePercent, setAdminServiceFeePercent] = useState(parseFloat(serviceFeePercent) || 0);
+  // Pricing v2: consignee destination parish (drives the combined Customs & Delivery fee)
+  const [selectedParish, setSelectedParish] = useState("");
 
   const booking = bookings && bookings.length > 0 ? bookings[0] : null;
   const providerId = booking ? booking.driverId : null;
   const providerDetail = providers ? providers.find(p => Number(p.providerId) === Number(providerId)) : null;
+
+  // Auto-detect the parish from the saved booking/request; the shopper can correct it below.
+  // consignee_state IS the parish (the delivery form's parish select stores it there).
+  useEffect(() => {
+    if (selectedParish) return;
+    const detected =
+      (JAMAICA_PARISHES.includes(booking?.consignee_state) && booking.consignee_state) ||
+      bookingRequest?.parish ||
+      detectParish(booking?.consignee_address) ||
+      detectParish(bookingRequest?.drop_off_address);
+    if (detected) setSelectedParish(detected);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking?.consignee_state, bookingRequest?.parish, booking?.consignee_address, bookingRequest?.drop_off_address]);
 
   const itemType = bookingRequest && bookingRequest.items && bookingRequest.items.length > 0 ? bookingRequest.items[0].item_type : "Parcel";
   const itemSubTypes = bookingRequest && bookingRequest.items && bookingRequest.items.length > 0 ? (bookingRequest.items[0].sub_type || "N/A") : "N/A";
@@ -94,6 +114,9 @@ const ShipmentDetailsSection = () => {
     });
   }
 
+  // Simplified pricing model (v2): active when the matched rate card has a seaFreightPrice.
+  const pricingV2 = isPricingV2(barrelPriceObj);
+
   const flatPickupChargeBase = getValueForQuantity(barrelPriceObj?.flatPickupCharge, quantity);
   const flatDeliveryChargeBase = getValueForQuantity(barrelPriceObj?.flatDeliveryCharge, quantity);
 
@@ -111,10 +134,14 @@ const ShipmentDetailsSection = () => {
 
   const basePrice = barrelPriceObj ? parseFloat(barrelPriceObj.basePrice || 0) : (providerDetail ? parseFloat(providerDetail.basePrice || 0) : 0);
 
-  const customsAndHandlingFee = getValueForQuantity(
-    barrelPriceObj?.customsAndHandling ?? providerDetail?.customsAndHandling,
-    quantity
-  );
+  // v2: one combined Customs & Delivery fee for the consignee's parish.
+  // Legacy: quantity-tiered customs CSV lookup.
+  const customsAndHandlingFee = pricingV2
+    ? v2ParishFee(barrelPriceObj, selectedParish, quantity)
+    : getValueForQuantity(
+        barrelPriceObj?.customsAndHandling ?? providerDetail?.customsAndHandling,
+        quantity
+      );
 
   const perBarrelPrice = barrelPriceObj ? parseFloat(barrelPriceObj.barrelPrice || 0) : 0;
 
@@ -125,13 +152,16 @@ const ShipmentDetailsSection = () => {
     discountPercent,
     discountAfter,
     listTotal: totalWithoutDiscount,
-  } = calculateBarrelPricing({
-    quantity,
-    perBarrelPrice,
-    isVolumeDiscount: barrelPriceObj?.isVolumeDiscount,
-    discountAfter: barrelPriceObj?.discountAfter,
-    discountPercent: barrelPriceObj?.discountPercent,
-  });
+    discountedPerBarrel,
+  } = pricingV2
+    ? calculateBarrelPricingV2({ quantity, barrelPrices: barrelPriceObj })
+    : calculateBarrelPricing({
+        quantity,
+        perBarrelPrice,
+        isVolumeDiscount: barrelPriceObj?.isVolumeDiscount,
+        discountAfter: barrelPriceObj?.discountAfter,
+        discountPercent: barrelPriceObj?.discountPercent,
+      });
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
@@ -205,7 +235,14 @@ const ShipmentDetailsSection = () => {
   let finalFlatPickupCharge = 0;
   let finalFlatDeliveryCharge = 0;
 
-  if (!isRequestBarrel) {
+  if (pricingV2) {
+    // v2: pickup = flat charge + extra-mileage beyond the free radius; delivery
+    // is included in the per-parish Customs & Delivery fee (no separate charge).
+    if (!isRequestBarrel) {
+      finalFlatPickupCharge = v2PickupCharge(barrelPriceObj, effectivePickupDistance).total;
+    }
+    finalFlatDeliveryCharge = 0;
+  } else if (!isRequestBarrel) {
     finalFlatPickupCharge = flatPickupChargeBase;
     if (effectivePickupDistance > 0 && effectivePickupDistance > pickupFreeMiles) {
       const extraMiles = effectivePickupDistance - pickupFreeMiles;
@@ -220,7 +257,7 @@ const ShipmentDetailsSection = () => {
     console.log("🔍 Request Barrel Drop-Off: No pickup fee applied");
   }
 
-  if (!isRequestBarrel) {
+  if (!pricingV2 && !isRequestBarrel) {
     finalFlatDeliveryCharge = flatDeliveryChargeBase;
     if (effectiveDeliveryDistance > 0 && effectiveDeliveryDistance > deliveryFreeMiles) {
       const extraMiles = effectiveDeliveryDistance - deliveryFreeMiles;
@@ -381,7 +418,10 @@ const ShipmentDetailsSection = () => {
     );
   };
 
-  const flatDeliveryFee = parseFloat(barrelPriceObj?.pricePerMile ?? providerDetail?.pricePerMile ?? 0) || 0;
+  // v2 folds delivery into the parish fee — no separate flat "Delivery ($)" fee.
+  const flatDeliveryFee = pricingV2
+    ? 0
+    : parseFloat(barrelPriceObj?.pricePerMile ?? providerDetail?.pricePerMile ?? 0) || 0;
   let deliveryFee = flatDeliveryFee;
 
   const subtotal = itemPrice;
@@ -601,11 +641,32 @@ const ShipmentDetailsSection = () => {
                   <span className='text-[14px] font-semibold text-black/80'>${itemPrice.toFixed(2)}</span>
                 </div>
 
-                {customsAndHandlingFee > 0 && shouldAddCustomsFee && (
+                {pricingV2 && (
+                  <div className="flex justify-between items-center gap-2">
+                    <span className='text-[16px] font-semibold text-black flex items-center gap-2'>
+                      Customs &amp; Delivery
+                      <select
+                        value={selectedParish}
+                        onChange={(e) => setSelectedParish(e.target.value)}
+                        className="text-[13px] font-normal border border-black/20 rounded-md px-2 py-1 bg-white"
+                        aria-label="Destination parish"
+                      >
+                        <option value="">Select parish…</option>
+                        {JAMAICA_PARISHES.map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </span>
+                    <span className='text-[14px] font-semibold text-black/80'>
+                      {selectedParish ? `$${customsAndHandlingFee.toFixed(2)}` : '—'}
+                    </span>
+                  </div>
+                )}
+                {!pricingV2 && customsAndHandlingFee > 0 && shouldAddCustomsFee && (
                   <div className="flex justify-between">
                     <span className='text-[16px] font-semibold text-black'>
                       Customs and handling
-                      
+
                     </span>
                     <span className='text-[14px] font-semibold text-black/80'>${customsAndHandlingFee.toFixed(2)}</span>
                   </div>
@@ -613,7 +674,7 @@ const ShipmentDetailsSection = () => {
 
                 {isEndUser ? (
                   <>
-                    {isRequestBarrel && (
+                    {!pricingV2 && isRequestBarrel && (
                       <div className="flex justify-between">
                         <span className='text-[16px] font-semibold text-black'>Delivery</span>
                         <span className='text-[14px] font-semibold text-black/80'>${deliveryFee.toFixed(2)}</span>
@@ -628,16 +689,16 @@ const ShipmentDetailsSection = () => {
                   </>
                 ) : (
                   <>
-                    {shouldAddCustomsFee && customsAndHandlingFee > 0 && (
+                    {!pricingV2 && shouldAddCustomsFee && customsAndHandlingFee > 0 && (
                       <div className="flex justify-between">
                         <span className='text-[16px] font-semibold text-black'>
                           Customs and handling
-                         
+
                         </span>
                         <span className='text-[14px] font-semibold text-black/80'>${customsAndHandlingFee.toFixed(2)}</span>
                       </div>
                     )}
-                    {isRequestBarrel && (
+                    {!pricingV2 && isRequestBarrel && (
                       <div className="flex justify-between">
                         <span className='text-[16px] font-semibold text-black'>Delivery Fees</span>
                         <span className='text-[14px] font-semibold text-black/80'>
@@ -696,6 +757,12 @@ const ShipmentDetailsSection = () => {
                 }
                 if (!booking?.id) {
                   toast.error("Booking information missing.");
+                  return;
+                }
+                if (pricingV2 && !selectedParish) {
+                  toast.error("Please select the destination parish so Customs & Delivery can be included.", {
+                    position: "top-center",
+                  });
                   return;
                 }
                 setLoading(true);

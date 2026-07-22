@@ -60,6 +60,90 @@ export const calculateBarrelPricing = ({
   };
 };
 
+/* ---------------- Simplified pricing model (v2) ---------------- */
+
+/** A barrelsprices row uses the v2 model when seaFreightPrice is set. */
+export const isPricingV2 = (bp) =>
+  bp && String(bp.seaFreightPrice ?? "").trim() !== "" && parseFloat(bp.seaFreightPrice) > 0;
+
+/** Per-barrel price after the tier discount: 1-4 full, 5-9 minus discount5to9, 10+ minus discount10plus. */
+export const v2PerBarrelPrice = (bp, quantity) => {
+  const qty = parseInt(quantity, 10) || 0;
+  const sea = parseFloat(bp?.seaFreightPrice) || 0;
+  const d59 = parseFloat(bp?.discount5to9) || 0;
+  const d10 = parseFloat(bp?.discount10plus) || 0;
+  const off = qty >= 10 ? d10 : qty >= 5 ? d59 : 0;
+  return Math.max(0, sea - off);
+};
+
+/** Barrel line under v2 — same return shape as calculateBarrelPricing so callers can swap in. */
+export const calculateBarrelPricingV2 = ({ quantity = 0, barrelPrices: bp, storedBarrelDiscount = null }) => {
+  const qty = parseInt(quantity, 10) || 0;
+  const perBarrel = parseFloat(bp?.seaFreightPrice) || 0;
+  const discountedPerBarrel = v2PerBarrelPrice(bp, qty);
+  const listTotal = qty * perBarrel;
+  let barrelPrice = qty * discountedPerBarrel;
+
+  const parsedStoredDiscount = parseFloat(storedBarrelDiscount);
+  if (!Number.isNaN(parsedStoredDiscount) && parsedStoredDiscount > 0 && listTotal > 0) {
+    barrelPrice = Math.max(0, listTotal - parsedStoredDiscount);
+  }
+
+  return {
+    barrelPrice,
+    barrelDiscount: Math.max(0, listTotal - barrelPrice),
+    discountApplies: discountedPerBarrel < perBarrel,
+    discountPercent: 0,
+    discountAfter: 0,
+    listTotal,
+    discountedPerBarrel,
+    perBarrel,
+    quantity: qty,
+  };
+};
+
+/** Pickup under v2: flat charge + $/mile beyond the free radius. Drop-off orders pay no pickup. */
+export const v2PickupCharge = (bp, pickupMiles) => {
+  const flat = parseFloat(bp?.pickupCharge) || 0;
+  const radius = parseFloat(bp?.pickupRadius) || 0;
+  const perMile = parseFloat(bp?.extraMileageCost) || 0;
+  const miles = Math.max(0, parseFloat(pickupMiles) || 0);
+  const extra = Math.max(0, miles - radius) * perMile;
+  return { flat, radius, perMile, extraMiles: Math.max(0, miles - radius), extra, total: flat + extra };
+};
+
+/**
+ * Combined Customs & Delivery fee for the consignee's parish.
+ * Each parish entry is { first, additional }: the 1st barrel pays `first`,
+ * every extra barrel adds `additional`.
+ *   fee = first + (qty - 1) * additional
+ * Legacy scalar entries (auto-migrated rows) are a flat per-order fee:
+ * treated as { first: value, additional: 0 }.
+ */
+export const v2ParishEntry = (bp, parish) => {
+  if (!bp || !parish) return null;
+  let fees = bp.parishFees;
+  if (typeof fees === "string") {
+    try { fees = JSON.parse(fees); } catch { fees = null; }
+  }
+  const raw = fees && typeof fees === "object" ? fees[parish] : undefined;
+  if (raw === undefined || raw === null || raw === "") return null;
+  if (typeof raw === "object") {
+    return {
+      first: parseFloat(raw.first) || 0,
+      additional: parseFloat(raw.additional) || 0,
+    };
+  }
+  return { first: parseFloat(raw) || 0, additional: 0 };
+};
+
+export const v2ParishFee = (bp, parish, quantity = 1) => {
+  const entry = v2ParishEntry(bp, parish);
+  if (!entry) return 0;
+  const qty = Math.max(1, parseInt(quantity, 10) || 1);
+  return entry.first + (qty - 1) * entry.additional;
+};
+
 /** Commission & service fee are always % of discounted barrel price (barrel line total) */
 export const calculateBarrelBasedFees = (barrelPrice, commissionPercent, serviceFeePercent) => {
   const barrel = parseFloat(barrelPrice) || 0;

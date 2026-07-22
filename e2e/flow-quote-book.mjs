@@ -23,7 +23,7 @@ try {
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1000);
   await page.click('button[aria-label="Select origin"]'); await page.waitForTimeout(200);
-  await page.click('li[role=option] button:has-text("Pittsburgh, PA")');
+  await page.click('li[role=option] button:has-text("Fort Lauderdale, FL")'); // e2e provider's origin route
   await page.click('button[aria-label="Select destination"]'); await page.waitForTimeout(200);
   await page.click('li[role=option] button:has-text("Kingston, Jamaica")');
   await page.fill('input[aria-label="Barrel quantity"]', "3");
@@ -39,10 +39,11 @@ try {
   log("== quotes page content ==");
   const body = (await page.locator("body").innerText().catch(() => "")).replace(/\n{2,}/g, "\n");
   log(body.slice(0, 900));
-  // look for provider name / price
-  const hasProvider = body.includes("E2E Test Forwarders");
-  const hasPrice = /\$\s?150|150/.test(body);
-  log("\n  >> quote shows 'E2E Test Forwarders':", hasProvider, "| shows price 150:", hasPrice);
+  // look for the e2e provider's quote card — under pricing v2 its sea freight is $100
+  const hasProvider = /E2E/i.test(body);
+  const hasPrice = /\$\s?100\b/.test(body);
+  log("\n  >> quote shows E2E provider:", hasProvider, "| shows v2 price $100:", hasPrice);
+  if (!hasProvider || !hasPrice) process.exitCode = 1;
 
   // count quote cards / actionable buttons
   const btns = await page.locator("button:visible, a[href]:visible").allInnerTexts().catch(() => []);

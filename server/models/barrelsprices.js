@@ -132,6 +132,41 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: false,
             defaultValue: "0"
         },
+        // ---- Simplified pricing model (v2) ----
+        pickupCharge: {            // flat pickup-barrel charge ($)
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            defaultValue: ""
+        },
+        pickupRadius: {            // free pickup radius (miles)
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            defaultValue: ""
+        },
+        extraMileageCost: {        // $/mile beyond the radius
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            defaultValue: ""
+        },
+        seaFreightPrice: {         // per-barrel sea freight (tier 1-4)
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            defaultValue: ""
+        },
+        discount5to9: {            // $ off per barrel for 5-9 barrels
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            defaultValue: ""
+        },
+        discount10plus: {          // $ off per barrel for 10+ barrels
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            defaultValue: ""
+        },
+        parishFees: {              // JSON { "<parish>": "<customs+delivery $>" }
+            type: DataTypes.TEXT,
+            allowNull: true,
+        },
     }, {
         sequelize,
         tableName: 'barrelsprices',

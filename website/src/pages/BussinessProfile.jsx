@@ -6,6 +6,7 @@ import Commonbanner from '../components/Commonbanner';
 import { getProviderProfile, createStripeAccount } from '../api/cms';
 import { toast } from 'sonner';
 import { API_URL } from '../api/axios';
+import { JAMAICA_PARISHES } from '../utils/parishes';
 
 const BussinessProfile = () => {
   const [profileData, setProfileData] = useState(null);
@@ -286,6 +287,99 @@ const BussinessProfile = () => {
     );
   };
 
+  // ── Simplified pricing (v2) display ──
+  // A config is "v2" when it carries a non-zero seaFreightPrice; legacy
+  // configs fall back to the old 25-slot renderers below.
+  const hasV2Pricing = (config) => {
+    const v = parseFloat(config?.seaFreightPrice);
+    return !isNaN(v) && v > 0;
+  };
+
+  const fmtMoney = (v) => {
+    const n = parseFloat(v);
+    return isNaN(n) ? '0.00' : n.toFixed(2);
+  };
+
+  const renderV2Pricing = (config, isOwn) => {
+    const sea = parseFloat(config.seaFreightPrice) || 0;
+    const d59 = parseFloat(config.discount5to9) || 0;
+    const d10 = parseFloat(config.discount10plus) || 0;
+
+    let parishFees = config.parishFees;
+    if (typeof parishFees === 'string') {
+      try { parishFees = JSON.parse(parishFees); } catch { parishFees = {}; }
+    }
+    if (!parishFees || typeof parishFees !== 'object' || Array.isArray(parishFees)) parishFees = {};
+
+    // Entries are { first, additional }; legacy scalar values read as
+    // { first: value, additional: 0 }.
+    const parishEntry = (v) => {
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        return { first: parseFloat(v.first) || 0, additional: parseFloat(v.additional) || 0 };
+      }
+      return { first: parseFloat(v) || 0, additional: 0 };
+    };
+
+    const pickupCharge = parseFloat(config.pickupCharge) || 0;
+    const pickupRadius = parseFloat(config.pickupRadius) || 0;
+    const extraMileage = parseFloat(config.extraMileageCost) || 0;
+    const hasPickup = isOwn && (pickupCharge > 0 || pickupRadius > 0 || extraMileage > 0);
+    const hasParishFees = JAMAICA_PARISHES.some(p => {
+      const e = parishEntry(parishFees[p]);
+      return e.first > 0 || e.additional > 0;
+    });
+
+    return (
+      <>
+        {hasPickup && (
+          <div className="mt-3 p-3 bg-blue-900/20 rounded-lg border border-blue-500/20 mb-3">
+            <p className="text-blue-400 font-semibold mb-2 text-sm">📦 Pickup</p>
+            <p className="text-white text-sm font-medium">
+              ${fmtMoney(pickupCharge)} pickup · {pickupRadius} mi radius · ${fmtMoney(extraMileage)}/mi after
+            </p>
+          </div>
+        )}
+
+        <div className="mt-3 p-3 bg-white/5 rounded-lg border border-white/10 mb-3">
+          <p className="text-white/70 font-semibold mb-2 text-sm">🚢 Sea Freight (per barrel)</p>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="bg-white/5 p-1.5 rounded">
+              <span className="text-[10px] text-white/40 block">1-4 barrels</span>
+              <span className="text-white font-medium">${fmtMoney(sea)}</span>
+            </div>
+            <div className="bg-white/5 p-1.5 rounded">
+              <span className="text-[10px] text-white/40 block">5-9 barrels</span>
+              <span className="text-white font-medium">${fmtMoney(Math.max(sea - d59, 0))}</span>
+            </div>
+            <div className="bg-white/5 p-1.5 rounded">
+              <span className="text-[10px] text-white/40 block">10+ barrels</span>
+              <span className="text-white font-medium">${fmtMoney(Math.max(sea - d10, 0))}</span>
+            </div>
+          </div>
+        </div>
+
+        {hasParishFees && (
+          <div className="mt-3 p-3 bg-green-900/20 rounded-lg border border-green-500/20 mb-3">
+            <p className="text-green-400 font-semibold mb-2 text-sm">🚚 Customs &amp; Delivery (per parish)</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {JAMAICA_PARISHES.map(parish => {
+                const entry = parishEntry(parishFees[parish]);
+                return (
+                  <div key={parish} className="bg-green-950/30 p-1.5 rounded flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-green-400/60 truncate">{parish}</span>
+                    <span className="text-white font-medium shrink-0">
+                      ${fmtMoney(entry.first)} first · ${fmtMoney(entry.additional)}/additional
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <>
       <Commonbanner title="My Profile" />
@@ -354,38 +448,48 @@ const BussinessProfile = () => {
                           {/* Basic Info */}
                           <Row label="Origin" value={config.originCountry} />
                           <Row label="Destination" value={config.destinationCountry} />
-                          <Row label="Base Price" value={`$${config.basePrice}`} />
-                          
-                          {/* Customs & Handling - 25 fields */}
-                          {renderCustomsCharges(config.customsAndHandling)}
-                          
-                          <Row label="Transit Time" value={config.transitTime} />
 
-                          {/* Flat Pickup Charge - 25 fields */}
-                          {renderFlatPickupCharge(config.flatPickupCharge)}
+                          {hasV2Pricing(config) ? (
+                            <>
+                              {renderV2Pricing(config, true)}
+                              <Row label="Transit Time" value={config.transitTime} />
+                            </>
+                          ) : (
+                            <>
+                              <Row label="Base Price" value={`$${config.basePrice}`} />
 
-                          <Row label="Pickup Free Miles" value={config.pickupFreeMiles ? `${config.pickupFreeMiles} miles` : 'N/A'} />
-                          <Row label="Pickup Per Mile Charge" value={config.pickupPerMileCharge ? `$${config.pickupPerMileCharge}` : 'N/A'} />
+                              {/* Customs & Handling - 25 fields */}
+                              {renderCustomsCharges(config.customsAndHandling)}
 
-                          {/* Flat Delivery Charge - 25 fields */}
-                          {renderFlatDeliveryCharge(config.flatDeliveryCharge)}
+                              <Row label="Transit Time" value={config.transitTime} />
 
-                          <Row label="Delivery Free Miles" value={config.deliveryFreeMiles ? `${config.deliveryFreeMiles} miles` : 'N/A'} />
-                          <Row label="Delivery Per Mile Charge" value={config.deliveryPerMileCharge ? `$${config.deliveryPerMileCharge}` : 'N/A'} />
+                              {/* Flat Pickup Charge - 25 fields */}
+                              {renderFlatPickupCharge(config.flatPickupCharge)}
 
-                          {/* Quantity Prices */}
-                          <div className="mt-3 pt-3 border-t border-white/10">
-                            <div className="flex justify-between mb-2">
-                              <p className="text-white/70">Quantity Prices</p>
-                              <div className="text-right">
-                                {config.barrelPrices?.map((p, idx) => (
-                                  <p key={idx} className="text-white text-xs">
-                                    {p.quantity} Barrel: ${p.price} {p.discount && p.discount !== '0' ? `(${p.discount}% OFF)` : ''}
-                                  </p>
-                                ))}
+                              <Row label="Pickup Free Miles" value={config.pickupFreeMiles ? `${config.pickupFreeMiles} miles` : 'N/A'} />
+                              <Row label="Pickup Per Mile Charge" value={config.pickupPerMileCharge ? `$${config.pickupPerMileCharge}` : 'N/A'} />
+
+                              {/* Flat Delivery Charge - 25 fields */}
+                              {renderFlatDeliveryCharge(config.flatDeliveryCharge)}
+
+                              <Row label="Delivery Free Miles" value={config.deliveryFreeMiles ? `${config.deliveryFreeMiles} miles` : 'N/A'} />
+                              <Row label="Delivery Per Mile Charge" value={config.deliveryPerMileCharge ? `$${config.deliveryPerMileCharge}` : 'N/A'} />
+
+                              {/* Quantity Prices */}
+                              <div className="mt-3 pt-3 border-t border-white/10">
+                                <div className="flex justify-between mb-2">
+                                  <p className="text-white/70">Quantity Prices</p>
+                                  <div className="text-right">
+                                    {config.barrelPrices?.map((p, idx) => (
+                                      <p key={idx} className="text-white text-xs">
+                                        {p.quantity} Barrel: ${p.price} {p.discount && p.discount !== '0' ? `(${p.discount}% OFF)` : ''}
+                                      </p>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -401,27 +505,37 @@ const BussinessProfile = () => {
                           {/* Basic Info */}
                           <Row label="Origin" value={config.originCountry} />
                           <Row label="Destination" value={config.destinationCountry} />
-                          <Row label="Base Price" value={`$${config.basePrice}`} />
-                          <Row label="Delivery" value={`$${config.pricePerMile}`} />
-                          
-                          {/* Customs & Handling - 25 fields */}
-                          {renderCustomsCharges(config.customsAndHandling)}
-                          
-                          <Row label="Transit Time" value={config.transitTime} />
 
-                          {/* Quantity Prices */}
-                          <div className="mt-3 pt-3 border-t border-white/10">
-                            <div className="flex justify-between mb-2">
-                              <p className="text-white/70">Quantity Prices</p>
-                              <div className="text-right">
-                                {config.barrelPrices?.map((p, idx) => (
-                                  <p key={idx} className="text-white text-xs">
-                                    {p.quantity} Barrel: ${p.price} {p.discount && p.discount !== '0' ? `(${p.discount}% OFF)` : ''}
-                                  </p>
-                                ))}
+                          {hasV2Pricing(config) ? (
+                            <>
+                              {renderV2Pricing(config, false)}
+                              <Row label="Transit Time" value={config.transitTime} />
+                            </>
+                          ) : (
+                            <>
+                              <Row label="Base Price" value={`$${config.basePrice}`} />
+                              <Row label="Delivery" value={`$${config.pricePerMile}`} />
+
+                              {/* Customs & Handling - 25 fields */}
+                              {renderCustomsCharges(config.customsAndHandling)}
+
+                              <Row label="Transit Time" value={config.transitTime} />
+
+                              {/* Quantity Prices */}
+                              <div className="mt-3 pt-3 border-t border-white/10">
+                                <div className="flex justify-between mb-2">
+                                  <p className="text-white/70">Quantity Prices</p>
+                                  <div className="text-right">
+                                    {config.barrelPrices?.map((p, idx) => (
+                                      <p key={idx} className="text-white text-xs">
+                                        {p.quantity} Barrel: ${p.price} {p.discount && p.discount !== '0' ? `(${p.discount}% OFF)` : ''}
+                                      </p>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>
