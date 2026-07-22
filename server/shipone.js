@@ -241,7 +241,9 @@ app.use('/admin/images', express.static(path.join(uploadRoot, "images")));
 // only handle redirects. ADMIN_HOST (e.g. "admin.vershipgo.com") additionally
 // moves the main domain's /admin/* over to the subdomain — leave it unset in
 // dev/staging where no subdomain exists and /admin keeps working as before.
-const ADMIN_HOST = process.env.ADMIN_HOST || "";
+// Resolved via envConfig so on Replit's single secret store PROD_ADMIN_HOST
+// applies only to the published Deployment, never the workspace Run.
+const ADMIN_HOST = require('./helper/envConfig').env('ADMIN_HOST') || "";
 const isAdminHost = (req) => /^admin\./i.test(req.hostname || "");
 app.use((req, res, next) => {
   const underAdminPath = req.path === '/admin' || req.path.startsWith('/admin/');
