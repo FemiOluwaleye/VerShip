@@ -59,7 +59,7 @@ const Verified = () => {
               <div className="flex items-center justify-center w-full mb-3 sm:mb-5 mt-5">
                 <button onClick={() => {
                   setIsOpen(true);
-                  navigate('/businessCreateAccount')
+                  navigate('/businessdoument')
                 }}
                   type="submit"
                   className="bg-[linear-gradient(180deg,#FFBF00_0%,#FFD864_100%)]

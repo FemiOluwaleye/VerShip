@@ -225,6 +225,11 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: false,
             defaultValue: ""
         },
+        zip: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            defaultValue: ""
+        },
         gender: {
             type: DataTypes.ENUM('0', '1', '2'),
             allowNull: false,

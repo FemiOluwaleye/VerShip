@@ -13,6 +13,7 @@ const BussinessSignup = () => {
   const [formData, setFormData] = useState({
     companyName: "",
     working_as: "",
+    registerationNumber: "",
     email: "",
     phone: "",
     main_address: "",
@@ -24,7 +25,11 @@ const BussinessSignup = () => {
     agreeTerms: false,
     streetAddress: "",
     city: "",
-    state: ""
+    state: "",
+    zip: "",
+    primaryContactFirstName: "",
+    primaryContactLastName: "",
+    primaryContactEmail: ""
   });
   const role = localStorage.getItem("role");
   const [showPassword, setShowPassword] = useState(false);
@@ -98,10 +103,9 @@ const BussinessSignup = () => {
       case "main_address":
         if (!value.trim()) error = "Address is required";
         break;
-      case "streetAddress":
-        if (!value.trim()) error = "Street address is required";
-        else if (value.trim().length < 2) error = "Please enter a valid street address";
-        break;
+      // streetAddress is hidden (parsed from Google Places). Don't hard-require it:
+      // a typed address that was never picked from the dropdown would silently
+      // block submit with no visible error. It falls back to main_address on submit.
       case "city":
         if (!value.trim()) error = "City is required";
         else if (value.trim().length < 1) error = "City must be at least 1 characters";
@@ -109,6 +113,19 @@ const BussinessSignup = () => {
       case "state":
         if (!value.trim()) error = "State is required";
         else if (value.trim().length < 1) error = "State must be at least 1 characters";
+        break;
+      case "zip":
+        if (!value.trim()) error = "Zip code is required";
+        break;
+      case "primaryContactFirstName":
+        if (!value.trim()) error = "First name is required";
+        break;
+      case "primaryContactLastName":
+        if (!value.trim()) error = "Last name is required";
+        break;
+      case "primaryContactEmail":
+        if (!value.trim()) error = "Primary contact email is required";
+        else if (!/\S+@\S+\.\S+/.test(value)) error = "Invalid email format";
         break;
       case "password":
         if (!value) error = "Password is required";
@@ -179,6 +196,21 @@ const BussinessSignup = () => {
       toast.error("Address is required");
       return false;
     }
+    if (!formData.zip.trim()) {
+      toast.error("Zip code is required");
+      return false;
+    }
+    if (!formData.primaryContactFirstName.trim() || !formData.primaryContactLastName.trim()) {
+      toast.error("Primary contact name is required");
+      return false;
+    }
+    if (!formData.primaryContactEmail.trim()) {
+      toast.error("Primary contact email is required");
+      return false;
+    } else if (!/\S+@\S+\.\S+/.test(formData.primaryContactEmail)) {
+      toast.error("Invalid primary contact email format");
+      return false;
+    }
     if (!formData.password) {
       toast.error("Password is required");
       return false;
@@ -226,9 +258,14 @@ const BussinessSignup = () => {
         latitude: formData.latitude,
         longitude: formData.longitude,
         working_as: formData.working_as,
-        streetAddress: formData.streetAddress,
+        registerationNumber: formData.registerationNumber,
+        streetAddress: formData.streetAddress || formData.main_address.split(",")[0].trim(),
         city: formData.city,
         state: formData.state,
+        zip: formData.zip,
+        primaryContactPersonFirstName: formData.primaryContactFirstName,
+        primaryContactPersonLastName: formData.primaryContactLastName,
+        primaryContactEmail: formData.primaryContactEmail,
 
         survey: survey,
       };
@@ -374,7 +411,7 @@ const BussinessSignup = () => {
 
           {/* Email */}
           <div className="sm:col-span-2">
-            <label className="text-sm font-medium">Email</label>
+            <label className="text-sm font-medium">Email Address</label>
             <input
               type="email"
               name="email"
@@ -420,6 +457,7 @@ const BussinessSignup = () => {
                     let streetAddress = '';
                     let city = '';
                     let state = '';
+                    let zip = '';
                     let formattedAddress = place.formatted_address || place.name;
 
                     // Extract address components
@@ -443,6 +481,11 @@ const BussinessSignup = () => {
                         // State/Administrative Area Level 1
                         if (types.includes('administrative_area_level_1')) {
                           state = component.long_name;
+                        }
+
+                        // Zip/Postal code
+                        if (types.includes('postal_code')) {
+                          zip = component.long_name;
                         }
 
                         // Also check for postal_town or other city equivalents
@@ -475,6 +518,7 @@ const BussinessSignup = () => {
                       streetAddress: streetAddress,
                       city: city,
                       state: state,
+                      zip: zip,
                       latitude: place.geometry.location.lat().toString(),
                       longitude: place.geometry.location.lng().toString(),
                     }));
@@ -485,7 +529,8 @@ const BussinessSignup = () => {
                       main_address: "",
                       streetAddress: "",
                       city: "",
-                      state: ""
+                      state: "",
+                      zip: ""
                     }));
                   }}
                   options={{ types: ["address"] }}
@@ -559,6 +604,99 @@ const BussinessSignup = () => {
               <p className="text-red-400 text-sm mt-1">{errors.state}</p>
             )}
           </div>
+
+          {/* Zip Code */}
+          <div>
+            <label className="text-sm font-medium">Zip Code</label>
+            <input
+              type="text"
+              name="zip"
+              value={formData.zip}
+              onChange={handleInputChange}
+              placeholder="Enter zip code"
+              className="w-full mt-2 bg-transparent border border-white/20
+      text-white placeholder:text-white/40
+      rounded-[16px] px-4 py-2
+      focus:outline-none focus:border-yellow-400"
+            />
+            {errors.zip && (
+              <p className="text-red-400 text-sm mt-1">{errors.zip}</p>
+            )}
+          </div>
+
+          {/* FMC License */}
+          <div>
+            <label className="text-sm font-medium">FMC License (Optional)</label>
+            <input
+              type="text"
+              name="registerationNumber"
+              value={formData.registerationNumber}
+              onChange={handleInputChange}
+              placeholder="Enter"
+              className="w-full mt-2 bg-transparent border border-white/20
+      text-white placeholder:text-white/40
+      rounded-[16px] px-4 py-2
+      focus:outline-none focus:border-yellow-400"
+            />
+          </div>
+
+          {/* Primary Contact First Name */}
+          <div>
+            <label className="text-sm font-medium">Primary Contact First Name</label>
+            <input
+              type="text"
+              name="primaryContactFirstName"
+              value={formData.primaryContactFirstName}
+              onChange={handleInputChange}
+              placeholder="Enter first name"
+              className="w-full mt-2 bg-transparent border border-white/20
+      text-white placeholder:text-white/40
+      rounded-[16px] px-4 py-2
+      focus:outline-none focus:border-yellow-400"
+            />
+            {errors.primaryContactFirstName && (
+              <p className="text-red-400 text-sm mt-1">{errors.primaryContactFirstName}</p>
+            )}
+          </div>
+
+          {/* Primary Contact Last Name */}
+          <div>
+            <label className="text-sm font-medium">Primary Contact Last Name</label>
+            <input
+              type="text"
+              name="primaryContactLastName"
+              value={formData.primaryContactLastName}
+              onChange={handleInputChange}
+              placeholder="Enter last name"
+              className="w-full mt-2 bg-transparent border border-white/20
+      text-white placeholder:text-white/40
+      rounded-[16px] px-4 py-2
+      focus:outline-none focus:border-yellow-400"
+            />
+            {errors.primaryContactLastName && (
+              <p className="text-red-400 text-sm mt-1">{errors.primaryContactLastName}</p>
+            )}
+          </div>
+
+          {/* Primary Contact Email */}
+          <div className="sm:col-span-2">
+            <label className="text-sm font-medium">Primary Contact Email</label>
+            <input
+              type="email"
+              name="primaryContactEmail"
+              value={formData.primaryContactEmail}
+              onChange={handleInputChange}
+              placeholder="Enter"
+              className="w-full mt-2 bg-transparent border border-white/20
+              text-white placeholder:text-white/40
+              rounded-[16px] px-4 py-2
+              focus:outline-none focus:border-yellow-400"
+            />
+            {errors.primaryContactEmail && (
+              <p className="text-red-400 text-sm mt-1">{errors.primaryContactEmail}</p>
+            )}
+          </div>
+
           {/* Password */}
           <div className="flex flex-col">
             <label className="text-sm font-medium">Password</label>

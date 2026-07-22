@@ -212,6 +212,16 @@ module.exports = function (sequelize, DataTypes) {
         allowNull: true,
         defaultValue: "",
       },
+      zip: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        defaultValue: "",
+      },
+      primaryContactEmail: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        defaultValue: "",
+      },
     },
     {
       sequelize,

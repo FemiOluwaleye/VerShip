@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import { FaSpinner } from 'react-icons/fa';
 
 const BusinessVerification = () => {
-  const [otp, setOtp] = useState(['', '', '', '']);
+  // 6 boxes — server issues 6-digit codes (otpHelper).
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ const BusinessVerification = () => {
       setOtp(newOtp);
 
       // Move focus to next input
-      if (value && index < 3) {
+      if (value && index < 5) {
         const nextInput = document.getElementById(`otp-${index + 1}`);
         if (nextInput) nextInput.focus();
       }
@@ -44,8 +45,8 @@ const BusinessVerification = () => {
   const handleVerify = async (e) => {
     e.preventDefault();
     const otpValue = otp.join('');
-    if (otpValue.length < 4) {
-      toast.error('Please enter the full 4-digit code');
+    if (otpValue.length < 6) {
+      toast.error('Please enter the full 6-digit code');
       return;
     }
 
@@ -66,7 +67,9 @@ const BusinessVerification = () => {
           window.dispatchEvent(new Event('userUpdated'));
         }
 
-        navigate('/verified', { replace: true });
+        // Consolidated flow: business details were captured at signup, so head
+        // straight to document upload (skips the old interstitial + detail steps).
+        navigate('/businessdoument', { replace: true });
       } else {
         toast.error(response.message || 'Invalid OTP');
       }
@@ -114,7 +117,7 @@ const BusinessVerification = () => {
             </h1>
             <div>
               <p className="text-center mx-[15px] sm:mx-[40px] text-[13px] sm:text-[14px] md:text-[16px] lg:text-[18px] font-semibold mt-3">
-                Enter the 4-digit code sent to you at
+                Enter the 6-digit code sent to you at
               </p>
               <p className='text-center text-[13px] sm:text-[14px] md:text-[16px] lg:text-[18px] text-yellow-400'>
                 {email || 'your email'}
@@ -135,7 +138,7 @@ const BusinessVerification = () => {
                     value={digit}
                     onChange={(e) => handleChange(e, index)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
-                    className='px-2 py-2 sm:px-4 sm:py-3 w-[50px] sm:w-[80px] text-center text-[22px] font-bold text-white rounded-[16px] border border-white/20 focus:border-yellow-400 focus:outline-none bg-white/5'
+                    className='px-1 py-2 sm:px-2 sm:py-3 w-[42px] sm:w-[60px] text-center text-[22px] font-bold text-white rounded-[16px] border border-white/20 focus:border-yellow-400 focus:outline-none bg-white/5'
                     autoComplete="off"
                   />
                 ))}

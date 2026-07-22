@@ -136,7 +136,8 @@ const BusinessDocument = () => {
       form.append("certificateOfIncorporation", files.certificateOfIncorporation);
       form.append("ValidBusinessId", files.validId);
       form.append("AddressProof", files.utilityBill);
-      form.append("profile_step", 4);
+      // Consolidated flow: docs are the 2nd-to-last step; 6 resumes at pricing.
+      form.append("profile_step", 6);
 
       const response = await completeProfile(form);
       if (response.status === 200 || response.status === "1") {
@@ -298,10 +299,10 @@ const BusinessDocument = () => {
 
           <div className="w-full max-w-[480px] mt-4">
             <div className="flex items-center gap-2">
-              {[1, 2, 3, 4, 5, 6].map((step) => (
+              {[1, 2].map((step) => (
                 <div
                   key={step}
-                  className={`h-[4px] w-full rounded-full transition-all duration-300 ${step <= 3 ? "bg-gradient-to-r from-yellow-400 to-yellow-600" : "bg-white/30"
+                  className={`h-[4px] w-full rounded-full transition-all duration-300 ${step <= 1 ? "bg-gradient-to-r from-yellow-400 to-yellow-600" : "bg-white/30"
                     }`}
                 />
               ))}
@@ -353,7 +354,8 @@ const BusinessDocument = () => {
               <button
                 onClick={() => {
                   setShowModal(false);
-                  navigate("/businesspolicies");
+                  // Consolidated flow: pricing is the only remaining step.
+                  navigate("/businessupload");
                 }}
                 className="bg-gradient-to-r from-yellow-400 to-yellow-600
                 text-black font-bold py-3 rounded-full px-[70px]

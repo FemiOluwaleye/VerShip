@@ -189,15 +189,17 @@ const Login = () => {
                             navigate("/request", { replace: true });
                         } else {
                             // Redirect to the correct signup step
+                            // Consolidated flow: details are captured at signup, so an
+                            // incomplete profile resumes at docs (<=3) or pricing (>=4).
                             const stepRoutes = {
-                                1: "/businessCreateAccount",
-                                2: "/businesscontact",
+                                1: "/businessdoument",
+                                2: "/businessdoument",
                                 3: "/businessdoument",
-                                4: "/businesspolicies",
-                                5: "/businesstime",
+                                4: "/businessupload",
+                                5: "/businessupload",
                                 6: "/businessupload"
                             };
-                            const targetRoute = stepRoutes[user.profile_step] || "/businessCreateAccount";
+                            const targetRoute = stepRoutes[user.profile_step] || "/businessdoument";
                             navigate(targetRoute, { replace: true });
                         }
                     } else {
@@ -216,15 +218,17 @@ const Login = () => {
                             navigate("/request", { replace: true });
                         } else {
                             // Redirect to the correct signup step
+                            // Consolidated flow: details are captured at signup, so an
+                            // incomplete profile resumes at docs (<=3) or pricing (>=4).
                             const stepRoutes = {
-                                1: "/businessCreateAccount",
-                                2: "/businesscontact",
+                                1: "/businessdoument",
+                                2: "/businessdoument",
                                 3: "/businessdoument",
-                                4: "/businesspolicies",
-                                5: "/businesstime",
+                                4: "/businessupload",
+                                5: "/businessupload",
                                 6: "/businessupload"
                             };
-                            const targetRoute = stepRoutes[user.profile_step] || "/businessCreateAccount";
+                            const targetRoute = stepRoutes[user.profile_step] || "/businessdoument";
                             navigate(targetRoute, { replace: true });
                         }
                     } else {
@@ -342,15 +346,17 @@ const Login = () => {
                             if (user.isProfileComplete === "1") {
                                 navigate("/request", { replace: true });
                             } else {
+                                // Consolidated flow: details are captured at signup, so an
+                                // incomplete profile resumes at docs (<=3) or pricing (>=4).
                                 const stepRoutes = {
-                                    1: "/businessCreateAccount",
-                                    2: "/businesscontact",
+                                    1: "/businessdoument",
+                                    2: "/businessdoument",
                                     3: "/businessdoument",
-                                    4: "/businesspolicies",
-                                    5: "/businesstime",
+                                    4: "/businessupload",
+                                    5: "/businessupload",
                                     6: "/businessupload"
                                 };
-                                const targetRoute = stepRoutes[user.profile_step] || "/businessCreateAccount";
+                                const targetRoute = stepRoutes[user.profile_step] || "/businessdoument";
                                 navigate(targetRoute, { replace: true });
                             }
                         } else {
@@ -459,15 +465,17 @@ const Login = () => {
                             if (user.isProfileComplete === "1") {
                                 navigate("/request", { replace: true });
                             } else {
+                                // Consolidated flow: details are captured at signup, so an
+                                // incomplete profile resumes at docs (<=3) or pricing (>=4).
                                 const stepRoutes = {
-                                    1: "/businessCreateAccount",
-                                    2: "/businesscontact",
+                                    1: "/businessdoument",
+                                    2: "/businessdoument",
                                     3: "/businessdoument",
-                                    4: "/businesspolicies",
-                                    5: "/businesstime",
+                                    4: "/businessupload",
+                                    5: "/businessupload",
                                     6: "/businessupload"
                                 };
-                                const targetRoute = stepRoutes[user.profile_step] || "/businessCreateAccount";
+                                const targetRoute = stepRoutes[user.profile_step] || "/businessdoument";
                                 navigate(targetRoute, { replace: true });
                             }
                         } else {

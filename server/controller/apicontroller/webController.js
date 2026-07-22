@@ -257,8 +257,10 @@ module.exports = {
             }
 
             if (user.role === "2") {
+                // providerDetails now exists from signup onward — only hold providers at the
+                // admin-verification gate once they have actually submitted documents.
                 const details = await db.providerDetails.findOne({ where: { providerId: user.id } });
-                if (details && details.documentVerify != 1) {
+                if (details && details.certificateOfIncorporation && details.documentVerify != 1) {
                     return helper.failure(res, "Your account is pending admin verification. Please try again later.");
                 }
             }
@@ -357,8 +359,10 @@ module.exports = {
 
             // Email verification (signup): activate + log in.
             if (user.role === "2") {
+                // providerDetails now exists from signup onward — only hold providers at the
+                // admin-verification gate once they have actually submitted documents.
                 const details = await db.providerDetails.findOne({ where: { providerId: user.id } });
-                if (details && details.documentVerify != 1) {
+                if (details && details.certificateOfIncorporation && details.documentVerify != 1) {
                     return helper.failure(res, "Your account is pending admin verification. Please try again later.");
                 }
             }
@@ -581,10 +585,13 @@ module.exports = {
                     password: hashedNewPassword,
                     working_as: req.body.working_as,
                     survey: survey,
-                    profile_step: 1,
+                    // Consolidated signup collects all business details up front, so the
+                    // old detail/contact steps (1-3) are already satisfied at registration.
+                    profile_step: 3,
                     streetAddress: streetAddress || "",
                     city: city || "",
-                    state: state || ""
+                    state: state || "",
+                    zip: req.body.zip || ""
                 }
 
             } else {
@@ -601,6 +608,7 @@ module.exports = {
                     streetAddress: streetAddress || "",
                     city: city || "",
                     state: state || "",
+                    zip: req.body.zip || "",
                     location: req.body.main_address,
                     latitude: req.body.latitude || "",
                     longitude: req.body.longitude || "",
@@ -610,6 +618,35 @@ module.exports = {
             console.log("createObj=----------------------->>>>>", createObj);
             // return
             const user = await db.users.create(createObj);
+
+            // Consolidated onboarding: the signup form now carries every business detail
+            // the old step-2/3 pages collected, so seed providerDetails (plus the
+            // defaults the deleted timeline/service-area steps used to pick) right away.
+            if (req.body.role == "2") {
+                const contactFirst = req.body.primaryContactPersonFirstName || "";
+                const contactLast = req.body.primaryContactPersonLastName || "";
+                await db.providerDetails.create({
+                    providerId: user.id,
+                    businessName: name,
+                    registerationNumber: req.body.registerationNumber || "",
+                    countryOfRegistration: "USA",
+                    businessAddress: req.body.main_address,
+                    businessLatitude: req.body.latitude || "",
+                    businessLongitude: req.body.longitude || "",
+                    streetAddress: streetAddress || "",
+                    city: city || "",
+                    state: state || "",
+                    zip: req.body.zip || "",
+                    email,
+                    phone: req.body.number,
+                    primaryContactPersonFirstName: contactFirst,
+                    primaryContactPersonLastName: contactLast,
+                    primaryContactPerson: `${contactFirst} ${contactLast}`.trim(),
+                    primaryContactEmail: req.body.primaryContactEmail || "",
+                    deliveryTimeline: "21 Days",
+                });
+                await db.serviceAreaRoutes.create({ providerId: user.id, country: "USA", freightType: 2 });
+            }
             const loginTime = helper.unixTimestamp() + Math.floor(Math.random() * 10000000);
             user.loginTime = loginTime;
 
@@ -1089,12 +1126,18 @@ module.exports = {
                 streetAddress,
                 city,
                 state,
+                zip: req.body.zip,
                 description,
                 email: companyEmail,
                 phone,
-                primaryContactPerson: `${primaryContactPersonFirstName} ${primaryContactPersonLastName}`,
+                // Only rebuild the combined name when the request actually carries the
+                // parts — doc-only submits used to overwrite it with "undefined undefined".
+                primaryContactPerson: (primaryContactPersonFirstName || primaryContactPersonLastName)
+                    ? `${primaryContactPersonFirstName || ""} ${primaryContactPersonLastName || ""}`.trim()
+                    : undefined,
                 primaryContactPersonFirstName,
                 primaryContactPersonLastName,
+                primaryContactEmail: req.body.primaryContactEmail,
                 deliveryTimeline,
                 // deliveryPolicy,
                 // pricePerPound,
@@ -1163,6 +1206,7 @@ module.exports = {
             if (isValid(businessAddress)) updateData.location = businessAddress;
             if (isValid(businessLatitude)) updateData.latitude = businessLatitude;
             if (isValid(businessLongitude)) updateData.longitude = businessLongitude;
+            if (isValid(req.body.zip)) updateData.zip = req.body.zip;
             if (isValid(profile_step)) updateData.profile_step = profile_step;
 
             if (Object.keys(updateData).length > 0) {
@@ -1331,8 +1375,9 @@ module.exports = {
                 attributes: ['id', 'role', 'firstName', 'lastName', 'working_as', 'isProfileComplete', 'email', 'countryCode', 'phoneNumber', 'image', 'otp', 'otpVerify', 'status', 'loginTime', 'bio', 'location', 'latitude', 'longitude', 'isNotificationOn', 'deviceToken', 'deviceType', 'socketId', 'online', 'customerId', 'accountId', 'hashAccount', 'country', 'city', 'state', 'streetAddress', 'gender', 'documentVerify', 'adminCommission', 'profile_step', 'createdAt', 'updatedAt', 'deletedAt']
             });
 
+            // Any submit carrying KYC files is "the document step" — the consolidated
+            // flow posts them with profile_step 6, the legacy flow used 4.
             const isDocumentStep =
-                Number(profile_step) === 4 &&
                 req.files &&
                 (req.files.certificateOfIncorporation ||
                     req.files.ValidBusinessId ||
@@ -1593,12 +1638,18 @@ module.exports = {
                 streetAddress,
                 city,
                 state,
+                zip: req.body.zip,
                 description,
                 email: companyEmail,
                 phone,
-                primaryContactPerson: `${primaryContactPersonFirstName} ${primaryContactPersonLastName}`,
+                // Only rebuild the combined name when the request actually carries the
+                // parts — doc-only submits used to overwrite it with "undefined undefined".
+                primaryContactPerson: (primaryContactPersonFirstName || primaryContactPersonLastName)
+                    ? `${primaryContactPersonFirstName || ""} ${primaryContactPersonLastName || ""}`.trim()
+                    : undefined,
                 primaryContactPersonFirstName,
                 primaryContactPersonLastName,
+                primaryContactEmail: req.body.primaryContactEmail,
                 deliveryTimeline,
                 // deliveryPolicy,
                 // pricePerPound,
@@ -1674,6 +1725,7 @@ module.exports = {
             if (isValid(businessAddress)) updateData.location = businessAddress;
             if (isValid(businessLatitude)) updateData.latitude = businessLatitude;
             if (isValid(businessLongitude)) updateData.longitude = businessLongitude;
+            if (isValid(req.body.zip)) updateData.zip = req.body.zip;
             if (isValid(profile_step)) updateData.profile_step = profile_step;
 
             if (Object.keys(updateData).length > 0) {
@@ -1738,7 +1790,17 @@ module.exports = {
                         pickupPerMileCharge: config.pickupPerMileCharge || '0',
                         flatDeliveryCharge: config.flatDeliveryCharge || '0',
                         deliveryFreeMiles: config.deliveryFreeMiles || '0',
-                        deliveryPerMileCharge: config.deliveryPerMileCharge || '0'
+                        deliveryPerMileCharge: config.deliveryPerMileCharge || '0',
+                        // Simplified pricing model (v2)
+                        pickupCharge: config.pickupCharge || '',
+                        pickupRadius: config.pickupRadius || '',
+                        extraMileageCost: config.extraMileageCost || '',
+                        seaFreightPrice: config.seaFreightPrice || '',
+                        discount5to9: config.discount5to9 || '',
+                        discount10plus: config.discount10plus || '',
+                        parishFees: typeof config.parishFees === 'object' && config.parishFees !== null
+                            ? JSON.stringify(config.parishFees)
+                            : (config.parishFees || null)
                     }));
                     await db.barrelsprices.bulkCreate(ownEntries);
                 } else if (shipmentType === 'barrel' && !sub_shipment_type.includes("Ship Your Own Barrel")) {
@@ -1786,7 +1848,17 @@ module.exports = {
                         pickupPerMileCharge: config.pickupPerMileCharge || '0',
                         flatDeliveryCharge: config.flatDeliveryCharge || '0',
                         deliveryFreeMiles: config.deliveryFreeMiles || '0',
-                        deliveryPerMileCharge: config.deliveryPerMileCharge || '0'
+                        deliveryPerMileCharge: config.deliveryPerMileCharge || '0',
+                        // Simplified pricing model (v2)
+                        pickupCharge: config.pickupCharge || '',
+                        pickupRadius: config.pickupRadius || '',
+                        extraMileageCost: config.extraMileageCost || '',
+                        seaFreightPrice: config.seaFreightPrice || '',
+                        discount5to9: config.discount5to9 || '',
+                        discount10plus: config.discount10plus || '',
+                        parishFees: typeof config.parishFees === 'object' && config.parishFees !== null
+                            ? JSON.stringify(config.parishFees)
+                            : (config.parishFees || null)
                     }));
                     await db.barrelsprices.bulkCreate(dropOffEntries);
                 } else if (shipmentType === 'barrel' && !sub_shipment_type.includes("Request Barrel Drop-Off")) {
@@ -1854,8 +1926,9 @@ module.exports = {
                 attributes: ['id', 'role', 'firstName', 'lastName', 'working_as', 'isProfileComplete', 'email', 'countryCode', 'phoneNumber', 'image', 'otp', 'otpVerify', 'status', 'loginTime', 'bio', 'location', 'latitude', 'longitude', 'isNotificationOn', 'deviceToken', 'deviceType', 'socketId', 'online', 'customerId', 'accountId', 'hashAccount', 'country', 'city', 'state', 'streetAddress', 'gender', 'documentVerify', 'adminCommission', 'profile_step', 'createdAt', 'updatedAt', 'deletedAt']
             });
 
+            // Any submit carrying KYC files is "the document step" — the consolidated
+            // flow posts them with profile_step 6, the legacy flow used 4.
             const isDocumentStep =
-                Number(profile_step) === 4 &&
                 req.files &&
                 (req.files.certificateOfIncorporation ||
                     req.files.ValidBusinessId ||
@@ -2073,6 +2146,14 @@ module.exports = {
                                 flatDeliveryCharge: p.flatDeliveryCharge || info.flatDeliveryCharge || '0',
                                 deliveryFreeMiles: p.deliveryFreeMiles || info.deliveryFreeMiles || '0',
                                 deliveryPerMileCharge: p.deliveryPerMileCharge || info.deliveryPerMileCharge || '0',
+                                // Simplified pricing model (v2)
+                                pickupCharge: p.pickupCharge || '',
+                                pickupRadius: p.pickupRadius || '',
+                                extraMileageCost: p.extraMileageCost || '',
+                                seaFreightPrice: p.seaFreightPrice || '',
+                                discount5to9: p.discount5to9 || '',
+                                discount10plus: p.discount10plus || '',
+                                parishFees: (() => { try { return p.parishFees ? JSON.parse(p.parishFees) : null; } catch { return null; } })(),
                                 barrelPrices: []
                             };
                         }
@@ -2153,7 +2234,8 @@ module.exports = {
                 destination_long,
                 drop_off_lat,
                 drop_off_long,
-                drop_off_address
+                drop_off_address,
+                parish
             } = req.body;
 
             /* ---------------- CHECK PROVIDER AVAILABILITY ---------------- */
@@ -2247,7 +2329,8 @@ module.exports = {
                 destination_long,
                 drop_off_lat,
                 drop_off_long,
-                drop_off_address
+                drop_off_address,
+                parish: parish || ''
             });
 
             if (bookingRequest) {
@@ -2425,6 +2508,7 @@ module.exports = {
                 streetAddress,  // Added
                 city,           // Added
                 state,          // Added
+                parish,         // pricing v2: consignee destination parish
             } = req.body;
 
             const bookingRequest = await db.booking_requests.findOne({
@@ -2453,6 +2537,7 @@ module.exports = {
                 streetAddress,  // Added
                 city,           // Added
                 state,          // Added
+                ...(parish !== undefined ? { parish } : {}),
             });
 
             /* ---------------- AUTO-MATCH PROVIDERS (20 MILES & CRITERIA) ---------------- */
