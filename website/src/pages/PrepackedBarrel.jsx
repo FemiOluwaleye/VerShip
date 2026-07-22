@@ -387,24 +387,6 @@ const PrepackedBarrel = () => {
                                 <p className="text-[#595d5e] leading-relaxed mt-5 whitespace-pre-line">{product.description}</p>
                             )}
 
-                            {Array.isArray(product.contents) && product.contents.length > 0 && (
-                                <div className="mt-6">
-                                    <h2 className="text-lg font-bold text-[#071618] mb-3">What's in the barrel</h2>
-                                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
-                                        {product.contents.map((item) => (
-                                            <li key={item.id} className="flex items-center justify-between gap-3 text-[#071618] border-b border-dashed border-[#0D4D4D]/15 py-1.5">
-                                                <span className="flex items-center gap-2 min-w-0">
-                                                    <span aria-hidden="true">{item.icon || '•'}</span>
-                                                    <span className="truncate">{item.name}</span>
-                                                </span>
-                                                {item.quantity && (
-                                                    <span className="text-[#0D4D4D] font-semibold text-sm whitespace-nowrap">{item.quantity}</span>
-                                                )}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -507,6 +489,26 @@ const PrepackedBarrel = () => {
                     </form>
                 </div>
                 </div>
+
+                {/* ---------- Barrel contents (full width so every item is clearly readable) ---------- */}
+                {Array.isArray(product?.contents) && product.contents.length > 0 && (
+                    <div className="mt-10 bg-white rounded-[22px] border border-[#0D4D4D]/10 p-6 md:p-8 shadow-sm">
+                        <h2 className="text-xl md:text-2xl font-bold text-[#071618] mb-4">What's in the barrel?</h2>
+                        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-2">
+                            {product.contents.map((item) => (
+                                <li key={item.id} className="flex items-center justify-between gap-3 text-[#071618] border-b border-dashed border-[#0D4D4D]/15 py-1.5">
+                                    <span className="flex items-center gap-2 min-w-0">
+                                        <span aria-hidden="true">{item.icon || '•'}</span>
+                                        <span className="break-words">{item.name}</span>
+                                    </span>
+                                    {item.quantity && (
+                                        <span className="text-[#0D4D4D] font-semibold text-sm whitespace-nowrap">{item.quantity}</span>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </div>
             )}
         </div>

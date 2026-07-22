@@ -8,7 +8,7 @@ const db = require('./models');
 // right side of each list row (e.g. "8ct · 15oz"); `name` is the clean product
 // name shown on the left. The page renders these as an even two-column grid.
 const CONTENTS = [
-  { name: 'White Long Grain Rice', quantity: '40lbs', icon: '🍚', sort_order: 1 },
+  { name: 'Basmati Rice', quantity: '40lbs', icon: '🍚', sort_order: 1 },
   { name: 'Toilet Paper', quantity: '18ct', icon: '🧻', sort_order: 2 },
   { name: 'All Purpose Flour', quantity: '20lbs', icon: '🌾', sort_order: 3 },
   { name: 'Colgate Toothpaste', quantity: '5ct', icon: '🪥', sort_order: 4 },
