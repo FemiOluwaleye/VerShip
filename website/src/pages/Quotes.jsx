@@ -6,6 +6,7 @@ import api, { API_URL } from "../api/axios";
 import { toast } from "sonner";
 import { Package, MapPin, Calendar, Star } from "lucide-react";
 import { getAvailableQuotes, createBooking } from "../api/cms";
+import { selectRateCard, isPricingV2 } from "../utils/pricing";
 const Quotes = () => {
   const [activeId, setActiveId] = useState(null);
   const [bookingRequest, setBookingRequest] = useState(null);
@@ -244,11 +245,16 @@ const Quotes = () => {
                       {/* Price Badge */}
                       <div className="bg-[#FFC929] text-black font-bold px-5 sm:px-8 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm h-fit whitespace-nowrap">
                         ${(() => {
-                          const quantity = parseInt(bookingRequest?.quantity || 1);
-                          const matchedPrice = providerDetail.barrelPrices?.find(
-                            (bp) => bp.type === "dropoff"
-                          );
-                          return matchedPrice ? matchedPrice.basePrice : (providerDetail.basePrice || 0);
+                          // Route-aware card selection — keeps this card in sync with checkout.
+                          const card = selectRateCard(providerDetail.barrelPrices, {
+                            type: 'dropoff',
+                            origin: bookingRequest?.origin,
+                            destination: bookingRequest?.destination,
+                          });
+                          const price = card
+                            ? (isPricingV2(card) ? card.seaFreightPrice : card.basePrice)
+                            : providerDetail.basePrice;
+                          return parseFloat(price || 0);
                         })()}
                       </div>
 

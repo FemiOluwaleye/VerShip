@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Package, Info } from "lucide-react";
 import { toast } from "sonner";
 import { getAvailableQuotes, createBooking, getAddons } from "../api/cms";
+import { selectRateCard, isPricingV2 } from "../utils/pricing";
 import Autocomplete from "react-google-autocomplete";
 import PhoneInput from "../components/PhoneInput";
 import { COUNTRY_LIST, validatePhoneForCountry } from "../utils/countryPhoneData";
@@ -777,10 +778,19 @@ const QuotesShipown = () => {
                                         <div className="flex flex-col sm:flex-row gap-4 sm:gap-[40px] w-full">
                                             <div className="bg-[#FFC929] text-black font-bold px-5 sm:px-8 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm h-fit whitespace-nowrap">
                                                 ${(() => {
-                                                    const matchedPrice = providerDetail.barrelPrices?.find(
-                                                        (bp) => bp.type === "own"
-                                                    );
-                                                    return matchedPrice ? matchedPrice.basePrice : (providerDetail.basePrice || 0);
+                                                    // Route-aware card selection — same logic as checkout, so the
+                                                    // quote card and the final calculation quote the same rate.
+                                                    const sub = ((bookingRequest?.items?.[0]?.sub_type) || bookingRequest?.sub_type || "").toLowerCase();
+                                                    const type = (sub.includes('drop-off') || sub.includes('dropoff')) ? 'dropoff' : 'own';
+                                                    const card = selectRateCard(providerDetail.barrelPrices, {
+                                                        type,
+                                                        origin: bookingRequest?.origin,
+                                                        destination: bookingRequest?.destination,
+                                                    });
+                                                    const price = card
+                                                        ? (isPricingV2(card) ? card.seaFreightPrice : card.basePrice)
+                                                        : providerDetail.basePrice;
+                                                    return parseFloat(price || 0);
                                                 })()}
                                             </div>
                                             <div className="w-full">

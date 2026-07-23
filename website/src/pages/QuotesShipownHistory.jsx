@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Package, Info, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { getAvailableQuotes, createBooking } from "../api/cms";
+import { selectRateCard, isPricingV2 } from "../utils/pricing";
 import Autocomplete from "react-google-autocomplete";
 import PhoneInput from "../components/PhoneInput";
 import { validatePhoneForCountry } from "../utils/countryPhoneData";
@@ -447,10 +448,16 @@ const QuotesShipownHistory = () => {
                                             <div className="flex flex-col sm:flex-row gap-4 sm:gap-[40px] w-full">
                                                 <div className="bg-[#FFC929] text-black font-bold px-5 sm:px-8 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm h-fit whitespace-nowrap">
                                                     ${(() => {
-                                                        const matchedPrice = providerDetail.barrelPrices?.find(
-                                                            (bp) => bp.type === "own"
-                                                        );
-                                                        return matchedPrice ? matchedPrice.basePrice : (providerDetail.basePrice || 0);
+                                                        // Route-aware card selection — keeps this card in sync with checkout.
+                                                        const card = selectRateCard(providerDetail.barrelPrices, {
+                                                            type: 'own',
+                                                            origin: bookingRequest?.origin,
+                                                            destination: bookingRequest?.destination,
+                                                        });
+                                                        const price = card
+                                                            ? (isPricingV2(card) ? card.seaFreightPrice : card.basePrice)
+                                                            : providerDetail.basePrice;
+                                                        return parseFloat(price || 0);
                                                     })()}
                                                 </div>
                                                 <div className="w-full">
