@@ -39,6 +39,36 @@ export const getPrepackedBarrel = async () => {
     }
 };
 
+export const addBookingAdditionalCost = async (data) => {
+    try {
+        const response = await axios.post('/website/booking-additional-cost', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error adding additional cost:', error);
+        throw error;
+    }
+};
+
+export const payAdditionalCost = async (data) => {
+    try {
+        const response = await axios.post('/website/additional-cost/pay-intent', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating additional cost payment:', error);
+        throw error;
+    }
+};
+
+export const confirmAdditionalCostPayment = async (data) => {
+    try {
+        const response = await axios.post('/website/additional-cost/confirm', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error confirming additional cost payment:', error);
+        throw error;
+    }
+};
+
 export const confirmPrepackedPayment = async (data) => {
     try {
         const response = await axios.post('/website/prepacked-order/confirm', data);

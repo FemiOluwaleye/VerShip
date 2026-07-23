@@ -118,6 +118,16 @@ router.post('/create-booking', verifyUser, (req, res, next) => {
 router.get('/get-bookings', verifyUser, (req, res, next) => {
     webController.getBookings(req, res);
 });
+// Forwarder-requested additional costs on a booking
+router.post('/booking-additional-cost', verifyUser, (req, res, next) => {
+    webController.addBookingAdditionalCost(req, res);
+});
+router.post('/additional-cost/pay-intent', verifyUser, (req, res, next) => {
+    webController.payAdditionalCostIntent(req, res);
+});
+router.post('/additional-cost/confirm', verifyUser, (req, res, next) => {
+    webController.confirmAdditionalCostPayment(req, res);
+});
 router.get('/get-earnings', verifyUser, (req, res, next) => {
     webController.getEarnings(req, res);
 });

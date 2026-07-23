@@ -3,7 +3,7 @@ const helper = require('../../helper/helper');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { sendResetEmail, sendSubscriptionEmail, sendBookingStatusUpdateEmailToUser, sendOtpEmail, sendOtpEmail12, sendVerificationOtpEmail, sendFreightForwarderRegistrationEmail, sendNewOrderPlacedEmailToProvider, sendNewOrderPlacedEmailToProvider12 } = require('../../helper/mailHelper');
+const { sendResetEmail, sendSubscriptionEmail, sendBookingStatusUpdateEmailToUser, sendOtpEmail, sendOtpEmail12, sendVerificationOtpEmail, sendFreightForwarderRegistrationEmail, sendNewOrderPlacedEmailToProvider, sendNewOrderPlacedEmailToProvider12, sendAdditionalCostRequestEmail } = require('../../helper/mailHelper');
 const otpHelper = require('../../helper/otpHelper');
 const { env } = require('../../helper/envConfig');
 
@@ -809,6 +809,130 @@ module.exports = {
             });
         } catch (error) {
             console.log("error=------createPrepackedOrder-------->>>>>", error);
+            return helper.failure(res, error.message);
+        }
+    },
+
+    // Forwarder requests an extra charge on a booking (storage, oversize, …).
+    // Creates the charge record and emails the customer a payment request that
+    // links back to their History page, where the in-app Stripe flow pays it.
+    addBookingAdditionalCost: async (req, res) => {
+        try {
+            const { bookingId, amount, description } = req.body;
+            if (req.user.role !== '2') return helper.forbidden(res, "Only providers can add costs.");
+            if (!bookingId) return helper.failure(res, "bookingId is required.");
+            const amt = parseFloat(amount);
+            if (!Number.isFinite(amt) || amt <= 0) return helper.failure(res, "A valid amount is required.");
+            if (!description || !String(description).trim()) return helper.failure(res, "A description is required.");
+
+            const booking = await db.bookings.findOne({ where: { id: bookingId } });
+            if (!booking) return helper.failure(res, "Booking not found.");
+            if (String(booking.driverId) !== String(req.user.id)) {
+                return helper.forbidden(res, "You can only add costs to your own bookings.");
+            }
+
+            const cost = await db.booking_additional_costs.create({
+                booking_id: booking.id,
+                provider_id: req.user.id,
+                user_id: booking.userId,
+                amount: amt.toFixed(2),
+                description: String(description).trim(),
+                status: '0',
+            });
+
+            // Email the customer (best-effort — the charge still shows in History).
+            try {
+                const customer = await db.users.findByPk(booking.userId, { attributes: ['email', 'firstName'] });
+                const business = await db.providerDetails.findOne({ where: { providerId: req.user.id }, attributes: ['businessName'] });
+                if (customer?.email) {
+                    await sendAdditionalCostRequestEmail(customer.email, {
+                        customerName: customer.firstName || 'there',
+                        businessName: business?.businessName || 'Your freight forwarder',
+                        orderId: booking.orderId || `#${booking.id}`,
+                        amount: amt.toFixed(2),
+                        description: String(description).trim(),
+                    });
+                }
+            } catch (mailErr) {
+                console.error('Additional-cost email failed:', mailErr.message);
+            }
+
+            return helper.success(res, "Additional cost requested. The customer has been emailed.", { cost });
+        } catch (error) {
+            console.log("error=------addBookingAdditionalCost-------->>>>>", error);
+            return helper.failure(res, error.message);
+        }
+    },
+
+    // Customer pays a requested additional cost — same Connect split as bookings.
+    payAdditionalCostIntent: async (req, res) => {
+        try {
+            const { additionalCostId } = req.body;
+            const cost = await db.booking_additional_costs.findOne({ where: { id: additionalCostId } });
+            if (!cost) return helper.failure(res, "Charge not found.");
+            if (String(cost.user_id) !== String(req.user.id)) return helper.forbidden(res, "Not your charge.");
+            if (cost.status !== '0') return helper.failure(res, "This charge is not payable.");
+
+            const booking = await db.bookings.findOne({ where: { id: cost.booking_id } });
+            const provider = await db.users.findByPk(cost.provider_id);
+            if (!provider) return helper.failure(res, "Provider not found.");
+
+            const stripe = require('stripe')(env('STRIPE_SECRET_KEY'));
+            const amountInCents = Math.round(parseFloat(cost.amount) * 100);
+            const payload = {
+                amount: amountInCents,
+                currency: 'usd',
+                metadata: { additionalCostId: String(cost.id), bookingRef: String(cost.booking_id) },
+                automatic_payment_methods: { enabled: true },
+            };
+
+            // Split to the forwarder's connected account, same commission as the booking.
+            if (String(provider.hashAccount || '0') === '1' && provider.accountId) {
+                const commissionPercent = Number(booking?.adminCommission || 0) + Number(booking?.serviceFee || 0);
+                const pct = Number.isFinite(commissionPercent) && commissionPercent >= 0 && commissionPercent <= 100 ? commissionPercent : 0;
+                payload.application_fee_amount = Math.round((amountInCents * pct) / 100);
+                payload.transfer_data = { destination: provider.accountId };
+            }
+
+            const paymentIntent = await stripe.paymentIntents.create(payload);
+            return helper.success(res, "Payment intent created.", {
+                clientSecret: paymentIntent.client_secret,
+                publishkey: env('STRIPE_PUBLISHABLE_KEY'),
+                amount: cost.amount,
+            });
+        } catch (error) {
+            console.log("error=------payAdditionalCostIntent-------->>>>>", error);
+            return helper.failure(res, error.message);
+        }
+    },
+
+    // Server-side verify + mark paid (mirrors confirmPrepackedPayment).
+    confirmAdditionalCostPayment: async (req, res) => {
+        try {
+            const { paymentId } = req.body;
+            if (!paymentId) return helper.failure(res, "paymentId is required.");
+            const stripe = require('stripe')(env('STRIPE_SECRET_KEY'));
+            let paymentIntent;
+            try {
+                paymentIntent = await stripe.paymentIntents.retrieve(paymentId);
+            } catch (e) {
+                return helper.failure(res, "Payment verification failed.");
+            }
+            if (!paymentIntent || paymentIntent.status !== "succeeded") {
+                return helper.failure(res, "Payment has not been completed.");
+            }
+            const costId = paymentIntent.metadata?.additionalCostId;
+            if (!costId) return helper.failure(res, "Payment does not match an additional cost.");
+            const cost = await db.booking_additional_costs.findOne({ where: { id: costId } });
+            if (!cost) return helper.failure(res, "Charge not found.");
+            const paid = (paymentIntent.amount_received || paymentIntent.amount) / 100;
+            if (paid + 0.005 < parseFloat(cost.amount)) {
+                return helper.failure(res, "Payment amount does not match the charge.");
+            }
+            await cost.update({ status: '1', transaction_id: paymentIntent.id });
+            return helper.success(res, "Payment confirmed.", { cost });
+        } catch (error) {
+            console.log("error=------confirmAdditionalCostPayment-------->>>>>", error);
             return helper.failure(res, error.message);
         }
     },
@@ -2401,7 +2525,8 @@ module.exports = {
                 drop_off_lat,
                 drop_off_long,
                 drop_off_address,
-                parish: parish || ''
+                parish: parish || '',
+                dropoff_addon: req.body.dropoff_addon ? 1 : 0
             });
 
             if (bookingRequest) {
@@ -4068,6 +4193,11 @@ module.exports = {
                                 include: [{ model: db.barrelsprices, as: 'barrelPrices' }]
                             }
                         ]
+                    },
+                    {
+                        model: db.booking_additional_costs,
+                        as: 'additionalCosts',
+                        required: false
                     }
                 ],
                 order: [['createdAt', 'DESC']]

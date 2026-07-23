@@ -13,6 +13,7 @@ import {
   calculateBarrelPricingV2,
   v2PickupCharge,
   v2ParishFee,
+  v2PerBarrelPrice,
   selectRateCard,
 } from '../utils/pricing';
 import { JAMAICA_PARISHES, detectParish } from '../utils/parishes';
@@ -453,11 +454,30 @@ const ShipmentDetailsSection = () => {
 
   const shouldAddCustomsFee = customsAndHandlingFee > 0;
 
+  // Barrel drop-off add-on: the forwarder delivers empty barrels first,
+  // billed per barrel from their drop-off rate card on top of the shipment.
+  const dropoffAddonOn = Number(bookingRequest?.dropoff_addon) === 1 && !isRequestBarrel;
+  let dropoffAddonCharge = 0;
+  if (dropoffAddonOn) {
+    const dropCard = selectRateCard(providerDetail?.barrelPrices, {
+      type: 'dropoff',
+      origin: bookingRequest?.origin,
+      destination: bookingRequest?.destination,
+    });
+    if (dropCard) {
+      const perDrop = isPricingV2(dropCard)
+        ? v2PerBarrelPrice(dropCard, quantity)
+        : parseFloat(dropCard.basePrice || dropCard.barrelPrice || 0);
+      dropoffAddonCharge = (perDrop || 0) * (quantity || 1);
+    }
+  }
+
   const finalTotal = subtotal +
     (shouldAddCustomsFee ? customsAndHandlingFee : 0) +
     deliveryFee +
     finalFlatPickupCharge +
     finalFlatDeliveryCharge +
+    dropoffAddonCharge +
     adminPrice +
     serviceFeeAmount;
   const paynowamount = finalTotal;
@@ -735,9 +755,18 @@ const ShipmentDetailsSection = () => {
                   <div className="flex justify-between">
                     <span className='text-[16px] font-semibold text-black'>
                       Delivery Fee
-                      
+
                     </span>
                     <span className='text-[14px] font-semibold text-black/80'>${finalFlatDeliveryCharge.toFixed(2)}</span>
+                  </div>
+                )}
+
+                {dropoffAddonOn && (
+                  <div className="flex justify-between">
+                    <span className='text-[16px] font-semibold text-black'>Barrel Drop-Off (add-on)</span>
+                    <span className='text-[14px] font-semibold text-black/80'>
+                      {dropoffAddonCharge > 0 ? `$${dropoffAddonCharge.toFixed(2)}` : 'Not offered by this forwarder'}
+                    </span>
                   </div>
                 )}
 

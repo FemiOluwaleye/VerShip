@@ -98,6 +98,11 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: true,
             defaultValue: ""
         },
+        dropoff_addon: {           // 1 = customer wants empty barrels dropped off first
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            defaultValue: 0
+        },
 
         drop_off_lat: {
             type: DataTypes.STRING(255),

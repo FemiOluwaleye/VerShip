@@ -116,6 +116,17 @@ app.post('/stripe/webhook', bodyParser.raw({ type: 'application/json' }), async 
         console.log('[WEBHOOK] Prepacked order updated:', prepackedOrderId);
       }
 
+      // Forwarder-requested additional costs carry additionalCostId.
+      const additionalCostId = paymentIntent?.metadata?.additionalCostId;
+      if (additionalCostId) {
+        console.log('[WEBHOOK] Marking additional cost paid, ID:', additionalCostId);
+        await db.booking_additional_costs.update(
+          { status: '1', transaction_id: paymentIntent.id },
+          { where: { id: additionalCostId } }
+        );
+        console.log('[WEBHOOK] Additional cost updated:', additionalCostId);
+      }
+
       const bookingId = paymentIntent?.metadata?.bookingId;
       console.log('[WEBHOOK] Booking ID from metadata:', bookingId);
 

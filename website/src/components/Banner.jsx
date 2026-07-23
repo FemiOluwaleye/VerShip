@@ -37,7 +37,9 @@ const Banner = () => {
   const deliveryDateRef = useRef(null);
   const formRef = useRef(null);
 
-  const [activeSubTab, setActiveSubTab] = useState("Ship Your Own Barrel");
+  // Single "Start a Shipment" flow — always Ship Your Own; barrel drop-off is an add-on.
+  const [activeSubTab] = useState("Ship Your Own Barrel");
+  const [dropoffAddon, setDropoffAddon] = useState(false);
   const [openOrigin, setOpenOrigin] = useState(false);
   const [openDestination, setOpenDestination] = useState(false);
   const [origin, setOrigin] = useState(""); // Empty by default - no auto-selection
@@ -189,6 +191,7 @@ const Banner = () => {
       destination,
       pickup_date: isRequestBarrel ? null : pickupDate,
       delivery_date: isRequestBarrel ? null : deliveryDate,
+      dropoff_addon: dropoffAddon ? 1 : 0,
       items: finalItems,
       origin_lat: CITY_COORDINATES[origin]?.lat || "",
       origin_long: CITY_COORDINATES[origin]?.lng || "",
@@ -281,53 +284,18 @@ const Banner = () => {
       {/* Form Section */}
       <section id="booking-form" ref={formRef} className="bg-[#071618] pt-4 pb-6 md:pt-5 md:pb-8 px-4 md:px-6">
         <div className="max-w-[1326px] mx-auto">
-          {/* Tabs */}
+          {/* Single entry point: one shipment flow; barrel drop-off is an add-on below. */}
           <div className="flex justify-center mb-[-1px] relative z-20">
-            <div className="flex items-center gap-4 md:gap-8">
-              <div className="relative">
-                <button
-                  onClick={() => setActiveSubTab("Ship Your Own Barrel")}
-                  className={`px-8 md:px-12 py-3 md:py-4 font-medium text-sm md:text-[20px] transition-all relative z-10 ${activeSubTab === "Ship Your Own Barrel"
-                    ? "text-[#D4B97C]"
-                    : "text-white hover:text-white/80"
-                    }`}
-                >
-                  Ship Your Own Barrel
-                </button>
-                {activeSubTab === "Ship Your Own Barrel" && (
-                  <>
-                    <div className="absolute inset-0 border-t border-l-0 border-r-0 border-white/10 rounded-t-[24px] bg-[#051111] -z-10" />
-                    <div className="absolute -left-[24px] bottom-0 w-[24px] h-[24px] overflow-hidden pointer-events-none">
-                      <div className="absolute top-0 right-0 w-full h-full border-b border-r-0 border-white/10 rounded-br-[24px] bg-transparent shadow-[10px_10px_0_0_#051111]" />
-                    </div>
-                    <div className="absolute -right-[24px] bottom-0 w-[24px] h-[24px] overflow-hidden pointer-events-none">
-                      <div className="absolute top-0 left-0 w-full h-full border-b border-l-0 border-white/10 rounded-bl-[24px] bg-transparent shadow-[-10px_10px_0_0_#051111]" />
-                    </div>
-                  </>
-                )}
+            <div className="relative">
+              <span className="px-8 md:px-12 py-3 md:py-4 font-medium text-sm md:text-[20px] text-[#D4B97C] relative z-10 inline-block">
+                Start a Shipment
+              </span>
+              <div className="absolute inset-0 border-t border-l-0 border-r-0 border-white/10 rounded-t-[24px] bg-[#051111] -z-10" />
+              <div className="absolute -left-[24px] bottom-0 w-[24px] h-[24px] overflow-hidden pointer-events-none">
+                <div className="absolute top-0 right-0 w-full h-full border-b border-r-0 border-white/10 rounded-br-[24px] bg-transparent shadow-[10px_10px_0_0_#051111]" />
               </div>
-
-              <div className="relative">
-                <button
-                  onClick={() => setActiveSubTab("Request Barrel Drop-Off")}
-                  className={`px-8 md:px-12 py-3 md:py-4 font-medium text-sm md:text-[20px] transition-all relative z-10 ${activeSubTab === "Request Barrel Drop-Off"
-                    ? "text-[#D4B97C]"
-                    : "text-white hover:text-white/80"
-                    }`}
-                >
-                  Request Barrel Drop-Off
-                </button>
-                {activeSubTab === "Request Barrel Drop-Off" && (
-                  <>
-                    <div className="absolute inset-0 border-t border-l-0 border-r-0 border-white/10 rounded-t-[24px] bg-[#051111] -z-10" />
-                    <div className="absolute -left-[24px] bottom-0 w-[24px] h-[24px] overflow-hidden pointer-events-none">
-                      <div className="absolute top-0 right-0 w-full h-full border-b border-r border-white/10 rounded-br-[24px] bg-transparent shadow-[10px_10px_0_0_#051111]" />
-                    </div>
-                    <div className="absolute -right-[24px] bottom-0 w-[24px] h-[24px] overflow-hidden pointer-events-none">
-                      <div className="absolute top-0 left-0 w-full h-full border-b border-l border-white/10 rounded-bl-[24px] bg-transparent shadow-[-10px_10px_0_0_#051111]" />
-                    </div>
-                  </>
-                )}
+              <div className="absolute -right-[24px] bottom-0 w-[24px] h-[24px] overflow-hidden pointer-events-none">
+                <div className="absolute top-0 left-0 w-full h-full border-b border-l-0 border-white/10 rounded-bl-[24px] bg-transparent shadow-[-10px_10px_0_0_#051111]" />
               </div>
             </div>
           </div>
@@ -540,6 +508,20 @@ const Banner = () => {
                 </>
               )}
             </div>
+
+            {/* Barrel drop-off add-on — priced from each forwarder's drop-off rate at checkout */}
+            <label className="flex items-start sm:items-center justify-center gap-3 mt-4 cursor-pointer select-none group">
+              <input
+                type="checkbox"
+                checked={dropoffAddon}
+                onChange={(e) => setDropoffAddon(e.target.checked)}
+                className="mt-1 sm:mt-0 w-5 h-5 rounded accent-[#D4B97C] cursor-pointer"
+              />
+              <span className="text-white/80 text-sm md:text-base group-hover:text-white transition-colors">
+                Also request barrel drop-off
+                <span className="text-white/50"> — we deliver empty barrels to you first (add-on)</span>
+              </span>
+            </label>
 
             <div className="flex justify-center mt-2 md:mt-4">
               <div className="p-2 bg-[#DCD5C5]/5 rounded-2xl md:rounded-[14px]">

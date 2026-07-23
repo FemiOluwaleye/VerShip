@@ -72,6 +72,15 @@ sequelize.sync({ alter: false })
     } catch (err) {
       console.error('Column guard (prepacked_barrel.featured) failed:', err.message);
     }
+    try {
+      // "Start a Shipment" drop-off add-on: customer asks the forwarder to
+      // deliver empty barrels first, priced off the provider's dropoff card.
+      await sequelize.query(
+        'ALTER TABLE booking_requests ADD COLUMN IF NOT EXISTS dropoff_addon INTEGER NOT NULL DEFAULT 0'
+      );
+    } catch (err) {
+      console.error('Column guard (booking_requests.dropoff_addon) failed:', err.message);
+    }
   })
   .catch((err) => {
     console.error('Error syncing the database:', err);
@@ -141,6 +150,11 @@ db.prepacked_barrel.hasMany(db.prepacked_barrel_items, { foreignKey: 'prepacked_
 db.prepacked_barrel_items.belongsTo(db.prepacked_barrel, { foreignKey: 'prepacked_barrel_id', as: 'barrel' });
 db.prepacked_orders.belongsTo(db.users, { foreignKey: 'userId', as: 'buyer' });
 db.prepacked_orders.belongsTo(db.prepacked_barrel, { foreignKey: 'prepacked_barrel_id', as: 'barrel' });
+
+// Forwarder-requested additional costs on a booking
+db.booking_additional_costs.belongsTo(db.bookings, { foreignKey: 'booking_id', as: 'booking' });
+db.booking_additional_costs.belongsTo(db.users, { foreignKey: 'provider_id', as: 'provider' });
+db.bookings.hasMany(db.booking_additional_costs, { foreignKey: 'booking_id', as: 'additionalCosts' });
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;

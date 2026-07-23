@@ -1,12 +1,103 @@
 import React, { useState, useEffect, useRef } from "react";
 import Commonbanner from "../components/Commonbanner";
-import { getBookings, updateBookingStatus, uploadBookingDocument, submitRating, checkRatingStatus, getMyPrepackedOrders } from "../api/cms";
+import { getBookings, updateBookingStatus, uploadBookingDocument, submitRating, checkRatingStatus, getMyPrepackedOrders, addBookingAdditionalCost, payAdditionalCost, confirmAdditionalCostPayment } from "../api/cms";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import CheckoutForm from "../components/CheckoutForm";
+import { Printer } from "lucide-react";
 import { pdf, file as fileIcon } from "../common/common-assets/assets-images";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "../api/axios";
 import { toast } from "sonner";
 import { Loader2, Star } from "lucide-react";
 import moment from "moment";
+
+// ─── Print receipt ───────────────────────────────────────────────────────────
+// Opens a minimal branded receipt in a new window and triggers the print dialog.
+const printReceipt = (title, rows) => {
+  const w = window.open("", "_blank", "width=720,height=900");
+  if (!w) return;
+  const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  w.document.write(`<!doctype html><html><head><title>${esc(title)}</title>
+    <style>
+      body { font-family: 'Segoe UI', Arial, sans-serif; color: #2D413F; margin: 40px; }
+      .brand { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #FFC928; padding-bottom: 14px; }
+      .brand h1 { margin: 0; font-size: 26px; }
+      .brand span { color: #888; font-size: 13px; }
+      h2 { font-size: 18px; margin: 24px 0 8px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+      td { padding: 9px 6px; border-bottom: 1px solid #eee; font-size: 14px; }
+      td:first-child { color: #777; width: 42%; }
+      td:last-child { font-weight: 600; }
+      .foot { margin-top: 30px; color: #999; font-size: 12px; text-align: center; }
+      @media print { body { margin: 12mm; } }
+    </style></head><body>
+    <div class="brand"><h1>VerShip</h1><span>Printed ${esc(moment().format("MMM D, YYYY h:mm A"))}</span></div>
+    <h2>${esc(title)}</h2>
+    <table>${rows.filter(([, v]) => v !== undefined && v !== null && v !== "").map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join("")}</table>
+    <div class="foot">vershipgo.com — thank you for shipping with VerShip</div>
+    </body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 300);
+};
+
+// ─── Add Additional Cost Modal (provider) ───────────────────────────────────
+const AddCostModal = ({ booking, onClose, onSuccess }) => {
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    const amt = parseFloat(amount);
+    if (!Number.isFinite(amt) || amt <= 0) return toast.error("Enter a valid amount.");
+    if (!description.trim()) return toast.error("Describe what the cost is for.");
+    setSubmitting(true);
+    try {
+      const res = await addBookingAdditionalCost({ bookingId: booking.id, amount: amt, description: description.trim() });
+      if (res.status) {
+        toast.success("Cost requested — the customer has been emailed.");
+        onSuccess();
+        onClose();
+      } else {
+        toast.error(res.message || "Failed to add cost.");
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to add cost.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={onClose}>
+      <div className="bg-[#1E2E2C] rounded-2xl p-6 w-full max-w-md border border-[#4E6B5D]" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-white text-xl font-bold mb-1">Request Additional Cost</h3>
+        <p className="text-gray-400 text-sm mb-5">Order {booking.orderId || booking.id} — the customer is emailed a payment request and pays in their History page.</p>
+        <label className="block text-gray-300 text-sm mb-1">Amount (USD)</label>
+        <input
+          type="number" min="1" step="0.01" value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="e.g. 25.00"
+          className="w-full bg-[#0f1b19] text-white border border-[#4E6B5D] rounded-lg px-4 py-2.5 mb-4 focus:outline-none focus:border-[#FFC928]"
+        />
+        <label className="block text-gray-300 text-sm mb-1">What is it for?</label>
+        <textarea
+          rows={3} value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="e.g. Storage fee — barrels held over 14 days"
+          className="w-full bg-[#0f1b19] text-white border border-[#4E6B5D] rounded-lg px-4 py-2.5 mb-6 focus:outline-none focus:border-[#FFC928]"
+        />
+        <div className="flex gap-3 justify-end">
+          <button onClick={onClose} disabled={submitting} className="px-5 py-2 rounded-lg border border-[#4E6B5D] text-gray-300 hover:bg-white/5 transition">Cancel</button>
+          <button onClick={handleSubmit} disabled={submitting} className="px-6 py-2 rounded-lg bg-[#FFC928] text-black font-semibold hover:bg-[#ffe58f] transition disabled:opacity-50">
+            {submitting ? "Sending…" : "Send Request"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── Rating Modal ────────────────────────────────────────────────────────────
 const RatingModal = ({ booking, onClose, onSuccess }) => {
@@ -119,6 +210,27 @@ const History = () => {
   // Rating modal state
   const [ratingModal, setRatingModal] = useState(null); // booking object
   const [ratedBookings, setRatedBookings] = useState({}); // { bookingId: true }
+
+  // Additional-cost modals
+  const [addCostModal, setAddCostModal] = useState(null);   // booking (provider)
+  const [payCostModal, setPayCostModal] = useState(null);   // { cost, clientSecret, stripePromise } (customer)
+
+  const startPayAdditionalCost = async (cost) => {
+    try {
+      const res = await payAdditionalCost({ additionalCostId: cost.id });
+      if (res.status && res.body?.clientSecret) {
+        setPayCostModal({
+          cost,
+          clientSecret: res.body.clientSecret,
+          stripePromise: loadStripe(res.body.publishkey),
+        });
+      } else {
+        toast.error(res.message || "Could not start payment.");
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not start payment.");
+    }
+  };
 
   // Pre-packed barrel orders (separate table from bookings)
   const [prepackedOrders, setPrepackedOrders] = useState([]);
@@ -291,10 +403,10 @@ const History = () => {
             </div>
           ) : (
             orders.map((item, index) => (
+              <div key={index} className="bg-[#2D413F] rounded-xl shadow-lg overflow-hidden">
               <div
-                key={index}
                 onClick={() => navigate("/businessdetail", { state: item })}
-                className="bg-[#2D413F] cursor-pointer rounded-xl px-6 py-4 flex md:items-center items-start justify-between shadow-lg flex-col md:flex-row gap-5 md:gap-0"
+                className="cursor-pointer px-6 py-4 flex md:items-center items-start justify-between flex-col md:flex-row gap-5 md:gap-0"
               >
                 {/* Left */}
                 <div className="flex items-center md:gap-8 gap-4 flex-wrap">
@@ -403,7 +515,72 @@ const History = () => {
                       </select>
                     </div>
                   )}
+
+                  {/* Role 2: Provider - request an extra charge */}
+                  {userRole === "2" && (
+                    <button
+                      onClick={() => setAddCostModal(item)}
+                      className="px-5 py-2 rounded-[12px] text-sm font-semibold bg-transparent border border-[#FFC928] text-[#FFC928] hover:bg-[#FFC928] hover:text-black transition"
+                    >
+                      + Additional Cost
+                    </button>
+                  )}
+
+                  {/* Print order */}
+                  <button
+                    onClick={() =>
+                      printReceipt(`Shipment Order ${item.orderId || item.id}`, [
+                        ["Order ID", item.orderId || item.id],
+                        ["Status", getStatusLabel(item.status)],
+                        ["Order date", moment(item.createdAt).format("MMM D, YYYY")],
+                        ["Freight forwarder", item.driverbook?.firstName],
+                        ["Customer", item.userbook ? `${item.userbook.firstName || ""} ${item.userbook.lastName || ""}`.trim() : undefined],
+                        ["Origin", item.bookingRequest?.origin],
+                        ["Destination", item.bookingRequest?.destination],
+                        ["Quantity", item.bookingRequest?.quantity],
+                        ["Pickup date", item.bookingRequest?.pickup_date ? moment(item.bookingRequest.pickup_date).format("MMM D, YYYY") : undefined],
+                        ["Delivery date", item.bookingRequest?.delivery_date ? moment(item.bookingRequest.delivery_date).format("MMM D, YYYY") : undefined],
+                        ["Payment", Number(item.payment_status) === 1 ? "Paid" : "Unpaid"],
+                        ["Total", item.total_amount ? `$${item.total_amount}` : undefined],
+                        ["Transaction", item.trasaction_id],
+                      ])
+                    }
+                    className="px-5 py-2 rounded-[12px] text-sm font-semibold bg-transparent border border-[#4E6B5D] text-gray-300 hover:bg-white/10 transition flex items-center gap-2"
+                  >
+                    <Printer size={15} /> Print
+                  </button>
                 </div>
+              </div>
+
+              {/* Additional costs requested by the forwarder */}
+              {item.additionalCosts?.length > 0 && (
+                <div className="border-t border-[#4E6B5D]/40 px-6 py-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Additional Costs</p>
+                  {item.additionalCosts.map((cost) => (
+                    <div key={cost.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="text-sm text-gray-200">
+                        {cost.description}
+                        <span className="text-gray-400"> · {moment(cost.createdAt).format("MMM D")}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[#FFC928] font-bold">${parseFloat(cost.amount).toFixed(2)}</span>
+                        {cost.status === "1" ? (
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600/30 text-green-300">Paid</span>
+                        ) : userRole === "1" ? (
+                          <button
+                            onClick={() => startPayAdditionalCost(cost)}
+                            className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#FFC928] text-black hover:bg-[#ffe58f] transition"
+                          >
+                            Pay Now
+                          </button>
+                        ) : (
+                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-600/30 text-red-300">Awaiting payment</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               </div>
             ))
           )}
@@ -435,13 +612,32 @@ const History = () => {
                         </div>
                         <div className="flex flex-col items-start md:items-end gap-2">
                           <p className="text-[#FFC928] font-bold text-xl">{o.currency} {o.total_price}</p>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 items-center">
                             <span className={`px-3 py-1 rounded-full text-sm font-semibold ${Number(o.payment_status) === 1 ? "bg-green-600/30 text-green-300" : "bg-red-600/30 text-red-300"}`}>
                               {Number(o.payment_status) === 1 ? "Paid" : "Unpaid"}
                             </span>
                             <span className="px-3 py-1 rounded-full text-sm font-semibold bg-[#4E6B5D]/60 text-gray-200">
                               {PP_STATUS[Number(o.status)] || "Placed"}
                             </span>
+                            <button
+                              onClick={() =>
+                                printReceipt(`Pre-Packed Barrel Order ${o.orderId}`, [
+                                  ["Order ID", o.orderId],
+                                  ["Product", o.barrel?.name || "Pre-Packed Barrel"],
+                                  ["Quantity", o.quantity],
+                                  ["Unit price", `${o.currency} ${o.unit_price}`],
+                                  ["Total", `${o.currency} ${o.total_price}`],
+                                  ["Payment", Number(o.payment_status) === 1 ? "Paid" : "Unpaid"],
+                                  ["Status", PP_STATUS[Number(o.status)] || "Placed"],
+                                  ["Recipient", o.recipient_name],
+                                  ["Delivery address", [o.delivery_street, o.delivery_town, o.delivery_parish, o.delivery_country].filter(Boolean).join(", ")],
+                                  ["Order date", moment(o.createdAt).format("MMM D, YYYY")],
+                                ])
+                              }
+                              className="px-3 py-1.5 rounded-full text-xs font-semibold bg-transparent border border-[#4E6B5D] text-gray-300 hover:bg-white/10 transition flex items-center gap-1.5"
+                            >
+                              <Printer size={13} /> Print
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -468,6 +664,40 @@ const History = () => {
           onClose={() => setRatingModal(null)}
           onSuccess={handleRatingSuccess}
         />
+      )}
+
+      {/* Provider: request additional cost */}
+      {addCostModal && (
+        <AddCostModal
+          booking={addCostModal}
+          onClose={() => setAddCostModal(null)}
+          onSuccess={fetchBookings}
+        />
+      )}
+
+      {/* Customer: pay an additional cost */}
+      {payCostModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={() => setPayCostModal(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-[#071618] text-xl font-bold mb-1">Pay Additional Cost</h3>
+            <p className="text-gray-500 text-sm mb-4">{payCostModal.cost.description}</p>
+            <Elements stripe={payCostModal.stripePromise} options={{ clientSecret: payCostModal.clientSecret }}>
+              <CheckoutForm
+                amount={parseFloat(payCostModal.cost.amount).toFixed(2)}
+                onSuccess={async (paymentIntent) => {
+                  try {
+                    await confirmAdditionalCostPayment({ paymentId: paymentIntent.id });
+                  } catch (e) {
+                    console.error("Additional cost confirm failed", e); // webhook reconciles
+                  }
+                  setPayCostModal(null);
+                  fetchBookings();
+                }}
+                onCancel={() => setPayCostModal(null)}
+              />
+            </Elements>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -533,4 +533,47 @@ module.exports = {
         throw error;
     }
 },
+
+// A forwarder requested an extra charge on a booking; link the customer to
+// their History page where the in-app Stripe flow collects it.
+sendAdditionalCostRequestEmail: async (email, { customerName, businessName, orderId, amount, description }) => {
+    try {
+        const appUrl = process.env.APP_URL || 'https://vershipgo.com';
+        const mailOptions = {
+            from: DEFAULT_FROM,
+            to: email,
+            subject: `Payment requested for order ${orderId} — VerShip`,
+            html: `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 550px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.15);">
+                <div style="background: linear-gradient(135deg, #FFBF00 0%, #FFD864 100%); padding: 30px 20px; text-align: center;">
+                    <h1 style="margin: 0; color: #2D413F; font-size: 28px; font-weight: bold;">VerShip</h1>
+                    <p style="margin: 10px 0 0; color: #2D413F; font-size: 14px; opacity: 0.85;">Additional cost on your shipment</p>
+                </div>
+                <div style="padding: 40px 30px; background: white;">
+                    <h2 style="color: #2D413F; margin: 0 0 10px 0; font-size: 22px;">Hi ${escapeHtml(customerName)},</h2>
+                    <p style="color: #666; line-height: 1.6; margin: 0 0 15px 0; font-size: 15px;">
+                        <strong>${escapeHtml(businessName)}</strong> has requested payment for an additional cost on your order <strong>${escapeHtml(orderId)}</strong>:
+                    </p>
+                    <div style="background: #f8f9fa; border-left: 4px solid #FFBF00; border-radius: 8px; padding: 18px 20px; margin: 20px 0;">
+                        <p style="margin: 0 0 8px 0; color: #2D413F; font-size: 15px;">${escapeHtml(description)}</p>
+                        <p style="margin: 0; color: #2D413F; font-size: 26px; font-weight: bold;">$${escapeHtml(amount)} USD</p>
+                    </div>
+                    <div style="text-align: center; margin: 30px 0 10px;">
+                        <a href="${appUrl}/history" style="background: #0D4D4D; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 999px; font-weight: bold; font-size: 15px; display: inline-block;">Review &amp; Pay</a>
+                    </div>
+                    <p style="color: #999; line-height: 1.6; margin: 15px 0 0; font-size: 13px; text-align: center;">
+                        You can review this charge under My History after signing in. If you weren't expecting it, contact your forwarder before paying.
+                    </p>
+                </div>
+            </div>
+            `,
+        };
+        const info = await deliver(mailOptions);
+        console.log('✅ Additional cost email sent to customer: %s', email);
+        return info;
+    } catch (error) {
+        console.error('❌ Error sending additional cost email:', error);
+        throw error;
+    }
+},
 };
