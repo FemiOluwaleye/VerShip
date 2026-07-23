@@ -8,6 +8,7 @@ import {
   getServiceFeePercentFromAddons,
   calculateBarrelPricing,
   calculateBarrelBasedFees,
+  selectRateCard,
 } from '../utils/pricing';
 import { toast } from 'sonner';
 import { Printer } from 'lucide-react';
@@ -418,9 +419,10 @@ const BuisnessDetail = () => {
   const type = isShipYourOwn ? 'own' : 'dropoff';
 
   if (providerDetail?.barrelPrices && Array.isArray(providerDetail.barrelPrices)) {
-    barrelPriceObj = providerDetail.barrelPrices.find(bp => {
-      const bpType = (bp.type || "").toLowerCase().trim();
-      return bpType === type;
+    barrelPriceObj = selectRateCard(providerDetail.barrelPrices, {
+      type,
+      origin: bookingRequest?.origin,
+      destination: bookingRequest?.destination,
     });
   }
 

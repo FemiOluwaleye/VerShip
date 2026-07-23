@@ -13,6 +13,7 @@ import {
   calculateBarrelPricingV2,
   v2PickupCharge,
   v2ParishFee,
+  selectRateCard,
 } from '../utils/pricing';
 import { JAMAICA_PARISHES, detectParish } from '../utils/parishes';
 import { toast } from 'sonner';
@@ -108,9 +109,10 @@ const ShipmentDetailsSection = () => {
     const sub = itemSubTypesLower;
     type = (sub.includes('ship your own') || sub.includes('own barrel')) ? 'own' : 'dropoff';
 
-    barrelPriceObj = providerDetail.barrelPrices.find(bp => {
-      const bpType = (bp.type || "").toLowerCase().trim();
-      return bpType === type;
+    barrelPriceObj = selectRateCard(providerDetail.barrelPrices, {
+      type,
+      origin: bookingRequest?.origin,
+      destination: bookingRequest?.destination,
     });
   }
 

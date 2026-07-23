@@ -66,6 +66,32 @@ export const calculateBarrelPricing = ({
 export const isPricingV2 = (bp) =>
   bp && String(bp.seaFreightPrice ?? "").trim() !== "" && parseFloat(bp.seaFreightPrice) > 0;
 
+/**
+ * Pick the rate card for a quote. Providers accumulate multiple barrelsprices
+ * rows (one per origin route, plus stale legacy rows with no seaFreightPrice),
+ * and matching on type alone returns whichever row the DB happens to list
+ * first — which silently prices the shipment off the wrong (often blank
+ * legacy) card. Match the booking's origin/destination like the server-side
+ * quote matcher does, preferring a v2 card at each level of specificity.
+ */
+export const selectRateCard = (barrelPrices, { type, origin, destination } = {}) => {
+  if (!Array.isArray(barrelPrices)) return null;
+  const norm = (s) => String(s || "").toLowerCase().trim();
+  const t = norm(type);
+  const o = norm(origin);
+  const d = norm(destination);
+  const byType = barrelPrices.filter((bp) => norm(bp.type) === t);
+  const routeMatch = (bp) =>
+    norm(bp.originCountry) === o && norm(bp.destinationCountry) === d;
+  return (
+    byType.find((bp) => routeMatch(bp) && isPricingV2(bp)) ||
+    byType.find(routeMatch) ||
+    byType.find(isPricingV2) ||
+    byType[0] ||
+    null
+  );
+};
+
 /** Per-barrel price after the tier discount: 1-4 full, 5-9 minus discount5to9, 10+ minus discount10plus. */
 export const v2PerBarrelPrice = (bp, quantity) => {
   const qty = parseInt(quantity, 10) || 0;
