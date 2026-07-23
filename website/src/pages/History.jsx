@@ -677,8 +677,8 @@ const History = () => {
 
       {/* Customer: pay an additional cost */}
       {payCostModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={() => setPayCostModal(null)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-6" onClick={() => setPayCostModal(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-[#071618] text-xl font-bold mb-1">Pay Additional Cost</h3>
             <p className="text-gray-500 text-sm mb-4">{payCostModal.cost.description}</p>
             <Elements stripe={payCostModal.stripePromise} options={{ clientSecret: payCostModal.clientSecret }}>
