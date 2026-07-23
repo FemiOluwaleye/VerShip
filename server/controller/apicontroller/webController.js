@@ -813,6 +813,45 @@ module.exports = {
         }
     },
 
+    // Buyer-driven payment confirmation. The webhook is the safety net, but it
+    // only reaches the deployed URL — a stage workspace (or a webhook outage)
+    // would leave paid orders marked Unpaid. Stripe is the authority here: we
+    // retrieve the intent server-side and only trust its status + metadata.
+    confirmPrepackedPayment: async (req, res) => {
+        try {
+            const { paymentId } = req.body;
+            if (!paymentId) return helper.failure(res, "paymentId is required.");
+
+            const stripe = require('stripe')(env('STRIPE_SECRET_KEY'));
+            let paymentIntent;
+            try {
+                paymentIntent = await stripe.paymentIntents.retrieve(paymentId);
+            } catch (e) {
+                return helper.failure(res, "Payment verification failed.");
+            }
+            if (!paymentIntent || paymentIntent.status !== "succeeded") {
+                return helper.failure(res, "Payment has not been completed.");
+            }
+            const orderId = paymentIntent.metadata?.prepackedOrderId;
+            if (!orderId) return helper.failure(res, "Payment does not match a pre-packed order.");
+
+            const order = await db.prepacked_orders.findOne({ where: { id: orderId } });
+            if (!order) return helper.failure(res, "Order not found.");
+
+            // Authoritative amount from Stripe must cover the order total.
+            const paid = (paymentIntent.amount_received || paymentIntent.amount) / 100;
+            if (paid + 0.005 < parseFloat(order.total_price)) {
+                return helper.failure(res, "Payment amount does not match the order.");
+            }
+
+            await order.update({ payment_status: 1 });
+            return helper.success(res, "Payment confirmed.", { order });
+        } catch (error) {
+            console.log("error=------confirmPrepackedPayment-------->>>>>", error);
+            return helper.failure(res, error.message);
+        }
+    },
+
     // Logged-in buyer's pre-packed barrel orders — surfaced on the History page
     // alongside bookings so guest-checkout buyers can track what they ordered.
     getMyPrepackedOrders: async (req, res) => {

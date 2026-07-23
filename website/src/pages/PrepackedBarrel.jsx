@@ -5,7 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import Commonbanner from '../components/Commonbanner';
 import CheckoutForm from '../components/CheckoutForm';
-import { getPrepackedBarrel, createPrepackedOrder } from '../api/cms';
+import { getPrepackedBarrel, createPrepackedOrder, confirmPrepackedPayment } from '../api/cms';
 import { API_URL } from '../api/axios';
 import prepackedBarrelImg from '../assets/prepacked-barrel.png';
 
@@ -280,7 +280,14 @@ const PrepackedBarrel = () => {
                         <Elements stripe={payment.stripePromise} options={{ clientSecret: payment.clientSecret }}>
                             <CheckoutForm
                                 amount={o.total_price}
-                                onSuccess={() => {
+                                onSuccess={async (paymentIntent) => {
+                                    // Server-side verify + mark paid (webhook is the backup, not the primary).
+                                    try {
+                                        await confirmPrepackedPayment({ paymentId: paymentIntent.id });
+                                    } catch (e) {
+                                        // Payment DID succeed on Stripe; the webhook will still reconcile.
+                                        console.error('Payment confirm call failed', e);
+                                    }
                                     setConfirmation({ order: payment.order, accountExists: payment.accountExists });
                                     setPayment(null);
                                     window.scrollTo({ top: 0, behavior: 'smooth' });

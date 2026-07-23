@@ -12,6 +12,9 @@ router.get('/prepacked-barrel', (req, res, next) => {
 router.post('/prepacked-order', (req, res, next) => {
     webController.createPrepackedOrder(req, res);
 });
+router.post('/prepacked-order/confirm', (req, res, next) => {
+    webController.confirmPrepackedPayment(req, res);
+});
 router.get('/prepacked-orders', verifyUser, (req, res, next) => {
     webController.getMyPrepackedOrders(req, res);
 });

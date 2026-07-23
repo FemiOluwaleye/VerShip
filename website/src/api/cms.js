@@ -39,6 +39,16 @@ export const getPrepackedBarrel = async () => {
     }
 };
 
+export const confirmPrepackedPayment = async (data) => {
+    try {
+        const response = await axios.post('/website/prepacked-order/confirm', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error confirming pre-packed payment:', error);
+        throw error;
+    }
+};
+
 export const getMyPrepackedOrders = async () => {
     try {
         const response = await axios.get('/website/prepacked-orders');
