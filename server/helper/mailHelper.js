@@ -538,7 +538,14 @@ module.exports = {
 // their History page where the in-app Stripe flow collects it.
 sendAdditionalCostRequestEmail: async (email, { customerName, businessName, orderId, amount, description }) => {
     try {
-        const appUrl = process.env.APP_URL || 'https://vershipgo.com';
+        // Link back to the environment that generated the email: a stage-created
+        // charge only exists in the stage DB, so a prod link would dead-end.
+        // Override per env with STAGE_APP_URL / PROD_APP_URL (or plain APP_URL).
+        const { env } = require('./envConfig');
+        const appUrl = env('APP_URL')
+            || (process.env.REPLIT_DEPLOYMENT
+                ? 'https://vershipgo.com'
+                : (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://vershipgo.com'));
         const mailOptions = {
             from: DEFAULT_FROM,
             to: email,
