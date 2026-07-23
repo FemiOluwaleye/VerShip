@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import Commonbanner from '../components/Commonbanner';
+import CheckoutForm from '../components/CheckoutForm';
 import { getPrepackedBarrel, createPrepackedOrder } from '../api/cms';
 import { API_URL } from '../api/axios';
 import prepackedBarrelImg from '../assets/prepacked-barrel.png';
@@ -89,6 +92,7 @@ const PrepackedBarrel = () => {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [confirmation, setConfirmation] = useState(null); // { order, accountExists }
+    const [payment, setPayment] = useState(null); // { clientSecret, stripePromise, order, accountExists }
 
     const [form, setForm] = useState({
         quantity: 1,
@@ -192,7 +196,7 @@ const PrepackedBarrel = () => {
                 return;
             }
 
-            const { order, accountExists, authtoken, user } = res.body || {};
+            const { order, accountExists, authtoken, user, clientSecret, publishkey } = res.body || {};
 
             // New email → backend auto-creates a verified account and returns a
             // token. Log the buyer in (mirrors the Login page) so they can track
@@ -202,6 +206,18 @@ const PrepackedBarrel = () => {
                 localStorage.setItem('user', JSON.stringify(user));
                 localStorage.setItem('is_login', 1);
                 window.dispatchEvent(new Event('userUpdated'));
+            }
+
+            // Order recorded as unpaid — collect payment before confirming.
+            if (clientSecret && publishkey) {
+                setPayment({
+                    clientSecret,
+                    stripePromise: loadStripe(publishkey),
+                    order,
+                    accountExists: !!accountExists,
+                });
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
             }
 
             toast.success('Order placed successfully!');
@@ -245,6 +261,42 @@ const PrepackedBarrel = () => {
         );
     }
 
+    if (payment && !confirmation) {
+        const o = payment.order || {};
+        return (
+            <div className="min-h-screen bg-[#F8FAFA]">
+                <Commonbanner title="Complete Your Payment" />
+                <div className="max-w-2xl mx-auto px-4 py-16">
+                    <div className="bg-white rounded-[22px] border border-[#C1A35E]/30 p-8 shadow-lg">
+                        <h2 className="text-2xl md:text-3xl font-bold text-[#071618] mb-2 text-center">Almost there — complete payment</h2>
+                        <p className="text-[#595d5e] mb-6 text-center">
+                            Your order is reserved. Pay below to confirm it.
+                        </p>
+                        <div className="bg-[#F8FAFA] rounded-2xl p-5 text-left mb-6 space-y-2">
+                            <div className="flex justify-between"><span className="text-[#595d5e]">Order number</span><span className="font-semibold text-[#071618]">{o.orderId}</span></div>
+                            <div className="flex justify-between"><span className="text-[#595d5e]">Quantity</span><span className="font-semibold text-[#071618]">{o.quantity}</span></div>
+                            <div className="flex justify-between"><span className="text-[#595d5e]">Total</span><span className="font-semibold text-[#071618]">{currency} {o.total_price}</span></div>
+                        </div>
+                        <Elements stripe={payment.stripePromise} options={{ clientSecret: payment.clientSecret }}>
+                            <CheckoutForm
+                                amount={o.total_price}
+                                onSuccess={() => {
+                                    setConfirmation({ order: payment.order, accountExists: payment.accountExists });
+                                    setPayment(null);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                                onCancel={() => {
+                                    setPayment(null);
+                                    toast.info('Payment cancelled — your order was not confirmed.');
+                                }}
+                            />
+                        </Elements>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (confirmation) {
         const o = confirmation.order || {};
         return (
@@ -255,7 +307,7 @@ const PrepackedBarrel = () => {
                         <div className="text-5xl mb-4" aria-hidden="true">✅</div>
                         <h2 className="text-2xl md:text-3xl font-bold text-[#071618] mb-2">Thank you — your order is in!</h2>
                         <p className="text-[#595d5e] mb-6">
-                            We've received your pre-packed barrel order and will be in touch about payment and shipping.
+                            Payment received — your pre-packed barrel order is confirmed. We'll be in touch about shipping.
                         </p>
                         <div className="bg-[#F8FAFA] rounded-2xl p-5 text-left mb-6 space-y-2">
                             <div className="flex justify-between"><span className="text-[#595d5e]">Order number</span><span className="font-semibold text-[#071618]">{o.orderId}</span></div>

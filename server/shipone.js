@@ -105,6 +105,17 @@ app.post('/stripe/webhook', bodyParser.raw({ type: 'application/json' }), async 
       const paymentIntent = event.data.object;
       console.log('[WEBHOOK] Payment intent ID:', paymentIntent.id);
 
+      // Pre-packed barrel orders carry prepackedOrderId instead of bookingId.
+      const prepackedOrderId = paymentIntent?.metadata?.prepackedOrderId;
+      if (prepackedOrderId) {
+        console.log('[WEBHOOK] Marking prepacked order paid, ID:', prepackedOrderId);
+        await db.prepacked_orders.update(
+          { payment_status: 1 },
+          { where: { id: prepackedOrderId } }
+        );
+        console.log('[WEBHOOK] Prepacked order updated:', prepackedOrderId);
+      }
+
       const bookingId = paymentIntent?.metadata?.bookingId;
       console.log('[WEBHOOK] Booking ID from metadata:', bookingId);
 

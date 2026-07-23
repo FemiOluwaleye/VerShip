@@ -785,14 +785,46 @@ module.exports = {
                 payment_status: 0,
             });
 
-            return helper.success(res, "Order placed successfully.", {
+            // Collect payment via Stripe before the order is considered placed.
+            // The order row exists (payment_status 0 = unpaid) so an abandoned
+            // payment leaves an auditable pending order; the verified webhook
+            // (payment_intent.succeeded → prepackedOrderId) flips it to paid.
+            const stripe = require('stripe')(env('STRIPE_SECRET_KEY'));
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: Math.round(parseFloat(totalPrice) * 100),
+                currency: (product.currency || 'USD').toLowerCase(),
+                metadata: {
+                    prepackedOrderId: order.id.toString(),
+                    orderId,
+                },
+            });
+
+            return helper.success(res, "Order created. Complete payment to confirm.", {
                 order,
                 accountExists,
                 authtoken,
                 user: accountExists ? null : user,
+                clientSecret: paymentIntent.client_secret,
+                publishkey: env('STRIPE_PUBLISHABLE_KEY'),
             });
         } catch (error) {
             console.log("error=------createPrepackedOrder-------->>>>>", error);
+            return helper.failure(res, error.message);
+        }
+    },
+
+    // Logged-in buyer's pre-packed barrel orders — surfaced on the History page
+    // alongside bookings so guest-checkout buyers can track what they ordered.
+    getMyPrepackedOrders: async (req, res) => {
+        try {
+            const orders = await db.prepacked_orders.findAll({
+                where: { userId: req.user.id },
+                include: [{ model: db.prepacked_barrel, as: 'barrel', attributes: ['id', 'name', 'image'] }],
+                order: [['createdAt', 'DESC']],
+            });
+            return helper.success(res, "Pre-packed orders fetched successfully.", { orders });
+        } catch (error) {
+            console.log("error=------getMyPrepackedOrders-------->>>>>", error);
             return helper.failure(res, error.message);
         }
     },

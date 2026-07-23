@@ -39,6 +39,16 @@ export const getPrepackedBarrel = async () => {
     }
 };
 
+export const getMyPrepackedOrders = async () => {
+    try {
+        const response = await axios.get('/website/prepacked-orders');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching pre-packed orders:', error);
+        throw error;
+    }
+};
+
 export const createPrepackedOrder = async (data) => {
     try {
         const response = await axios.post('/website/prepacked-order', data);

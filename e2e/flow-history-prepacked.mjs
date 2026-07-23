@@ -1,0 +1,25 @@
+import { chromium } from "@playwright/test";
+import fs from "fs";
+const BASE = "http://localhost:5000";
+const { token, user } = JSON.parse(fs.readFileSync("/tmp/claude-1000/-home-runner-workspace/fae0fc25-8cd1-4387-8536-9e190ba93d7f/scratchpad/auth.json"));
+const browser = await chromium.launch({ executablePath: process.env.REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE, args: ["--no-sandbox"] });
+const page = await browser.newPage();
+await page.addInitScript(([t, u]) => {
+  localStorage.setItem("token", t);
+  localStorage.setItem("user", JSON.stringify(u));
+  localStorage.setItem("is_login", 1);
+}, [token, user]);
+await page.goto(`${BASE}/history`, { waitUntil: "networkidle" });
+await page.waitForTimeout(1500);
+const body = await page.textContent("body");
+let fails = 0;
+const check = (n, ok) => { console.log((ok ? "PASS" : "FAIL") + " — " + n); if (!ok) fails++; };
+check("Pre-Packed Barrel Orders section shown", /Pre-Packed Barrel Orders/i.test(body));
+check("order number visible", /ORD-PP-1784771132823-810/.test(body));
+check("shows Paid badge", /Paid/.test(body));
+check("shows total", /899\.00/.test(body));
+check("shows status Placed", /Placed/.test(body));
+await page.screenshot({ path: "/tmp/claude-1000/-home-runner-workspace/fae0fc25-8cd1-4387-8536-9e190ba93d7f/scratchpad/history-prepacked.png", fullPage: true });
+await browser.close();
+console.log(fails === 0 ? "ALL PASS" : fails + " FAILURES");
+process.exit(fails ? 1 : 0);

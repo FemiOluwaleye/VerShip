@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Commonbanner from "../components/Commonbanner";
-import { getBookings, updateBookingStatus, uploadBookingDocument, submitRating, checkRatingStatus } from "../api/cms";
+import { getBookings, updateBookingStatus, uploadBookingDocument, submitRating, checkRatingStatus, getMyPrepackedOrders } from "../api/cms";
 import { pdf, file as fileIcon } from "../common/common-assets/assets-images";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "../api/axios";
@@ -120,11 +120,25 @@ const History = () => {
   const [ratingModal, setRatingModal] = useState(null); // booking object
   const [ratedBookings, setRatedBookings] = useState({}); // { bookingId: true }
 
+  // Pre-packed barrel orders (separate table from bookings)
+  const [prepackedOrders, setPrepackedOrders] = useState([]);
+
   useEffect(() => {
     fetchBookings();
+    fetchPrepackedOrders();
     const user = JSON.parse(localStorage.getItem("user"));
     if (user) setUserRole(user.role);
   }, []);
+
+  const fetchPrepackedOrders = async () => {
+    try {
+      const response = await getMyPrepackedOrders();
+      if (response.status) setPrepackedOrders(response.body?.orders || []);
+    } catch (error) {
+      // Non-fatal: bookings still render if this fails.
+      console.error("Failed to fetch pre-packed orders", error);
+    }
+  };
 
   const fetchBookings = async () => {
     try {
@@ -395,12 +409,56 @@ const History = () => {
           )}
         </div>
 
-        {/* Empty State */}
-        {!loading && orders.length === 0 && (
-          <div className="text-center text-gray-400 mt-10">
-            No {activeTab} orders available.
-          </div>
-        )}
+        {/* Pre-packed barrel orders — current: placed/processing/shipped, past: delivered/cancelled */}
+        {(() => {
+          const PP_STATUS = { 0: "Placed", 1: "Processing", 2: "Shipped", 3: "Delivered", 4: "Cancelled" };
+          const visiblePrepacked = prepackedOrders.filter((o) =>
+            activeTab === "current" ? Number(o.status) <= 2 : Number(o.status) >= 3
+          );
+          return (
+            <>
+              {visiblePrepacked.length > 0 && (
+                <div className="mt-12">
+                  <h3 className="text-white text-xl md:text-2xl font-bold mb-6">Pre-Packed Barrel Orders</h3>
+                  <div className="space-y-6">
+                    {visiblePrepacked.map((o) => (
+                      <div key={o.id} className="bg-[#2D413F] rounded-xl px-6 py-4 flex md:items-center items-start justify-between shadow-lg flex-col md:flex-row gap-5 md:gap-0">
+                        <div className="flex items-center md:gap-8 gap-4 flex-wrap">
+                          <div className="w-[92px] h-[92px] text-[40px] rounded-full bg-[#FFC928] flex items-center justify-center" aria-hidden="true">🛢️</div>
+                          <div>
+                            <p className="text-white font-semibold text-lg">{o.barrel?.name || "Pre-Packed Barrel"}</p>
+                            <p className="text-gray-300 text-sm">Order {o.orderId} · Qty {o.quantity}</p>
+                            <p className="text-gray-300 text-sm">
+                              {o.delivery_town}, {o.delivery_parish} · {moment(o.createdAt).format("MMM D, YYYY")}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-start md:items-end gap-2">
+                          <p className="text-[#FFC928] font-bold text-xl">{o.currency} {o.total_price}</p>
+                          <div className="flex gap-2">
+                            <span className={`px-3 py-1 rounded-full text-sm font-semibold ${Number(o.payment_status) === 1 ? "bg-green-600/30 text-green-300" : "bg-red-600/30 text-red-300"}`}>
+                              {Number(o.payment_status) === 1 ? "Paid" : "Unpaid"}
+                            </span>
+                            <span className="px-3 py-1 rounded-full text-sm font-semibold bg-[#4E6B5D]/60 text-gray-200">
+                              {PP_STATUS[Number(o.status)] || "Placed"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!loading && orders.length === 0 && visiblePrepacked.length === 0 && (
+                <div className="text-center text-gray-400 mt-10">
+                  No {activeTab} orders available.
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* Rating Modal */}
