@@ -27,8 +27,10 @@ const MoveBusinessForward = ({ variant }) => {
                         <div className="absolute inset-x-0 bottom-0 h-40 md:h-64 bg-gradient-to-t from-[#0A0D0C] to-transparent"></div>
                     </div>
 
-                    {/* Content */}
-                    <div className="relative z-10 p-6 max-w-[1200px] w-full text-center flex flex-col items-center mt-70">
+                    {/* Content — the parent already vertically centers this
+                        (justify-center); no top margin, which on short mobile
+                        heights pushed the CTA past the clipped bottom edge. */}
+                    <div className="relative z-10 p-6 max-w-[1200px] w-full text-center flex flex-col items-center">
                         <h2 className="text-white text-[28px] md:text-[60px] font-medium leading-[1.1] mb-6 tracking-tight">
                             Let's move your <br />
                             <span className="text-[#C1A35E] italic font-serif">shipment</span> forward.
