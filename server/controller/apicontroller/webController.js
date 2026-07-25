@@ -3,7 +3,7 @@ const helper = require('../../helper/helper');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { sendResetEmail, sendSubscriptionEmail, sendBookingStatusUpdateEmailToUser, sendOtpEmail, sendOtpEmail12, sendVerificationOtpEmail, sendFreightForwarderRegistrationEmail, sendNewOrderPlacedEmailToProvider, sendNewOrderPlacedEmailToProvider12, sendAdditionalCostRequestEmail } = require('../../helper/mailHelper');
+const { sendResetEmail, sendSubscriptionEmail, sendBookingStatusUpdateEmailToUser, sendOtpEmail, sendOtpEmail12, sendVerificationOtpEmail, sendFreightForwarderRegistrationEmail, sendNewOrderPlacedEmailToProvider, sendNewOrderPlacedEmailToProvider12, sendAdditionalCostRequestEmail, sendOrderConfirmationToCustomer } = require('../../helper/mailHelper');
 const otpHelper = require('../../helper/otpHelper');
 const { env } = require('../../helper/envConfig');
 
@@ -798,6 +798,22 @@ module.exports = {
                     orderId,
                 },
             });
+
+            // Acknowledge the placed order to the buyer (best-effort).
+            try {
+                await sendOrderConfirmationToCustomer(email, {
+                    customerName: firstName || recipient_name || 'there',
+                    orderId,
+                    orderType: 'Pre-Packed Barrel order',
+                    itemSummary: `${product.name} × ${qty}`,
+                    amount: totalPrice,
+                    currency: product.currency || 'USD',
+                    deliveryTo: [recipient_name, delivery_parish].filter(Boolean).join(', '),
+                    note: "We've received your order. Once payment is complete we'll begin preparing your barrel — track it any time under My History after signing in.",
+                });
+            } catch (mailErr) {
+                console.error('Order confirmation email (prepacked) failed:', mailErr.message);
+            }
 
             return helper.success(res, "Order created. Complete payment to confirm.", {
                 order,
@@ -4107,6 +4123,27 @@ module.exports = {
                 }
 
                 createdBookings.push(booking);
+            }
+
+            // Acknowledge the placed order to the customer (best-effort — the
+            // booking is saved regardless of email delivery). No dollar total is
+            // shown here: at creation the authoritative amount isn't settled yet
+            // (total_amount/pay_now_price are written at payment), so the email
+            // confirms receipt and points to My History for the final figure.
+            try {
+                const buyer = await db.users.findByPk(userId, { attributes: ['email', 'firstName'] });
+                const buyerEmail = buyer?.email || primary_email;
+                if (buyerEmail && createdBookings.length) {
+                    const orderNumbers = createdBookings.map((b) => b.orderId).filter(Boolean).join(', ');
+                    await sendOrderConfirmationToCustomer(buyerEmail, {
+                        customerName: buyer?.firstName || primary_firstName || 'there',
+                        orderId: orderNumbers,
+                        orderType: 'Shipment',
+                        note: "We've received your shipment request. Complete payment (if you haven't yet) and see the full total and track everything under My History after signing in.",
+                    });
+                }
+            } catch (mailErr) {
+                console.error('Order confirmation email (booking) failed:', mailErr.message);
             }
 
             return helper.success(res, "Bookings created successfully.", createdBookings);

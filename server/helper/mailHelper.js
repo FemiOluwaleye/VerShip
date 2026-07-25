@@ -583,4 +583,73 @@ sendAdditionalCostRequestEmail: async (email, { customerName, businessName, orde
         throw error;
     }
 },
+
+// Sent to the buyer the moment they place an order (shipment booking or a
+// pre-packed barrel). Acknowledges receipt and lists the essentials; used by
+// createBooking and createPrepackedOrder. Best-effort — callers swallow errors.
+sendOrderConfirmationToCustomer: async (email, orderDetails = {}) => {
+    try {
+        const {
+            customerName,
+            orderId,
+            orderType,     // e.g. "Shipment" or "Pre-Packed Barrel"
+            itemSummary,   // e.g. "VerShip Pre-Packed Food Barrel × 1"
+            amount,        // total (number or string)
+            currency,      // e.g. "USD"
+            deliveryTo,    // recipient / destination line (optional)
+            note,          // optional next-step line (e.g. payment / tracking)
+        } = orderDetails;
+
+        const detailRow = (label, value) => {
+            if (value === undefined || value === null || value === '') return '';
+            return `
+                <tr>
+                    <td style="padding: 10px 0; color: #666; font-size: 14px; width: 40%; vertical-align: top;">${escapeHtml(label)}</td>
+                    <td style="padding: 10px 0; color: #2D413F; font-size: 14px; font-weight: 600;">${escapeHtml(value)}</td>
+                </tr>
+            `;
+        };
+
+        const mailOptions = {
+            from: DEFAULT_FROM,
+            to: email,
+            subject: `Order confirmed${orderId ? ` — ${orderId}` : ''} — VerShip`,
+            html: `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.15);">
+                <div style="background: linear-gradient(135deg, #FFBF00 0%, #FFD864 100%); padding: 30px 20px; text-align: center;">
+                    <h1 style="margin: 0; color: #2D413F; font-size: 28px; font-weight: bold;">VerShip</h1>
+                    <p style="margin: 10px 0 0; color: #2D413F; font-size: 14px; opacity: 0.85;">The Smart Way to Ship</p>
+                </div>
+                <div style="padding: 40px 30px; background: #ffffff;">
+                    <h2 style="color: #2D413F; margin: 0 0 10px 0; font-size: 22px;">Thanks${customerName ? `, ${escapeHtml(customerName)}` : ''} — we've got your order!</h2>
+                    <p style="color: #666; line-height: 1.6; margin: 0 0 24px 0; font-size: 15px;">
+                        Your ${escapeHtml(orderType || 'order')} has been placed successfully. Here are the details for your records:
+                    </p>
+                    <div style="background: #f8f9fa; border-radius: 12px; padding: 8px 20px; border: 1px solid #e8eceb;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            ${detailRow('Order number', orderId)}
+                            ${detailRow('Item', itemSummary)}
+                            ${detailRow('Total', amount != null && amount !== '' ? `${currency || 'USD'} ${amount}` : '')}
+                            ${detailRow('Delivering to', deliveryTo)}
+                        </table>
+                    </div>
+                    <p style="color: #666; line-height: 1.6; margin: 24px 0 0 0; font-size: 14px;">
+                        ${escapeHtml(note || "We'll keep you posted as your order progresses. You can track it any time under My History after signing in.")}
+                    </p>
+                </div>
+                <div style="background: #f8f9fa; padding: 18px; text-align: center; border-top: 1px solid #e0e0e0;">
+                    <p style="margin: 0; font-size: 12px; color: #999;">&copy; ${new Date().getFullYear()} VerShip. All rights reserved.</p>
+                </div>
+            </div>
+            `,
+        };
+
+        const info = await deliver(mailOptions);
+        console.log('✅ Order confirmation email sent to customer: %s', email);
+        return info;
+    } catch (error) {
+        console.error('❌ Error sending order confirmation email:', error);
+        throw error;
+    }
+},
 };

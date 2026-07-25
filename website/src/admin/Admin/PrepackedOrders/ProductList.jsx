@@ -112,6 +112,33 @@ const ProductList = () => {
     }
   };
 
+  // Toggle Active('1') / Hidden('0'). A hidden barrel disappears from the public
+  // site, so this one-click switch is how an admin brings it back without opening
+  // the edit form.
+  const toggleStatus = async (product) => {
+    const next = String(product.status) === "1" ? "0" : "1";
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, status: next } : p))
+    );
+    try {
+      const response = await axiosInstance.post(`/prepacked/update/${product.id}`, {
+        status: next,
+      });
+      if (!response.data.success) throw new Error(response.data.message);
+    } catch (error) {
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id ? { ...p, status: product.status } : p
+        )
+      );
+      Swal.fire(
+        "Error",
+        error?.response?.data?.message || "Failed to update visibility",
+        "error"
+      );
+    }
+  };
+
   const money = (product) => `${product.currency || "USD"} ${product.price || "0"}`;
 
   return (
@@ -219,15 +246,32 @@ const ProductList = () => {
                             </td>
                             <td>{product.contents?.length || 0}</td>
                             <td>
-                              {String(product.status) === "1" ? (
-                                <span className="badge badge-soft-success">
-                                  Active
-                                </span>
-                              ) : (
-                                <span className="badge badge-soft-secondary">
-                                  Hidden
-                                </span>
-                              )}
+                              <div className="d-flex align-items-center gap-2">
+                                <div className="form-check form-switch mb-0">
+                                  <input
+                                    type="checkbox"
+                                    className="form-check-input"
+                                    role="switch"
+                                    style={{ cursor: "pointer" }}
+                                    checked={String(product.status) === "1"}
+                                    onChange={() => toggleStatus(product)}
+                                    title={
+                                      String(product.status) === "1"
+                                        ? "Active — click to hide from the public site"
+                                        : "Hidden — click to make it live again"
+                                    }
+                                  />
+                                </div>
+                                {String(product.status) === "1" ? (
+                                  <span className="badge badge-soft-success">
+                                    Active
+                                  </span>
+                                ) : (
+                                  <span className="badge badge-soft-secondary">
+                                    Hidden
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td>
                               <div className="form-check form-switch mb-0">

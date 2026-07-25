@@ -1,5 +1,16 @@
 const db = require("../../models");
 const helper = require("../../helper/helper");
+const { sendBookingStatusUpdateEmailToUser } = require("../../helper/mailHelper");
+
+// Human-readable order status labels — mirrors the admin OrderList STATUS_MAP so
+// the email says the same thing the admin sees.
+const ORDER_STATUS_LABELS = {
+    "0": "Placed",
+    "1": "Processing",
+    "2": "Shipped",
+    "3": "Delivered",
+    "4": "Cancelled",
+};
 
 // Admin CRUD for the "VerShip Pre-Packed Food Barrel" product + its contents,
 // plus a read-only order list. Mirrors bannerController's shape (paginated list,
@@ -250,6 +261,29 @@ module.exports = {
 
             await db.prepacked_orders.update(fields, { where: { id } });
             const updated = await db.prepacked_orders.findOne({ where: { id } });
+
+            // Notify the buyer when the fulfilment status actually changes
+            // (best-effort — the update stands regardless of email delivery).
+            if (fields.status !== undefined && String(fields.status) !== String(order.status)) {
+                try {
+                    const buyer = order.userId
+                        ? await db.users.findByPk(order.userId, { attributes: ["email", "firstName"] })
+                        : null;
+                    const buyerEmail = buyer?.email || order.recipient_email;
+                    if (buyerEmail) {
+                        await sendBookingStatusUpdateEmailToUser(buyerEmail, {
+                            customerName: buyer?.firstName || order.recipient_name || "Customer",
+                            orderId: order.orderId,
+                            status: fields.status,
+                            statusLabel: ORDER_STATUS_LABELS[String(fields.status)] || fields.status,
+                            providerName: "the VerShip team",
+                        });
+                    }
+                } catch (mailErr) {
+                    console.error("Prepacked status-update email failed:", mailErr.message);
+                }
+            }
+
             return helper.success(res, "Order updated successfully", { data: updated });
         } catch (error) {
             return helper.error(res, error.message);
