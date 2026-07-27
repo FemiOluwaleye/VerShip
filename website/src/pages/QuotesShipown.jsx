@@ -365,6 +365,16 @@ const QuotesShipown = () => {
         fetchAddonsData();
     }, []);
 
+    // The parish was already chosen at the destination step, so don't make the
+    // customer pick it a second time — seed the recipient's parish from the
+    // booking request. Only fills a blank field, so a manual correction (or an
+    // address picked from autocomplete) is never overwritten.
+    useEffect(() => {
+        const parish = bookingRequest?.parish;
+        if (!parish) return;
+        setDeliveryAddr((prev) => (prev.state ? prev : { ...prev, state: parish }));
+    }, [bookingRequest?.parish]);
+
     useEffect(() => {
         if (providers.length > 0 && selectedProviderIds.length === 0) {
             const bestQuoteProvider = providers.find(p => p.isBestQuote);

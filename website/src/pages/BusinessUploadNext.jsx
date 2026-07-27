@@ -10,13 +10,8 @@ import SuccessPopup from '../components/SuccessPopup';
 import countries from "world-countries";
 import { FaSpinner, FaPlus, FaTrash } from "react-icons/fa";
 import { JAMAICA_PARISHES } from '../utils/parishes';
-
-const ORIGIN_CITIES = [
-  "Fort Lauderdale, FL",
-  "Miami, FL",
-  "Pittsburgh, PA",
-  "Orlando, FL",
-];
+import { ADVERTISED_ORIGINS as ORIGIN_CITIES } from '../utils/origins';
+import InfoTip from '../components/InfoTip';
 
 const DESTINATION_CITIES = [
   "Kingston, Jamaica",
@@ -472,8 +467,16 @@ const BusinessUploadNext = () => {
     switch (formData.shipmentType) {
       case "barrel":
         return [
-          { id: "Ship Your Own Barrel", label: "Ship Your Own Barrel" },
-          { id: "Request Barrel Drop-Off", label: "Request Barrel Drop-Off" }
+          {
+            id: "Ship Your Own Barrel",
+            label: "Ship Your Own Barrel",
+            info: "The customer already has their own packed barrel. You collect it from them (or they drop it at your warehouse), then ship and deliver it. Pick this if you only handle barrels the customer supplies.",
+          },
+          {
+            id: "Request Barrel Drop-Off",
+            label: "Request Barrel Drop-Off",
+            info: "You deliver an empty barrel to the customer first. They fill it at home, you collect it later, then ship and deliver it. Pick this if you can supply and drop off empty barrels.",
+          }
         ];
       case "box":
         return [
@@ -994,6 +997,9 @@ const BusinessUploadNext = () => {
                           <span className={`${selectedSubTypes.includes(opt.id) ? 'text-yellow-400' : 'text-white/70'} text-sm`}>
                             {opt.label}
                           </span>
+                          {opt.info && (
+                            <InfoTip label={opt.label} text={opt.info} />
+                          )}
                         </div>
                       ))}
                     </div>

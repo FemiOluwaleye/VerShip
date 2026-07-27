@@ -8,40 +8,40 @@ const db = require('./models');
 // right side of each list row (e.g. "8ct · 15oz"); `name` is the clean product
 // name shown on the left. The page renders these as an even two-column grid.
 const CONTENTS = [
-  { name: 'Basmati Rice', quantity: '40lbs', icon: '🍚', sort_order: 1 },
-  { name: 'Toilet Paper', quantity: '18ct', icon: '🧻', sort_order: 2 },
-  { name: 'All Purpose Flour', quantity: '20lbs', icon: '🌾', sort_order: 3 },
-  { name: 'Colgate Toothpaste', quantity: '5ct', icon: '🪥', sort_order: 4 },
-  { name: 'Granulated Sugar', quantity: '10lbs', icon: '🧂', sort_order: 5 },
-  { name: 'Irish Spring Bath Soap', quantity: '10ct', icon: '🧼', sort_order: 6 },
-  { name: 'Yellow Cornmeal', quantity: '5lbs', icon: '🌽', sort_order: 7 },
-  { name: 'Paper Towel', quantity: '4ct', icon: '🧻', sort_order: 8 },
-  { name: 'Gallon Canola Cooking Oil', quantity: '2ct', icon: '🛢️', sort_order: 9 },
-  { name: 'Always Ultra-Thin w/Wings', quantity: '32ct', icon: '🧴', sort_order: 10 },
-  { name: 'Whole Kernel Sweet Corn', quantity: '12ct', icon: '🌽', sort_order: 11 },
-  { name: 'Adult Toothbrush', quantity: '6ct', icon: '🪥', sort_order: 12 },
-  { name: 'Sweet Green Peas', quantity: '12ct', icon: '🫛', sort_order: 13 },
-  { name: 'Equate Mouthwash', quantity: '2ct · 500ml', icon: '🧴', sort_order: 14 },
-  { name: 'Corned Beef', quantity: '6ct', icon: '🥫', sort_order: 15 },
-  { name: 'Trash Bag', quantity: '20ct · 13 gal', icon: '🗑️', sort_order: 16 },
-  { name: 'Sardines', quantity: '12ct', icon: '🐟', sort_order: 17 },
-  { name: 'Instant Oats (Quaker)', quantity: '1ct · 42oz', icon: '🥣', sort_order: 18 },
-  { name: 'Tuna', quantity: '12ct', icon: '🐟', sort_order: 19 },
-  { name: 'Mac and Cheese', quantity: '12ct · 15oz', icon: '🧀', sort_order: 20 },
-  { name: 'Chicken Vienna Sausage', quantity: '12ct', icon: '🌭', sort_order: 21 },
-  { name: 'Spaghetti', quantity: '8ct', icon: '🍝', sort_order: 22 },
-  { name: 'Chef Boyardee Beef Ravioli', quantity: '8ct · 15oz', icon: '🥫', sort_order: 23 },
-  { name: 'Light Red Kidney Beans', quantity: '3ct · 1lb', icon: '🫘', sort_order: 24 },
-  { name: 'Condensed Milk', quantity: '8ct', icon: '🥛', sort_order: 25 },
-  { name: "Kellogg's Frosted Flakes", quantity: '1ct · 21.07oz', icon: '🥣', sort_order: 26 },
-  { name: 'Evaporated Milk', quantity: '8ct', icon: '🥛', sort_order: 27 },
-  { name: 'Creamy Peanut Butter', quantity: '2ct · 16oz', icon: '🥜', sort_order: 28 },
-  { name: 'Ocean Spray Cranberry Juice', quantity: '2ct · 64oz', icon: '🧃', sort_order: 29 },
-  { name: 'Grape Jelly', quantity: '2ct · 18oz', icon: '🍇', sort_order: 30 },
-  { name: 'Swiss Miss Hot Chocolate', quantity: '20ct', icon: '☕', sort_order: 31 },
-  { name: 'BBQ Sauce', quantity: '3ct · 18oz', icon: '🍖', sort_order: 32 },
-  { name: 'Heinz Ketchup', quantity: '3ct · 44oz', icon: '🍅', sort_order: 33 },
-  { name: 'Mayonnaise', quantity: '2ct · 15oz', icon: '🫙', sort_order: 34 },
+  { name: 'Basmati Rice', quantity: '40lbs', icon: '🍚', category: 'Food', sort_order: 1 },
+  { name: 'Toilet Paper', quantity: '18ct', icon: '🧻', category: 'Household Items', sort_order: 2 },
+  { name: 'All Purpose Flour', quantity: '20lbs', icon: '🌾', category: 'Food', sort_order: 3 },
+  { name: 'Colgate Toothpaste', quantity: '5ct', icon: '🪥', category: 'Personal Care', sort_order: 4 },
+  { name: 'Granulated Sugar', quantity: '10lbs', icon: '🧂', category: 'Food', sort_order: 5 },
+  { name: 'Irish Spring Bath Soap', quantity: '10ct', icon: '🧼', category: 'Personal Care', sort_order: 6 },
+  { name: 'Yellow Cornmeal', quantity: '5lbs', icon: '🌽', category: 'Food', sort_order: 7 },
+  { name: 'Paper Towel', quantity: '4ct', icon: '🧻', category: 'Household Items', sort_order: 8 },
+  { name: 'Gallon Canola Cooking Oil', quantity: '2ct', icon: '🛢️', category: 'Food', sort_order: 9 },
+  { name: 'Always Ultra-Thin w/Wings', quantity: '32ct', icon: '🧴', category: 'Personal Care', sort_order: 10 },
+  { name: 'Whole Kernel Sweet Corn', quantity: '12ct', icon: '🌽', category: 'Food', sort_order: 11 },
+  { name: 'Adult Toothbrush', quantity: '6ct', icon: '🪥', category: 'Personal Care', sort_order: 12 },
+  { name: 'Sweet Green Peas', quantity: '12ct', icon: '🫛', category: 'Food', sort_order: 13 },
+  { name: 'Equate Mouthwash', quantity: '2ct · 500ml', icon: '🧴', category: 'Personal Care', sort_order: 14 },
+  { name: 'Corned Beef', quantity: '6ct', icon: '🥫', category: 'Food', sort_order: 15 },
+  { name: 'Trash Bag', quantity: '20ct · 13 gal', icon: '🗑️', category: 'Household Items', sort_order: 16 },
+  { name: 'Sardines', quantity: '12ct', icon: '🐟', category: 'Food', sort_order: 17 },
+  { name: 'Instant Oats (Quaker)', quantity: '1ct · 42oz', icon: '🥣', category: 'Food', sort_order: 18 },
+  { name: 'Tuna', quantity: '12ct', icon: '🐟', category: 'Food', sort_order: 19 },
+  { name: 'Mac and Cheese', quantity: '12ct · 15oz', icon: '🧀', category: 'Food', sort_order: 20 },
+  { name: 'Chicken Vienna Sausage', quantity: '12ct', icon: '🌭', category: 'Food', sort_order: 21 },
+  { name: 'Spaghetti', quantity: '8ct', icon: '🍝', category: 'Food', sort_order: 22 },
+  { name: 'Chef Boyardee Beef Ravioli', quantity: '8ct · 15oz', icon: '🥫', category: 'Food', sort_order: 23 },
+  { name: 'Light Red Kidney Beans', quantity: '3ct · 1lb', icon: '🫘', category: 'Food', sort_order: 24 },
+  { name: 'Condensed Milk', quantity: '8ct', icon: '🥛', category: 'Food', sort_order: 25 },
+  { name: "Kellogg's Frosted Flakes", quantity: '1ct · 21.07oz', icon: '🥣', category: 'Food', sort_order: 26 },
+  { name: 'Evaporated Milk', quantity: '8ct', icon: '🥛', category: 'Food', sort_order: 27 },
+  { name: 'Creamy Peanut Butter', quantity: '2ct · 16oz', icon: '🥜', category: 'Food', sort_order: 28 },
+  { name: 'Ocean Spray Cranberry Juice', quantity: '2ct · 64oz', icon: '🧃', category: 'Food', sort_order: 29 },
+  { name: 'Grape Jelly', quantity: '2ct · 18oz', icon: '🍇', category: 'Food', sort_order: 30 },
+  { name: 'Swiss Miss Hot Chocolate', quantity: '20ct', icon: '☕', category: 'Food', sort_order: 31 },
+  { name: 'BBQ Sauce', quantity: '3ct · 18oz', icon: '🍖', category: 'Food', sort_order: 32 },
+  { name: 'Heinz Ketchup', quantity: '3ct · 44oz', icon: '🍅', category: 'Food', sort_order: 33 },
+  { name: 'Mayonnaise', quantity: '2ct · 15oz', icon: '🫙', category: 'Food', sort_order: 34 },
 ];
 
 (async () => {
@@ -55,6 +55,10 @@ const CONTENTS = [
     // column to an existing table, so add it idempotently before we write to it.
     await db.sequelize.query(
       'ALTER TABLE prepacked_barrel ADD COLUMN IF NOT EXISTS "compareAtPrice" VARCHAR(255) DEFAULT \'\''
+    );
+    // Same story for the contents' grouping column (see migrate-barrel-categories.js).
+    await db.sequelize.query(
+      "ALTER TABLE prepacked_barrel_items ADD COLUMN IF NOT EXISTS category VARCHAR(255) NOT NULL DEFAULT 'Food'"
     );
 
     const productBase = {

@@ -65,7 +65,15 @@ module.exports = function (sequelize, DataTypes) {
             type: DataTypes.STRING(255),
             allowNull: true,
             defaultValue: ""
-            // 1 for fast delivery,2 for safest delivery,3 for best price
+            // 1 for fast delivery,2 for safest delivery,3 for best price,4 for other
+        },
+        // Free text the customer types when they pick "Other" in the signup survey.
+        // Captured verbatim so we can read what actually matters to people beyond
+        // the three fixed choices.
+        surveyOther: {
+            type: DataTypes.STRING(500),
+            allowNull: true,
+            defaultValue: ""
         },
         full_address: {
             type: DataTypes.STRING(255),

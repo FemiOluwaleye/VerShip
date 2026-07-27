@@ -394,14 +394,16 @@ const BussinessProfile = () => {
 
               {!isStripeConnected ? (
                 <div className='mb-6 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4'>
-                  <p className='text-sm text-yellow-100 mb-3'>Your Stripe account is not connected yet. Connect Stripe to receive payments and appear in provider booking quotes.</p>
+                  <p className='text-sm text-yellow-100 mb-3'>You can't be paid yet. Set up payments with Stripe to receive money from customers and appear in booking quotes.</p>
                   <button
                     type='button'
                     onClick={handleStripeConnect}
                     disabled={isStripeConnecting}
                     className='inline-flex items-center justify-center rounded-full bg-yellow-400 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-60'
                   >
-                    {isStripeConnecting ? 'Connecting...' : 'Connect Stripe'}
+                    {/* Names the outcome, not the vendor — forwarders understand
+                        "start collecting payments" far quicker than "Connect Stripe". */}
+                    {isStripeConnecting ? 'Setting up...' : 'Start Collecting Payments'}
                   </button>
                 </div>
               ) : (

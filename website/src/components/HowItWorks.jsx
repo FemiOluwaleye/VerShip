@@ -35,7 +35,7 @@ const HowItWorks = () => {
                 {/* Mission Statement */}
                 <div className="max-w-4xl mx-auto mb-12 md:mb-16 pt-6 md:pt-10 mt-4">
                     <p className="text-[#040b0c] text-xl md:text-[32px] font-medium leading-relaxed md:leading-snug">
-                        Looking to ship freight from USA to Jamaica? VerShip allows you compare rates from trusted shipping companies, book and track your shipment all in one place.
+                        Looking to ship freight from USA to Jamaica? VerShip allows you to compare rates from trusted shipping companies, book and track your shipment all in one place.
                     </p>
                 </div>
 

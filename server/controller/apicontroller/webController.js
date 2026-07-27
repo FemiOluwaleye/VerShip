@@ -7,6 +7,27 @@ const { sendResetEmail, sendSubscriptionEmail, sendBookingStatusUpdateEmailToUse
 const otpHelper = require('../../helper/otpHelper');
 const { env } = require('../../helper/envConfig');
 
+// Destination matching is country-level, not city-level.
+//
+// Forwarders priced their lane as a city string ("Kingston, Jamaica", and a few
+// legacy rows as "Montego Bay, Jamaica"), but under pricing v2 a single barrel
+// price already carries a `parishFees` map covering all 14 parishes — i.e. the
+// lane really is "to Jamaica", with the parish deciding the delivery fee. The
+// booking form now reflects that by asking for the country plus a parish, so a
+// request destined for "Jamaica" must match those existing city-shaped rows.
+// Comparing only the country segment keeps every previously-working quote
+// working while letting shipments to all 14 parishes be quoted.
+const destinationCountryOf = (str) => {
+    if (!str) return "";
+    const parts = String(str).split(',');
+    return parts[parts.length - 1].trim().toLowerCase();
+};
+const destinationsMatch = (a, b) => {
+    const ca = destinationCountryOf(a);
+    const cb = destinationCountryOf(b);
+    return !!ca && ca === cb;
+};
+
 // Fields that must never be serialised back to a client — OTP/reset material and the password hash.
 const SENSITIVE_USER_FIELDS = ['password', 'otp', 'otpHash', 'otpPurpose', 'otpExpiresAt', 'otpAttempts', 'otpLastSentAt'];
 
@@ -536,7 +557,7 @@ module.exports = {
     },
     register: async (req, res) => {
         try {
-            const { name, email, password, role, number, countryCode, survey, streetAddress, city, state } = req.body;
+            const { name, email, password, role, number, countryCode, survey, surveyOther, streetAddress, city, state } = req.body;
             console.log("survey=----------------------->>>>>", survey);
             // return
             let createObj = ""
@@ -585,6 +606,7 @@ module.exports = {
                     password: hashedNewPassword,
                     working_as: req.body.working_as,
                     survey: survey,
+                    surveyOther: String(surveyOther || "").trim().slice(0, 500),
                     // Consolidated signup collects all business details up front, so the
                     // old detail/contact steps (1-3) are already satisfied at registration.
                     profile_step: 3,
@@ -605,6 +627,7 @@ module.exports = {
                     phoneNumber: req.body.number,
                     password: hashedNewPassword,
                     survey: survey,
+                    surveyOther: String(surveyOther || "").trim().slice(0, 500),
                     streetAddress: streetAddress || "",
                     city: city || "",
                     state: state || "",
@@ -2506,7 +2529,7 @@ module.exports = {
 
                         return matchesType &&
                             (bpOrigin === reqOriginCountry || cleanOrigin.toLowerCase().includes(bpOrigin)) &&
-                            (bpDest === reqDestCountry || cleanDestination.toLowerCase().includes(bpDest));
+                            destinationsMatch(bpDest, cleanDestination);
                     });
                 } else {
                     return p.shipmentItemTypes && p.shipmentItemTypes.some(it =>
@@ -3077,9 +3100,10 @@ module.exports = {
                         console.log("reqDestAddress", reqDestAddress);
                         console.log("requestedOriginCountry", requestedOriginCountry);
                         console.log("requestedDestinationCountry", requestedDestinationCountry);
-                        // Case-insensitive exact string match for specific origin/destination
+                        // Origin stays an exact city match; destination matches on
+                        // country (see destinationsMatch above).
                         const originMatch = (bpOrigin === reqOriginAddress);
-                        const destMatch = (bpDest === reqDestAddress);
+                        const destMatch = destinationsMatch(bpDest, reqDestAddress);
 
                         console.log(`Provider ${providerDetail.id} Quotes Match Debug: type=${bp.type}, matchesType=${matchesType}, originMatch=${originMatch}, destMatch=${destMatch}`);
                         return matchesType && originMatch && destMatch;
@@ -3103,7 +3127,7 @@ module.exports = {
                         const reqDest = (latestRequest.destination || "").toLowerCase().trim();
 
                         const isOriginMatch = (bpOrigin === reqOrigin);
-                        const isDestinationMatch = (bpDest === reqDest);
+                        const isDestinationMatch = destinationsMatch(bpDest, reqDest);
                         return isTypeMatch && isOriginMatch && isDestinationMatch;
                     });
 
@@ -3237,7 +3261,7 @@ module.exports = {
                 const safest = [...providersWithMetrics].sort((a, b) => b.metrics.avgRating - a.metrics.avgRating)[0];
                 if (safest && safest.metrics.avgRating > 0) bestInCategories.add(safest.pd.id);
             }
-            if (surveyIds.includes('3') || surveyIds.length === 0) {
+            if (surveyIds.includes('3') || !surveyIds.some((id) => ['1', '2'].includes(id))) {
                 // Lowest Price (Default if none selected)
                 const cheapest = [...providersWithMetrics].sort((a, b) => a.metrics.price - b.metrics.price)[0];
                 if (cheapest) bestInCategories.add(cheapest.pd.id);
@@ -3717,7 +3741,7 @@ module.exports = {
                 const safest = [...providersWithMetrics].sort((a, b) => b.metrics.avgRating - a.metrics.avgRating)[0];
                 if (safest && safest.metrics.avgRating > 0) bestInCategories.add(safest.pd.id);
             }
-            if (surveyIds.includes('3') || surveyIds.length === 0) {
+            if (surveyIds.includes('3') || !surveyIds.some((id) => ['1', '2'].includes(id))) {
                 // Lowest Price (Default if none selected)
                 const cheapest = [...providersWithMetrics].sort((a, b) => a.metrics.price - b.metrics.price)[0];
                 if (cheapest) bestInCategories.add(cheapest.pd.id);

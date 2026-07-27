@@ -25,6 +25,15 @@ module.exports = function (sequelize, DataTypes) {
             allowNull: false,
             defaultValue: "1"
         },
+        // Which group the item is listed under on the public page. Free text so
+        // the owner can add groups later, but the UI offers the three canonical
+        // ones ("Food", "Household Items", "Personal Care"). Anything blank or
+        // unrecognised falls back to "Food" at render time.
+        category: {
+            type: DataTypes.STRING(255),
+            allowNull: false,
+            defaultValue: "Food"
+        },
         // optional emoji/icon shown next to the item on the landing page
         icon: {
             type: DataTypes.STRING(255),

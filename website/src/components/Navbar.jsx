@@ -58,6 +58,21 @@ export default function Navbar() {
     ? (userData.image.startsWith("http") ? userData.image : `${API_URL}/${userData.image}?t=${timestamp}`)
     : profile1;
 
+  // One class for every desktop menu item. Smaller than the old text-lg (18px)
+  // so the whole bar reads as navigation rather than headline copy.
+  const navLinkClass =
+    "flex items-center justify-center px-5 border-r border-[#E5E7EB] bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-[15px] whitespace-nowrap";
+
+  // "Get Quotes" takes you to the booking form on the landing page — scroll to it
+  // when we're already there, otherwise navigate home carrying the scroll intent.
+  const goToQuotes = () => {
+    if (location.pathname === "/") {
+      document.getElementById("booking-form")?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigate("/", { state: { scrollTo: "booking-form" } });
+    }
+  };
+
   const authHiddenRoutes = ["/signup", "/login", "/otp", "/forgot", "/type", "/verification", "/businessSignup", "/businessverification", "/verified", "/businessCreateAccount", "/businesscontact", "/businessdoument", "/businesspolicies", "/businesstime", "/businessupload"];
   const isSignupOnlyNavbar = authHiddenRoutes.includes(location.pathname);
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
@@ -87,101 +102,107 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* Desktop View */}
+          {/* Desktop View — logo far left, then the menu, actions pushed right. */}
           {!isSignupOnlyNavbar && (
-            <div className="hidden lg:grid grid-cols-3 w-full items-stretch divide-x divide-[#E5E7EB]">
-              {/* Left Column: Navigation Links */}
-              <div className="flex items-stretch divide-x divide-[#E5E7EB]">
-                <button
-                  type="button"
-                  onClick={() => navigate("/about")}
-                  className="flex-1 flex items-center justify-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg"
-                >
-                  About
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (location.pathname === "/") {
-                      document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
-                    } else {
-                      navigate("/", { state: { scrollTo: "how-it-works" } });
-                    }
-                  }}
-                  className="flex-1 flex items-center justify-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg"
-                >
-                  How it works
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/prepacked-barrel")}
-                  className="flex-1 flex items-center justify-center text-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg whitespace-nowrap px-2"
-                >
-                  Pre-Packed Barrels
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/contact")}
-                  className="flex-1 flex items-center justify-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg"
-                >
-                  Contact
-                </button>
-              </div>
-
-              {/* Center Column: Logo */}
-              <div className="flex items-center justify-center py-2 px-12 bg-[#F8FAFA]">
+            <div className="hidden lg:flex w-full items-stretch h-[76px] bg-[#F8FAFA]">
+              {/* Logo — far left */}
+              <div className="flex items-center px-6 border-r border-[#E5E7EB]">
                 <button type="button" onClick={() => navigate(homePath)} aria-label="VerShip home">
                   <img
                     src={logo}
                     alt=""
-                    className="h-[44px] cursor-pointer"
+                    className="h-[38px] cursor-pointer"
                   />
                 </button>
               </div>
 
-              {/* Right Column: Auth/Profile */}
-              <div className="flex items-stretch divide-x divide-[#E5E7EB]">
-                {!is_login ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => navigate("/type", { state: { mode: "login" } })}
-                      className="flex-1 flex items-center justify-center py-4.5 bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-lg group"
-                    >
-                      Login <ArrowUpRight className="ml-2 w-5 h-5 text-[#FFBF00] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigate("/type", { state: { mode: "signup" } })}
-                      className="flex-1 flex items-center justify-center py-4.5 bg-[#0D4D4D] hover:bg-[#0A3D3D] transition-colors cursor-pointer text-white font-medium text-lg group"
-                    >
-                      Get started <ArrowUpRight className="ml-2 w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </button>
-                  </>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center py-4 bg-[#F8FAFA] relative" ref={dropdownRef}>
+              {/* Menu */}
+              <button
+                type="button"
+                onClick={() => navigate("/about")}
+                className={navLinkClass}
+              >
+                About
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (location.pathname === "/") {
+                    document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" });
+                  } else {
+                    navigate("/", { state: { scrollTo: "how-it-works" } });
+                  }
+                }}
+                className={navLinkClass}
+              >
+                How it works
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/prepacked-barrel")}
+                className={navLinkClass}
+              >
+                Pre-Packed Barrels
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/contact")}
+                className={navLinkClass}
+              >
+                Contact
+              </button>
+
+              {/* Spacer pushes the actions to the right edge */}
+              <div className="flex-1" />
+
+              {/* Right: Get Quotes, then auth/profile */}
+              <button
+                type="button"
+                onClick={goToQuotes}
+                className="flex items-center justify-center px-6 border-l border-[#E5E7EB] bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#0D4D4D] font-semibold text-[15px] whitespace-nowrap"
+              >
+                Get Quotes
+              </button>
+              {!is_login ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/type", { state: { mode: "login" } })}
+                    className="flex items-center justify-center px-6 border-l border-[#E5E7EB] bg-[#F8FAFA] hover:bg-gray-50 transition-colors cursor-pointer text-[#1A1A1A] font-medium text-[15px] whitespace-nowrap group"
+                  >
+                    Login <ArrowUpRight className="ml-1.5 w-4 h-4 text-[#FFBF00] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/type", { state: { mode: "signup" } })}
+                    className="flex items-center justify-center px-6 bg-[#0D4D4D] hover:bg-[#0A3D3D] transition-colors cursor-pointer text-white font-medium text-[15px] whitespace-nowrap group"
+                  >
+                    Get started <ArrowUpRight className="ml-1.5 w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </button>
+                </>
+              ) : (
+                  <div className="flex items-center px-5 border-l border-[#E5E7EB] bg-[#F8FAFA] relative" ref={dropdownRef}>
                     <button
                       type="button"
                       onClick={() => setShowDropdown(!showDropdown)}
                       aria-haspopup="menu"
                       aria-expanded={showDropdown}
-                      className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                      aria-label={`${userName || "Account"} menu`}
+                      className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                     >
                       {userData.image && userData.image.trim() !== "" ? (
                         <img
                           src={userData.image.startsWith("http") ? userData.image : `${API_URL}/${userData.image}?t=${new Date().getTime()}`}
-                          className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                          className="w-8 h-8 rounded-full object-cover border border-gray-200"
                           alt="profile"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-[#0D4D4D] flex items-center justify-center text-white font-bold border border-[#0D4D4D]/10">
+                        <div className="w-8 h-8 rounded-full bg-[#0D4D4D] flex items-center justify-center text-white text-sm font-bold border border-[#0D4D4D]/10">
                           {userName ? userName[0].toUpperCase() : "U"}
                         </div>
                       )}
-                      <div className="flex flex-col text-left">
-                        <span className="font-semibold text-sm text-[#1A1A1A]">{userName}</span>
-                        <span className="text-xs text-gray-500">Profile</span>
-                      </div>
+                      {/* Just the name — the avatar and caret already say "account". */}
+                      <span className="font-semibold text-[15px] text-[#1A1A1A]">{userName}</span>
                       <ChevronDown className={`w-4 h-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
                     </button>
 
@@ -205,7 +226,6 @@ export default function Navbar() {
                     )}
                   </div>
                 )}
-              </div>
             </div>
           )}
 

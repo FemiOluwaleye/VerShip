@@ -16,6 +16,24 @@ const JAMAICA_PARISHES = [
     'St. Elizabeth', 'Manchester', 'Clarendon', 'St. Catherine',
 ];
 
+// Barrel contents are shown grouped, in this order. Anything with a blank or
+// unrecognised category is listed under the first group rather than dropped, so
+// a bad value can never hide an item the buyer is paying for.
+const CONTENT_CATEGORIES = ['Food', 'Household Items', 'Personal Care'];
+
+const groupContents = (contents = []) => {
+    const buckets = new Map(CONTENT_CATEGORIES.map((c) => [c, []]));
+    contents.forEach((item) => {
+        const key = CONTENT_CATEGORIES.includes(item?.category)
+            ? item.category
+            : CONTENT_CATEGORIES[0];
+        buckets.get(key).push(item);
+    });
+    return CONTENT_CATEGORIES
+        .map((label) => ({ label, items: buckets.get(label) }))
+        .filter((g) => g.items.length > 0);
+};
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Uploaded images are stored with a leading slash (e.g. `/images/x.png`).
@@ -28,10 +46,11 @@ const resolveImageUrl = (img) => {
     return `${API_URL}/${img.replace(/^\/+/, '')}`;
 };
 
-// Door-to-door delivery zone — highlighted red everywhere it appears so buyers
-// immediately see where we deliver to the door.
-const RedParishes = () => (
-    <span className="text-red-600 font-bold">Kingston, St. Andrew &amp; Portmore</span>
+// Door-to-door delivery reach — highlighted red everywhere it appears so buyers
+// immediately see where we deliver to the door. We now cover the whole island,
+// not just the Kingston/St. Andrew/Portmore corridor.
+const DeliveryReach = () => (
+    <span className="text-red-600 font-bold">Islandwide</span>
 );
 
 // A barrel's media can be a still image or a video/animation (e.g. an uploaded
@@ -416,7 +435,7 @@ const PrepackedBarrel = () => {
                                 Send a Pre-Packed Food Barrel to Jamaica
                             </h1>
                             <p className="text-base md:text-lg font-semibold text-[#0D4D4D] mt-1 leading-tight">
-                                Door-to-Door Delivery in <RedParishes />
+                                <DeliveryReach /> Door-to-Door Delivery — all 14 parishes
                             </p>
                             {(product.name || product.tagline) && (
                                 <p className="text-sm md:text-base text-[#595d5e] mt-3 leading-relaxed">
@@ -553,19 +572,29 @@ const PrepackedBarrel = () => {
                 {Array.isArray(product?.contents) && product.contents.length > 0 && (
                     <div className="mt-10 bg-white rounded-[22px] border border-[#0D4D4D]/10 p-6 md:p-8 shadow-sm">
                         <h2 className="text-xl md:text-2xl font-bold text-[#071618] mb-4">What's in the barrel?</h2>
-                        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-2">
-                            {product.contents.map((item) => (
-                                <li key={item.id} className="flex items-center justify-between gap-3 text-[#071618] border-b border-dashed border-[#0D4D4D]/15 py-1.5">
-                                    <span className="flex items-center gap-2 min-w-0">
-                                        <span aria-hidden="true">{item.icon || '•'}</span>
-                                        <span className="break-words">{item.name}</span>
+                        {groupContents(product.contents).map((group) => (
+                            <section key={group.label} className="mt-6 first:mt-0">
+                                <h3 className="flex items-baseline gap-2 text-sm font-bold uppercase tracking-wide text-[#0D4D4D] border-b border-[#0D4D4D]/20 pb-2 mb-3">
+                                    {group.label}
+                                    <span className="text-xs font-semibold normal-case tracking-normal text-[#595d5e]">
+                                        {group.items.length} item{group.items.length === 1 ? '' : 's'}
                                     </span>
-                                    {item.quantity && (
-                                        <span className="text-[#0D4D4D] font-semibold text-sm whitespace-nowrap">{item.quantity}</span>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
+                                </h3>
+                                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-2">
+                                    {group.items.map((item) => (
+                                        <li key={item.id} className="flex items-center justify-between gap-3 text-[#071618] border-b border-dashed border-[#0D4D4D]/15 py-1.5">
+                                            <span className="flex items-center gap-2 min-w-0">
+                                                <span aria-hidden="true">{item.icon || '•'}</span>
+                                                <span className="break-words">{item.name}</span>
+                                            </span>
+                                            {item.quantity && (
+                                                <span className="text-[#0D4D4D] font-semibold text-sm whitespace-nowrap">{item.quantity}</span>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </section>
+                        ))}
                     </div>
                 )}
             </div>

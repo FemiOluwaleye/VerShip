@@ -6,6 +6,7 @@ import { contactUs } from "../api/cms";
 import { toast } from "sonner";
 import { FaSpinner } from "react-icons/fa";
 import PhoneInput from "../components/PhoneInput";
+import { Mail, Phone } from "lucide-react";
 import { validatePhoneForCountry } from "../utils/countryPhoneData";
 
 const Contact = () => {
@@ -107,8 +108,46 @@ const Contact = () => {
     <section className='bg-[linear-gradient(180deg,#2C4736_0%,#09120F_100%)] pb-10 lg:pb-20'>
       <Seo title="Contact Us" path="/contact" description="Get in touch with the VerShip team for help with barrel shipping from the USA to Jamaica." />
       <Commonbanner title="Contact Us" />
-      <div className="container mx-auto text-white mt-10 lg:mt-20">
-        <div className="mx-auto flex flex-col lg:flex-row pb-10 justify-center bg-[#2D413F] rounded-[18px] p-8 gap-5 lg:gap-10">
+      {/* Capped container + two columns on desktop: the form previously ran the
+          full container width, giving ~1170px-wide single-line inputs that were
+          uncomfortable to read and left the page feeling empty. The left column
+          now carries the details people actually look for before writing in. */}
+      <div className="container mx-auto max-w-5xl px-4 text-white mt-10 lg:mt-16">
+        <div className="mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] bg-[#2D413F] rounded-[18px] p-6 lg:p-8 gap-8 lg:gap-10">
+          {/* Contact details / hours / response time */}
+          <aside className="space-y-6 lg:border-r lg:border-white/10 lg:pr-8">
+            <div>
+              <h2 className="text-[#FFBF00] text-sm font-bold uppercase tracking-wider mb-3">Contact Information</h2>
+              <ul className="space-y-3 text-white/80 text-[15px]">
+                <li className="flex items-start gap-3">
+                  <Mail className="w-4 h-4 mt-1 shrink-0 text-[#FFBF00]" aria-hidden="true" />
+                  <a href="mailto:info@vershipgo.com" className="hover:text-white break-all">info@vershipgo.com</a>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Phone className="w-4 h-4 mt-1 shrink-0 text-[#FFBF00]" aria-hidden="true" />
+                  <a href="tel:+18142324537" className="hover:text-white">814-232-4537</a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h2 className="text-[#FFBF00] text-sm font-bold uppercase tracking-wider mb-3">Opening Hours</h2>
+              <ul className="space-y-2 text-white/80 text-[15px]">
+                <li className="flex justify-between gap-4"><span>Monday – Friday</span><span className="text-white/60">9am – 6pm EST</span></li>
+                <li className="flex justify-between gap-4"><span>Saturday</span><span className="text-white/60">10am – 2pm EST</span></li>
+                <li className="flex justify-between gap-4"><span>Sunday</span><span className="text-white/60">Closed</span></li>
+              </ul>
+            </div>
+
+            <div>
+              <h2 className="text-[#FFBF00] text-sm font-bold uppercase tracking-wider mb-3">Response Time</h2>
+              <p className="text-white/80 text-[15px] leading-relaxed">
+                We reply to most messages within <span className="text-white font-semibold">one business day</span>.
+                Messages sent over the weekend are answered the next business day.
+              </p>
+            </div>
+          </aside>
+
           <form className="w-full rounded-[20px] space-y-6" onSubmit={handleSubmit}>
 
             <div>

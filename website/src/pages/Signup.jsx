@@ -42,6 +42,8 @@ const Signup = () => {
   const stateFromRoute = location.state || {};
   const role = typeof stateFromRoute === "object" ? stateFromRoute.role : stateFromRoute;
   const survey = typeof stateFromRoute === "object" ? stateFromRoute.survey : "";
+  // Free text behind the survey's "Other" option; empty unless it was picked.
+  const surveyOther = typeof stateFromRoute === "object" ? (stateFromRoute.surveyOther || "") : "";
 
   useEffect(() => {
     const checkApi = () => {
@@ -233,6 +235,7 @@ const Signup = () => {
       data.append("confirmPassword", formData.confirmPassword);
       data.append("role", role);
       data.append("survey", survey);
+      data.append("surveyOther", surveyOther);
       data.append("main_address", formData.main_address);
       data.append("streetAddress", formData.streetAddress);
       data.append("city", formData.city);

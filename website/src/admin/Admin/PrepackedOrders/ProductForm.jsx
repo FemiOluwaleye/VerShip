@@ -8,7 +8,10 @@ import { axiosInstance, BASE_URL } from "../../Config";
 // Shared add/edit form for pre-packed barrel products. mode="add" | "edit".
 // Contents (the barrel's item list) are edited inline as dynamic rows and sent
 // as a JSON array; the server replaces the child rows wholesale.
-const emptyRow = () => ({ name: "", quantity: "1", icon: "" });
+// Groups the public page lists contents under (see PrepackedBarrel.jsx).
+const CONTENT_CATEGORIES = ["Food", "Household Items", "Personal Care"];
+
+const emptyRow = () => ({ name: "", quantity: "1", icon: "", category: CONTENT_CATEGORIES[0] });
 
 const ProductForm = ({ mode }) => {
   const isEdit = mode === "edit";
@@ -58,6 +61,9 @@ const ProductForm = ({ mode }) => {
               name: c.name || "",
               quantity: String(c.quantity ?? "1"),
               icon: c.icon || "",
+              category: CONTENT_CATEGORIES.includes(c.category)
+                ? c.category
+                : CONTENT_CATEGORIES[0],
             }));
           setContents(rows.length ? rows : [emptyRow()]);
           setExistingImage(p.image || "");
@@ -119,6 +125,7 @@ const ProductForm = ({ mode }) => {
         name: c.name.trim(),
         quantity: String(c.quantity || "1"),
         icon: c.icon || "",
+        category: c.category || CONTENT_CATEGORIES[0],
         sort_order: i + 1,
       }));
 
@@ -385,6 +392,7 @@ const ProductForm = ({ mode }) => {
                               <tr>
                                 <th style={{ width: "90px" }}>Icon</th>
                                 <th>Item Name</th>
+                                <th style={{ width: "170px" }}>Category</th>
                                 <th style={{ width: "120px" }}>Quantity</th>
                                 <th style={{ width: "60px" }}></th>
                               </tr>
@@ -421,6 +429,25 @@ const ProductForm = ({ mode }) => {
                                         )
                                       }
                                     />
+                                  </td>
+                                  <td>
+                                    <select
+                                      className="form-select"
+                                      value={row.category}
+                                      onChange={(e) =>
+                                        handleRowChange(
+                                          index,
+                                          "category",
+                                          e.target.value
+                                        )
+                                      }
+                                    >
+                                      {CONTENT_CATEGORIES.map((c) => (
+                                        <option key={c} value={c}>
+                                          {c}
+                                        </option>
+                                      ))}
+                                    </select>
                                   </td>
                                   <td>
                                     <input

@@ -26,7 +26,12 @@ function toBool(v) {
     return false;
 }
 
-// Accepts an array or a JSON string; returns a normalized array of {name,quantity,icon,sort_order}.
+// The groups the public page renders contents under, in display order. Kept in
+// sync with website/src/pages/PrepackedBarrel.jsx and the admin ProductForm.
+const CONTENT_CATEGORIES = ["Food", "Household Items", "Personal Care"];
+
+// Accepts an array or a JSON string; returns a normalized array of
+// {name,quantity,icon,category,sort_order}.
 function parseContents(raw) {
     let arr = raw;
     if (typeof raw === "string") {
@@ -39,6 +44,11 @@ function parseContents(raw) {
             name: String(c.name).trim(),
             quantity: String(c.quantity ?? "1"),
             icon: String(c.icon || ""),
+            // Unknown/blank groups collapse into "Food" so a row can never go
+            // missing from the page just because its category was mistyped.
+            category: CONTENT_CATEGORIES.includes(String(c.category || "").trim())
+                ? String(c.category).trim()
+                : CONTENT_CATEGORIES[0],
             sort_order: Number.isFinite(+c.sort_order) ? +c.sort_order : i + 1,
         }));
 }

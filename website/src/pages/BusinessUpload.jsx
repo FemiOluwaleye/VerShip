@@ -6,14 +6,9 @@ import MultiSelect from "../components/MultiSelect";
 import { toast } from "sonner";
 import { FaSpinner, FaPlus, FaTrash } from "react-icons/fa";
 import SuccessPopup from "../components/SuccessPopup";
+import InfoTip from "../components/InfoTip";
 import { JAMAICA_PARISHES } from "../utils/parishes";
-
-const ORIGIN_CITIES = [
-  "Fort Lauderdale, FL",
-  "Miami, FL",
-  "Pittsburgh, PA",
-  "Orlando, FL",
-];
+import { ADVERTISED_ORIGINS as ORIGIN_CITIES } from "../utils/origins";
 
 const DESTINATION_CITIES = [
   "Kingston, Jamaica",
@@ -599,8 +594,16 @@ const BuisnessUpload = () => {
     switch (formData.shipmentType) {
       case "barrel":
         return [
-          { id: "Ship Your Own Barrel", label: "Ship Your Own Barrel" },
-          { id: "Request Barrel Drop-Off", label: "Request Barrel Drop-Off" }
+          {
+            id: "Ship Your Own Barrel",
+            label: "Ship Your Own Barrel",
+            info: "The customer already has their own packed barrel. You collect it from them (or they drop it at your warehouse), then ship and deliver it. Pick this if you only handle barrels the customer supplies.",
+          },
+          {
+            id: "Request Barrel Drop-Off",
+            label: "Request Barrel Drop-Off",
+            info: "You deliver an empty barrel to the customer first. They fill it at home, you collect it later, then ship and deliver it. Pick this if you can supply and drop off empty barrels.",
+          }
         ];
       case "box":
         return [
@@ -972,7 +975,8 @@ const BuisnessUpload = () => {
                 disabled={isStripeProcessing}
                 className="inline-flex items-center justify-center rounded-full bg-yellow-400 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isStripeProcessing ? "Connecting..." : "Connect to Stripe"}
+                {/* Same wording as the profile callout — name the outcome, not the vendor. */}
+                {isStripeProcessing ? "Setting up..." : "Start Collecting Payments"}
               </button>
               <button
                 type="button"
@@ -1074,7 +1078,10 @@ const BuisnessUpload = () => {
                 <h3 className="text-sm mb-4 text-white/80">Sub shipment type (Select multiple)</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {getSubOptions().map((type) => (
-                    <label key={type.id} className="flex items-center gap-3 cursor-pointer group">
+                    // The tip sits outside the <label> so tapping "i" reads the
+                    // explanation instead of ticking the box.
+                    <div key={type.id} className="flex items-center gap-3">
+                    <label className="flex items-center gap-3 cursor-pointer group">
                       <div className={`
                         w-5 h-5 rounded border flex items-center justify-center transition-all
                         ${selectedSubTypes.includes(type.id)
@@ -1118,6 +1125,8 @@ const BuisnessUpload = () => {
                       />
                       <span className="text-sm">{type.label}</span>
                     </label>
+                    {type.info && <InfoTip label={type.label} text={type.info} />}
+                    </div>
                   ))}
                 </div>
                 {errors.main_sub_shipment_type && (

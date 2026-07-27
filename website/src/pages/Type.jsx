@@ -5,20 +5,37 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 
+// Survey choices. 1/2/3 drive which quote gets flagged "best"; 4 is a catch-all
+// whose value is the customer's own words, captured in `surveyOther`.
+const OTHER_VALUE = "4";
+const SURVEY_OPTIONS = [
+  { name: "fastest delivery", value: "1" },
+  { name: "safety & reliability", value: "2" },
+  { name: "lowest cost", value: "3" },
+  { name: "other", value: OTHER_VALUE },
+];
+
 const Type = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [role, setRole] = useState("");
   const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
   const [surveyValue, setSurveyValue] = useState([]);
+  // Free text behind the "Other" option, so we learn what matters to people
+  // beyond the three fixed choices.
+  const [surveyOther, setSurveyOther] = useState("");
   const mode = location.state?.mode || "signup";
 
   const toggleSurveyOption = (val) => {
-    setSurveyValue(prev =>
-      prev.includes(val)
+    setSurveyValue(prev => {
+      const next = prev.includes(val)
         ? prev.filter(item => item !== val)
-        : [...prev, val]
-    );
+        : [...prev, val];
+      // Unticking "Other" discards whatever was typed, so we never submit a
+      // free-text answer the customer has backed out of.
+      if (val === OTHER_VALUE && !next.includes(OTHER_VALUE)) setSurveyOther("");
+      return next;
+    });
   };
 
   const handleClick = () => {
@@ -54,15 +71,23 @@ const Type = () => {
       return;
     }
 
+    // "Other" without an explanation captures nothing, which is the whole point
+    // of the option — so ask for it rather than silently dropping the answer.
+    if (surveyValue.includes(OTHER_VALUE) && !surveyOther.trim()) {
+      toast.error("Please tell us what's most important to you");
+      return;
+    }
+
     const surveyString = surveyValue.join(",");
+    const surveyOtherText = surveyValue.includes(OTHER_VALUE) ? surveyOther.trim() : "";
 
     if (role == "user") {
       navigate("/signup", {
-        state: { role: "1", survey: surveyString }
+        state: { role: "1", survey: surveyString, surveyOther: surveyOtherText }
       });
     } else if (role == "business") {
       navigate('/businessSignup', {
-        state: { role: "2", survey: surveyString }
+        state: { role: "2", survey: surveyString, surveyOther: surveyOtherText }
       });
     }
     setIsSurveyModalOpen(false);
@@ -151,7 +176,7 @@ const Type = () => {
               </p>
 
               <div className="space-y-4">
-                {[{ name: "fastest delivery", value: "1" }, { name: "safety & reliability", value: "2" }, { name: "lowest cost", value: "3" }].map((option) => (
+                {SURVEY_OPTIONS.map((option) => (
                   <label
                     key={option.value}
                     className={`flex items-center p-5 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:bg-white/5
@@ -182,6 +207,25 @@ const Type = () => {
                   </label>
                 ))}
               </div>
+
+              {surveyValue.includes(OTHER_VALUE) && (
+                <div className="mt-4">
+                  <label htmlFor="survey-other" className="block text-sm font-medium text-white/80 mb-2">
+                    What matters most to you?
+                  </label>
+                  <textarea
+                    id="survey-other"
+                    name="surveyOther"
+                    rows={3}
+                    maxLength={500}
+                    value={surveyOther}
+                    onChange={(e) => setSurveyOther(e.target.value)}
+                    placeholder="Tell us in your own words…"
+                    className="w-full rounded-xl bg-white/5 border-2 border-white/10 focus:border-[#FCC604] focus:outline-none p-4 text-white placeholder-white/40 transition-colors resize-none"
+                  />
+                  <div className="mt-1 text-right text-xs text-white/40">{surveyOther.length}/500</div>
+                </div>
+              )}
 
               <button
                 onClick={handleSurveySubmit}

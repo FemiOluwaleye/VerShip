@@ -2,6 +2,28 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { logoFooter ,Group  , instagram12 } from "../common/common-assets/assets-images.jsx";
 import { Mail, Phone, Facebook, Instagram, } from "lucide-react";
+import { FaTiktok } from "react-icons/fa6";
+
+// VerShip's social profiles. Kept in one list so the footer icons can never
+// drift out of sync with each other again (both used to be dead "#" links).
+const SOCIAL_LINKS = [
+  {
+    label: "Facebook",
+    href: "https://www.facebook.com/profile.php?id=61590888983095",
+    icon: <img src={Group} alt="" width={18} />,
+  },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/vershipgo/",
+    icon: <img src={instagram12} alt="" width={18} />,
+  },
+  {
+    label: "TikTok",
+    href: "https://www.tiktok.com/@vershipgo",
+    // No bundled TikTok asset, so use the icon font at the same visual size.
+    icon: <FaTiktok size={16} aria-hidden="true" />,
+  },
+];
 import MoveBusinessForward from "./MoveBusinessForward";
 
 const Footer = () => {
@@ -34,15 +56,20 @@ const Footer = () => {
               
               {/* Social Icons */}
               <div className="flex gap-4">
-                <a href="#" aria-label="VerShip on Facebook" className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1A1F1D] flex items-center justify-center hover:bg-[#C1A35E] hover:text-[#0A0D0C] transition-all text-white/50">
-                  <img src={Group} alt="" width={18} />
-                </a>
-                <a href="#" aria-label="VerShip on Instagram" className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1A1F1D] flex items-center justify-center hover:bg-[#C1A35E] hover:text-[#0A0D0C] transition-all text-white/50">
-                  <img src={instagram12} alt="" width={18} />
-                </a>
-                {/* <a href="#" className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1A1F1D] flex items-center justify-center hover:bg-[#C1A35E] hover:text-[#0A0D0C] transition-all text-white/50">
-                  <img src={twitters} alt="Twitter" width={18} />
-                </a> */}
+                {SOCIAL_LINKS.map(({ label, href, icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    aria-label={`VerShip on ${label}`}
+                    target="_blank"
+                    // noopener/noreferrer: target="_blank" otherwise hands the
+                    // opened page a handle back to ours via window.opener.
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1A1F1D] flex items-center justify-center hover:bg-[#C1A35E] hover:text-[#0A0D0C] transition-all text-white/50"
+                  >
+                    {icon}
+                  </a>
+                ))}
               </div>
             </div>
 

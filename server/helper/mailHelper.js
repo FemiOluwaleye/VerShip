@@ -10,7 +10,12 @@ const escapeHtml = (value) => {
         .replace(/'/g, '&#39;');
 };
 
-const DEFAULT_FROM = process.env.MAIL_FROM || 'VerShip <no-reply@vershipgo.com>';
+// The From header for every outbound email — override per environment with
+// MAIL_FROM. This MUST be an address on a domain verified in Resend: several
+// senders used to fall back to "no-reply@shipone.com", an unverified domain, so
+// Resend replaced it with the account owner's own identity and customers saw a
+// personal name on their OTP mail. Keep this the single source of truth.
+const DEFAULT_FROM = process.env.MAIL_FROM || 'VerShip <info@vershipgo.com>';
 
 // --- Email transport seam -------------------------------------------------------------------
 // Prefer Resend when RESEND_API_KEY is configured; otherwise fall back to SMTP/nodemailer so
@@ -67,7 +72,9 @@ const deliver = async ({ to, subject, html, text, from, replyTo }) => {
             // Normalise Resend's error object into a thrown Error so callers' try/catch works.
             throw new Error(error.message || 'Resend send failed');
         }
-        console.log('📧 Email sent via Resend: %s', data && data.id);
+        // Log the resolved From — a wrong/unverified sender is silently rewritten
+        // by Resend, and this is the only place it is observable.
+        console.log('📧 Email sent via Resend: id=%s from=%s subject=%s', data && data.id, fromAddr, subject);
         return data;
     }
 
@@ -79,7 +86,7 @@ const deliver = async ({ to, subject, html, text, from, replyTo }) => {
         text: plain,
         ...(replyTo ? { replyTo } : {}),
     });
-    console.log('📧 Email sent via SMTP: %s', info.messageId);
+    console.log('📧 Email sent via SMTP: id=%s from=%s subject=%s', info.messageId, fromAddr, subject);
     return info;
 };
 
@@ -121,7 +128,7 @@ module.exports = {
     sendResetEmail12: async (email, link) => {
         try {
             const mailOptions = {
-                from: process.env.MAIL_FROM || '"Vership" <no-reply@shipone.com>',
+                from: DEFAULT_FROM,
                 to: email,
                 subject: 'Password Reset Request',
                 html: `
@@ -151,7 +158,7 @@ module.exports = {
     sendOtpEmail12: async (email, otp) => {
         try {
             const mailOptions = {
-                from: process.env.MAIL_FROM || '"Vership" <no-reply@shipone.com>',
+                from: DEFAULT_FROM,
                 to: email,
                 subject: 'Password Reset OTP',
                 html: `
@@ -206,7 +213,7 @@ module.exports = {
     sendSubscriptionEmail: async (email) => {
         try {
             const mailOptions = {
-                from: process.env.MAIL_FROM || '"Vership" <no-reply@shipone.com>',
+                from: DEFAULT_FROM,
                 to: email,
                 subject: 'Welcome to Vership Newsletter!',
                 html: `
@@ -275,7 +282,7 @@ module.exports = {
             };
 
             const mailOptions = {
-                from: process.env.MAIL_FROM || '"Vership" <no-reply@shipone.com>',
+                from: DEFAULT_FROM,
                 to: adminEmail,
                 subject: 'New Freight Forwarder Registration — Vership',
                 html: `
@@ -339,7 +346,7 @@ module.exports = {
     sendOtpEmail: async (email, otp) => {
         try {
             const mailOptions = {
-                from: process.env.MAIL_FROM || '"Vership" <no-reply@shipone.com>',
+                from: DEFAULT_FROM,
                 to: email,
                 subject: 'OTP Verification',
                 html: `
@@ -385,7 +392,7 @@ module.exports = {
             };
 
             const mailOptions = {
-                from: process.env.MAIL_FROM || '"Vership" <no-reply@shipone.com>',
+                from: DEFAULT_FROM,
                 to: email,
                 subject: `New Order Placed — ${orderId || 'Vership'}`,
                 html: `
@@ -445,7 +452,7 @@ module.exports = {
             } = orderDetails;
 
             const mailOptions = {
-                from: process.env.MAIL_FROM || '"Vership" <no-reply@shipone.com>',
+                from: DEFAULT_FROM,
                 to: email,
                 subject: `New Order Received - Order #${orderId || bookingId}`,
                 html: `
@@ -495,7 +502,7 @@ module.exports = {
         } = orderDetails;
 
         const mailOptions = {
-            from: process.env.MAIL_FROM || '"Vership" <no-reply@shipone.com>',
+            from: DEFAULT_FROM,
             to: email,
             subject: `Booking Status Update - Order #${orderId || bookingId}`,
             html: `
