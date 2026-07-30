@@ -3,6 +3,7 @@ import { MapPin, Clock, Star, Package, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getTopForwarders } from "../api/cms";
 import { API_URL } from "../api/axios";
+import { headlinePrice } from "../utils/pricing";
 
 const AllForwarders = () => {
     const navigate = useNavigate();
@@ -99,12 +100,16 @@ const AllForwarders = () => {
 
                                             {/* Price */}
                                             <div className="mt-2">
-                                                {/* <span className="text-[#FFBF00] font-bold text-[22px]">
-                                                    ${f.businessInfo?.basePrice}
-                                                </span> */}
-                                                {/* <span className="text-white/40 text-[12px] ml-1">
-                                                    /barrel
-                                                </span> */}
+                                                {headlinePrice(f.businessInfo?.barrelPrices) !== null && (
+                                                    <>
+                                                        <span className="text-[#FFBF00] font-bold text-[22px]">
+                                                            ${headlinePrice(f.businessInfo?.barrelPrices)}
+                                                        </span>
+                                                        <span className="text-white/40 text-[12px] ml-1">
+                                                            /barrel
+                                                        </span>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

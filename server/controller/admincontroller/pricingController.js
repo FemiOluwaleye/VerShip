@@ -20,12 +20,16 @@ const { sendPricingChangedEmailToProvider } = require("../../helper/mailHelper")
  *    down to whatever an admin form happened to post. Admin writes update ONE
  *    row, scoped by both id and providerId.
  *
- * 2. Keep the three copies of the headline price in sync. The per-barrel price
- *    is stored in barrelsprices.seaFreightPrice (drives v2 quotes),
+ * 2. Keep the copies of the headline price on the card in sync. The per-barrel
+ *    price is stored in barrelsprices.seaFreightPrice (drives v2 quotes) and
  *    barrelsprices.barrelPrice/basePrice (drives legacy quotes and the
- *    getAvailableQuotes display override), and providerDetails.basePrice (drives
- *    the public /forwarders card). Writing only one of them makes the public
- *    listing advertise a price checkout will not honour.
+ *    getAvailableQuotes display override). Writing only one makes a card quote
+ *    differently depending on which model reads it.
+ *
+ *    There used to be a third copy, providerDetails.basePrice, feeding the
+ *    public /forwarders card. It has been removed: the listing now derives its
+ *    price from the cards via headlinePrice() in website/src/utils/pricing.js,
+ *    so there is nothing left to drift.
  *
  * 3. Route identity is frozen. type / originCountry / destinationCountry / the
  *    lat-longs decide which bookings a card prices; editing them would silently
@@ -150,7 +154,7 @@ module.exports = {
                     model: db.providerDetails,
                     as: 'businessInfo',
                     required: false,
-                    attributes: ['id', 'businessName', 'documentVerify', 'basePrice', 'transitTime', 'shipmentType'],
+                    attributes: ['id', 'businessName', 'documentVerify', 'transitTime', 'shipmentType'],
                 }],
                 order: [['id', 'DESC']],
             });
@@ -207,9 +211,9 @@ module.exports = {
                     v2CardCount: v2.length,
                     staleCardCount: cards.length - live.length,
                     routeCollisions,
-                    // Headline price the public listing shows, and the card it
-                    // came from, so a mismatch between them is visible here.
-                    listedBasePrice: u.businessInfo?.basePrice ?? null,
+                    // The price the public listing shows. Derived from the same
+                    // card the listing derives it from, so this is what the
+                    // customer sees, not a copy of it.
                     headlinePrice: ownCard
                         ? (isPricingV2(ownCard) ? ownCard.seaFreightPrice : ownCard.barrelPrice)
                         : null,
@@ -230,9 +234,7 @@ module.exports = {
                 rows = rows.filter((r) =>
                     (r.liveCardCount > 0 && !r.isLive) ||
                     r.routeCollisions > 0 ||
-                    (r.modelVersion === 'v2' && r.parishCoverage < r.parishTotal) ||
-                    (r.isLive && r.headlinePrice != null && r.listedBasePrice != null &&
-                        parseFloat(r.headlinePrice) !== parseFloat(r.listedBasePrice))
+                    (r.modelVersion === 'v2' && r.parishCoverage < r.parishTotal)
                 );
             }
 
@@ -325,7 +327,6 @@ module.exports = {
                     phoneNumber: u.phoneNumber,
                     status: u.status,
                     documentVerify: u.businessInfo?.documentVerify ?? 0,
-                    listedBasePrice: u.businessInfo?.basePrice ?? null,
                     listedTransitTime: u.businessInfo?.transitTime ?? null,
                     gates: {
                         role: String(u.role) === '2',
@@ -401,10 +402,7 @@ module.exports = {
             });
             if (!provider) return helper.error(res, 'Provider not found.', 404);
 
-            // Rule 2: keep the headline price consistent across all three homes.
-            // The public /forwarders card reads providerDetails.basePrice, which
-            // tracks the 'own' card; leaving it stale advertises a price the
-            // checkout will not honour.
+            // Rule 2: keep the v2 and legacy price fields on the card in step.
             const effectivePerBarrel = updates.seaFreightPrice !== undefined
                 ? updates.seaFreightPrice
                 : (updates.basePrice !== undefined ? updates.basePrice : null);
@@ -416,13 +414,13 @@ module.exports = {
             await db.sequelize.transaction(async (t) => {
                 await card.update(updates, { transaction: t });
 
-                if (before.type === 'own' && provider.businessInfo) {
-                    const mirror = {};
-                    if (effectivePerBarrel !== null) mirror.basePrice = effectivePerBarrel;
-                    if (updates.transitTime !== undefined) mirror.transitTime = updates.transitTime;
-                    if (Object.keys(mirror).length) {
-                        await provider.businessInfo.update(mirror, { transaction: t });
-                    }
+                // transitTime is still denormalized onto providerDetails for the
+                // listing card. The price no longer is — see the header note.
+                if (before.type === 'own' && provider.businessInfo && updates.transitTime !== undefined) {
+                    await provider.businessInfo.update(
+                        { transitTime: updates.transitTime },
+                        { transaction: t },
+                    );
                 }
             });
 

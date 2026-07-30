@@ -426,7 +426,7 @@ const BuisnessDetail = () => {
     });
   }
 
-  const basePrice = booking?.base_price ? parseFloat(booking.base_price) : (barrelPriceObj ? parseFloat(barrelPriceObj.basePrice || 0) : (providerDetail ? parseFloat(providerDetail.basePrice || 0) : 0));
+  const basePrice = booking?.base_price ? parseFloat(booking.base_price) : (barrelPriceObj ? parseFloat(barrelPriceObj.basePrice || 0) : 0);
   const perBarrelPrice = booking ? parseFloat(booking.bookingPrice || 0) : 0;
 
   const storedBarrelDiscount =

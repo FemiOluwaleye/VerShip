@@ -163,7 +163,10 @@ const BusinessUploadNext = () => {
         if (response.success && response.body.businessInfo) {
           const info = response.body.businessInfo;
           setFormData({
-            basePrice: info.basePrice || "",
+            // providerDetails.basePrice is gone; the per-card price below is
+            // the real one. This stays only because the payload still carries
+            // a (now server-ignored) top-level basePrice field.
+            basePrice: "",
             pricePerMile: info.pricePerMile || "",
             pricePerPound: info.pricePerPound || "",
             originLat: info.originLat || "",

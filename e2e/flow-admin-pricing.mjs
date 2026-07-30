@@ -91,10 +91,21 @@ const misRows = await page.locator("table tbody tr").count();
 body = await text();
 await page.screenshot({ path: SHOT("2-needs-attention"), fullPage: true });
 check("needs-attention filter narrows the list", misRows <= rowCount, `${misRows} of ${rowCount}`);
+// Every row under this filter must state why it is there — and when nothing
+// qualifies, the page must say so rather than render a silently empty table.
+// (There used to be a "listed price mismatch" reason. The public listing now
+// derives its price from the same rate card a quote uses, so that class of
+// inconsistency cannot occur and is no longer flagged.)
 check(
-  "flags a real inconsistency",
-  /listed price mismatch|duplicate route|parish(es)? unpriced/i.test(body),
-  (body.match(/listed price mismatch|duplicate routes?|\d+ parish(es)? unpriced/i) || ["none"])[0]
+  misRows === 0
+    ? "nothing needs attention, and the table says so"
+    : "every flagged row states a reason",
+  misRows === 0
+    ? /No forwarders match this filter/i.test(body)
+    : /duplicate routes?|parish(es)? unpriced|not live/i.test(body),
+  misRows === 0
+    ? "empty state shown"
+    : (body.match(/duplicate routes?|\d+ parish(es)? unpriced|not live/i) || ["none"])[0]
 );
 
 // ---- Editor -----------------------------------------------------------------

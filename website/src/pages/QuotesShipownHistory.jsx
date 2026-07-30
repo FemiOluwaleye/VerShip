@@ -456,7 +456,7 @@ const QuotesShipownHistory = () => {
                                                         });
                                                         const price = card
                                                             ? (isPricingV2(card) ? card.seaFreightPrice : card.basePrice)
-                                                            : providerDetail.basePrice;
+                                                            : null;
                                                         return parseFloat(price || 0);
                                                     })()}
                                                 </div>

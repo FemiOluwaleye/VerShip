@@ -97,19 +97,10 @@ const PricingListing = () => {
           "Two live rate cards share the same type and route. Quotes pick one arbitrarily — retire the stale card.",
       });
     }
-    if (
-      r.headlinePrice != null &&
-      r.listedBasePrice != null &&
-      parseFloat(r.headlinePrice) !== parseFloat(r.listedBasePrice)
-    ) {
-      out.push({
-        tone: "danger",
-        text: "listed price mismatch",
-        title: `The public forwarder card advertises ${money(
-          r.listedBasePrice
-        )} but quotes price at ${money(r.headlinePrice)}. Saving the rate card realigns both.`,
-      });
-    }
+    // There was a "listed price mismatch" flag here, for when the public
+    // forwarder card advertised a different price than quotes charged. The
+    // listing derives its price from the same card now, so the two cannot
+    // disagree and there is nothing left to flag.
     if (r.modelVersion === "v2" && r.parishCoverage < r.parishTotal) {
       out.push({
         tone: "warning",
@@ -289,19 +280,7 @@ const PricingListing = () => {
                                   {r.modelVersion === "none" ? "none" : r.modelVersion}
                                 </span>
                               </td>
-                              <td>
-                                {money(r.headlinePrice)}
-                                {r.listedBasePrice != null &&
-                                  r.headlinePrice != null &&
-                                  parseFloat(r.listedBasePrice) !== parseFloat(r.headlinePrice) && (
-                                    <div
-                                      className="text-danger font-12"
-                                      title="What the public forwarder card advertises"
-                                    >
-                                      listed {money(r.listedBasePrice)}
-                                    </div>
-                                  )}
-                              </td>
+                              <td>{money(r.headlinePrice)}</td>
                               <td>
                                 {r.modelVersion === "v2" ? (
                                   <span

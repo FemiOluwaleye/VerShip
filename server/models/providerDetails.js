@@ -102,11 +102,10 @@ module.exports = function (sequelize, DataTypes) {
         allowNull: false,
         defaultValue: "",
       },
-      basePrice: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
-        defaultValue: "0",
-      },
+      // basePrice was removed by migrate-drop-provider-baseprice.js. It held a
+      // copy of the rate card's per-barrel price for the public listing, and
+      // nothing kept the copy in step with the card. The listing derives the
+      // price from barrelsprices now (headlinePrice() in website/src/utils/pricing.js).
       pricePerMile: {
         type: DataTypes.STRING(255),
         allowNull: false,

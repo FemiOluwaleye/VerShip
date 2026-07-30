@@ -1389,7 +1389,11 @@ module.exports = {
                 transitTime: finalTransitTime,
                 shipmentContents: finalShipmentContents,
                 isFinalStep,
-                basePrice: finalBasePrice || "0",
+                // providerDetails.basePrice is gone: it was a copy of the rate
+                // card's per-barrel price, written from a top-level form field
+                // that could be stale or blank while the card it shipped
+                // alongside was fresh. Listings derive the price from the cards
+                // now (headlinePrice() in website/src/utils/pricing.js).
                 originLat: finalOriginLat,
                 originLong: finalOriginLong,
                 destinationLat: finalDestinationLat,
@@ -1901,7 +1905,11 @@ module.exports = {
                 transitTime: finalTransitTime,
                 shipmentContents: finalShipmentContents,
                 isFinalStep,
-                basePrice: finalBasePrice || "0",
+                // providerDetails.basePrice is gone: it was a copy of the rate
+                // card's per-barrel price, written from a top-level form field
+                // that could be stale or blank while the card it shipped
+                // alongside was fresh. Listings derive the price from the cards
+                // now (headlinePrice() in website/src/utils/pricing.js).
                 originLat: finalOriginLat,
                 originLong: finalOriginLong,
                 destinationLat: finalDestinationLat,
@@ -2263,7 +2271,7 @@ module.exports = {
                             groups[key] = {
                                 originCountry: p.originCountry || info.originCountry,
                                 destinationCountry: p.destinationCountry || info.destinationCountry,
-                                basePrice: p.basePrice || info.basePrice,
+                                basePrice: p.basePrice,
                                 pricePerPound: info.pricePerPound,
                                 pricePerMile: p.pricePerMile || info.pricePerMile,
                                 customsAndHandling: p.customsAndHandling || info.customsAndHandling,
@@ -2358,7 +2366,7 @@ module.exports = {
                             groups[key] = {
                                 originCountry: p.originCountry || info.originCountry,
                                 destinationCountry: p.destinationCountry || info.destinationCountry,
-                                basePrice: p.basePrice || info.basePrice,
+                                basePrice: p.basePrice,
                                 pricePerPound: info.pricePerPound,
                                 pricePerMile: p.pricePerMile || info.pricePerMile,
                                 customsAndHandling: p.customsAndHandling || info.customsAndHandling,
@@ -4044,12 +4052,16 @@ module.exports = {
                     }
                 }
 
-                const barrelBasePrice = bestBarrel ? bestBarrel.basePrice : (providerDetail ? providerDetail.basePrice : "0");
+                // No providerDetails.basePrice fallback: it was a stale copy of
+                // this same card price, and bestBarrel is only null when the
+                // provider has no cards at all — in which case they are neither
+                // listed nor quotable, so there is nothing to book.
+                const barrelBasePrice = bestBarrel ? bestBarrel.basePrice : "0";
                 const barrelIsVolumeDiscount = bestBarrel ? (bestBarrel.isVolumeDiscount || 0) : 0;
                 const barrelDiscountAfter = bestBarrel ? (bestBarrel.discountAfter || 0) : 0;
                 const barrelDiscountPercent = bestBarrel ? (bestBarrel.discountPercent || 0) : 0;
                 const barrelFreeMiles = bestBarrel ? (bestBarrel.freeMiles || "0") : "0";
-                const bookingPrice = bestBarrel ? bestBarrel.barrelPrice : (providerDetail ? providerDetail.basePrice : "0");
+                const bookingPrice = bestBarrel ? bestBarrel.barrelPrice : "0";
 
                 // Check for existing booking for this request, provider and user
                 let booking = await db.bookings.findOne({
@@ -5225,7 +5237,10 @@ module.exports = {
                     {
                         model: db.providerDetails,
                         as: 'businessInfo',
-                        attributes: ['businessName', 'basePrice', 'originCountry', 'destinationCountry', 'transitTime', 'shipmentType'],
+                        // No basePrice: the listing derives the headline price
+                        // from barrelPrices below, so it can never disagree
+                        // with what a quote would charge.
+                        attributes: ['businessName', 'originCountry', 'destinationCountry', 'transitTime', 'shipmentType'],
                         where: { documentVerify: 1 },
                         required: true,
                         include: [

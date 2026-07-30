@@ -3,6 +3,7 @@ import { MapPin, Clock, Star, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import instance, { API_URL } from "../api/axios";
 import { getTopForwarders } from "../api/cms";
+import { headlinePrice } from "../utils/pricing";
 
 const TopForwarders = () => {
     const navigate = useNavigate();
@@ -95,12 +96,14 @@ const TopForwarders = () => {
 
                                 {/* Price + Days */}
                                 <div className="flex items-center justify-between mt-auto pt-2">
-                                    {/* <span className="text-[#FFBF00] font-bold text-[20px]">
-                                        ${f.businessInfo?.basePrice}
-                                        <span className="text-white/40 text-[12px] font-normal ml-1">
-                                            /barrel
+                                    {headlinePrice(f.businessInfo?.barrelPrices) !== null && (
+                                        <span className="text-[#FFBF00] font-bold text-[20px]">
+                                            ${headlinePrice(f.businessInfo?.barrelPrices)}
+                                            <span className="text-white/40 text-[12px] font-normal ml-1">
+                                                /barrel
+                                            </span>
                                         </span>
-                                    </span> */}
+                                    )}
                                     <div className="flex items-center gap-1 text-white/40 text-[12px]">
                                         <Clock size={12} />
                                         {f.businessInfo?.transitTime}

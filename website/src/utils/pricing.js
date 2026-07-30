@@ -92,6 +92,34 @@ export const selectRateCard = (barrelPrices, { type, origin, destination } = {})
   );
 };
 
+/**
+ * The per-barrel price to advertise on a forwarder card, derived from the
+ * forwarder's own rate cards.
+ *
+ * This used to be read from providerDetails.basePrice, a denormalized copy
+ * written by completeProfile. Nothing kept the copy in step with the cards —
+ * migrations and scripts wrote one and not the other, and completeProfile
+ * preferred a stale top-level form field over the card it was saving — so the
+ * listing could advertise a price the quote would not honour. Deriving it from
+ * the same cards selectRateCard() picks from makes that drift impossible.
+ *
+ * There is no booking context on a listing page, so no origin/destination is
+ * passed: selectRateCard() then falls through to "prefer v2, else first card"
+ * for the type, which is the headline rule. A forwarder with only drop-off
+ * cards still gets a price rather than a blank.
+ */
+export const headlinePrice = (barrelPrices) => {
+  const card =
+    selectRateCard(barrelPrices, { type: "own" }) ||
+    selectRateCard(barrelPrices, { type: "dropoff" });
+  if (!card) return null;
+  const raw = isPricingV2(card)
+    ? card.seaFreightPrice
+    : card.barrelPrice || card.basePrice;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+
 /** Per-barrel price after the tier discount: 1-4 full, 5-9 minus discount5to9, 10+ minus discount10plus. */
 export const v2PerBarrelPrice = (bp, quantity) => {
   const qty = parseInt(quantity, 10) || 0;

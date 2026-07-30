@@ -135,7 +135,10 @@ const ShipmentDetailsSection = () => {
   console.log("🔍 Delivery Free Miles:", deliveryFreeMiles);
   console.log("🔍 Delivery Per Mile Charge:", deliveryPerMileCharge);
 
-  const basePrice = barrelPriceObj ? parseFloat(barrelPriceObj.basePrice || 0) : (providerDetail ? parseFloat(providerDetail.basePrice || 0) : 0);
+  // Rate card only. providerDetails.basePrice used to be the fallback here, but
+  // it was a stale copy of this same number and a provider with no card is not
+  // quotable in the first place.
+  const basePrice = barrelPriceObj ? parseFloat(barrelPriceObj.basePrice || 0) : 0;
 
   // v2: one combined Customs & Delivery fee for the consignee's parish.
   // Legacy: quantity-tiered customs CSV lookup.
