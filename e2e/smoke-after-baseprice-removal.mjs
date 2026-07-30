@@ -46,12 +46,6 @@ const IGNORE = [
     /ResizeObserver loop/i,
     /Download the React DevTools/i,
     /React Router Future Flag/i,
-    // Uploaded document/image paths are stored without a leading slash, so the
-    // browser resolves "images/x.jpg" against the protocol and treats "images"
-    // as a hostname. Pre-existing and unrelated to pricing — broken thumbnails,
-    // not a broken page.
-    /ERR_NAME_NOT_RESOLVED/i,
-    /^http:\/\/images\//i,
 ];
 let consoleErrors = [];
 let netFailures = [];

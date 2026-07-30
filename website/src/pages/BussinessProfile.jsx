@@ -6,6 +6,7 @@ import Commonbanner from '../components/Commonbanner';
 import { getProviderProfile, createStripeAccount } from '../api/cms';
 import { toast } from 'sonner';
 import { API_URL } from '../api/axios';
+import { resolveFileUrl } from '../utils/fileUrl';
 import { JAMAICA_PARISHES } from '../utils/parishes';
 
 const BussinessProfile = () => {
@@ -76,11 +77,7 @@ const BussinessProfile = () => {
   const businessInfo = profileData?.businessInfo || {};
   console.log("businessInfo------->>>>>", businessInfo);
 
-  const getDocUrl = (path) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    return `${API_URL}/${path}`;
-  };
+  const getDocUrl = (path) => resolveFileUrl(path, API_URL);
 
   const isPdf = (path) => path && path.toLowerCase().endsWith('.pdf');
 

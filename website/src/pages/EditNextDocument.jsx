@@ -7,6 +7,7 @@ import { getProviderProfile, completeProfile } from "../api/cms";
 import { toast } from "sonner";
 import { FaSpinner, FaFilePdf, FaCloudUploadAlt } from "react-icons/fa";
 import { API_URL } from "../api/axios";
+import { resolveFileUrl } from "../utils/fileUrl";
 
 const EditNextDocument = () => {
   const navigate = useNavigate();
@@ -178,7 +179,7 @@ const EditNextDocument = () => {
       } else if (previewUrl && typeof previewUrl === 'string' && previewUrl !== '') {
         const name = previewUrl.split('/').pop()?.replace(/\.pdf$/i, '') || "Document";
         setFileName(name.length > 30 ? name.substring(0, 27) + '...' : name);
-        setPdfUrl(`${API_URL}/${previewUrl}`);
+        setPdfUrl(resolveFileUrl(previewUrl, API_URL));
       }
     }, [file, previewUrl]);
 
@@ -216,9 +217,7 @@ const EditNextDocument = () => {
   };
 
   const ImagePreview = ({ previewUrl, field }) => {
-    const fullPreviewUrl = previewUrl && !previewUrl.startsWith('blob:')
-      ? `${API_URL}/${previewUrl}`
-      : previewUrl;
+    const fullPreviewUrl = resolveFileUrl(previewUrl, API_URL);
 
     return (
       <div className="text-center flex flex-col items-center gap-2">

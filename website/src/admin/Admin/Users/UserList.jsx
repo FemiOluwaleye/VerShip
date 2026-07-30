@@ -15,6 +15,7 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 import Pagination from "@mui/material/Pagination";
 import Stack from "@mui/material/Stack";
 import { BASE_URL } from "../../Config";
+import { resolveFileUrl } from "../../../utils/fileUrl";
 import "@fancyapps/fancybox/dist/jquery.fancybox.css";
 import "@fancyapps/fancybox";
 
@@ -233,7 +234,7 @@ const UserList = () => {
                                 {/* <td>
                                   {user.image ? (
                                     <img
-                                      src={`${BASE_URL}/${user.image}`}
+                                      src={resolveFileUrl(user.image, BASE_URL)}
                                       alt="User"
                                       style={{
                                         width: "50px",
@@ -387,7 +388,7 @@ const UserList = () => {
                 {/* <div className="d-flex align-items-center border-bottom pt-1 pb-3">
                   {selectedUser.image ? (
                     <img
-                      src={`${BASE_URL}/${selectedUser.image}`}
+                      src={resolveFileUrl(selectedUser.image, BASE_URL)}
                       className="rounded-circle me-3"
                       width="100"
                       height="100"

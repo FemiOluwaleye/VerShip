@@ -8,6 +8,7 @@ import Stack from "@mui/material/Stack";
 import "@fancyapps/fancybox/dist/jquery.fancybox.css";
 import "@fancyapps/fancybox";
 import { axiosInstance, BASE_URL } from "../../Config";
+import { resolveFileUrl } from "../../../utils/fileUrl";
 
 const BookingList = () => {
   const tableStyle = {
@@ -665,11 +666,11 @@ const BookingList = () => {
                             <div
                               className="document-preview border rounded overflow-hidden bg-light d-flex align-items-center justify-content-center"
                               style={{ width: "80px", height: "80px", cursor: "pointer" }}
-                              onClick={() => window.open(`${BASE_URL}/${selectedMatch.document}`, '_blank')}
+                              onClick={() => window.open(resolveFileUrl(selectedMatch.document, BASE_URL), '_blank')}
                             >
                               {selectedMatch.document.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                                 <img
-                                  src={`${BASE_URL}/${selectedMatch.document}`}
+                                  src={resolveFileUrl(selectedMatch.document, BASE_URL)}
                                   alt="Document"
                                   className="w-100 h-100 object-fit-cover"
                                 />
@@ -687,7 +688,7 @@ const BookingList = () => {
                             </div>
                             <div className="mt-1 text-center">
                               <a
-                                href={`${BASE_URL}/${selectedMatch.document}`}
+                                href={resolveFileUrl(selectedMatch.document, BASE_URL)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="btn btn-sm btn-link p-0 text-primary"

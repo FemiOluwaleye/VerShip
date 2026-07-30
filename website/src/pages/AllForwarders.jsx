@@ -3,6 +3,7 @@ import { MapPin, Clock, Star, Package, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getTopForwarders } from "../api/cms";
 import { API_URL } from "../api/axios";
+import { resolveFileUrl } from "../utils/fileUrl";
 import { headlinePrice } from "../utils/pricing";
 
 const AllForwarders = () => {
@@ -57,7 +58,7 @@ const AllForwarders = () => {
                                         {/* Avatar */}
                                         {/* {f.image ? (
                                             <img
-                                                src={f.image.startsWith("http") ? f.image : `${API_URL}/${f.image}`}
+                                                src={resolveFileUrl(f.image, API_URL)}
                                                 alt={f.businessInfo?.businessName || f.firstName}
                                                 className="w-11 h-11 rounded-xl object-cover flex-shrink-0"
                                             />

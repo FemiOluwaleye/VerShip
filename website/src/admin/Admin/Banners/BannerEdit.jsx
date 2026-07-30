@@ -2,6 +2,7 @@ import { ADMIN_BASE } from "../../adminBase";
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { axiosInstance, BASE_URL } from "../../Config";
+import { resolveFileUrl } from "../../../utils/fileUrl";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Pencil } from "lucide-react";
@@ -22,11 +23,7 @@ const BannerEdit = () => {
         const response = await axiosInstance.get(`/bannerdetail/${id}`);
         if (response.data.success) {
           setData(response.data.body);
-          setImagePreview(
-            response.data.body.image
-              ? `${BASE_URL}/${response.data.body.image}`
-              : null
-          );
+          setImagePreview(resolveFileUrl(response.data.body.image, BASE_URL));
         } else {
           toast.error("Failed to fetch banner data.");
         }

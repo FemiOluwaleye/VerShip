@@ -6,6 +6,7 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 import Pagination from "@mui/material/Pagination";
 import Stack from "@mui/material/Stack";
 import { axiosInstance, BASE_URL } from "../../Config";
+import { resolveFileUrl } from "../../../utils/fileUrl";
 
 const BannerList = () => {
   const [banners, setBanners] = useState([]);
@@ -216,7 +217,7 @@ const BannerList = () => {
                             <td>
                               {banner.image ? (
                                 <img
-                                  src={`${BASE_URL}/${banner.image}`}
+                                  src={resolveFileUrl(banner.image, BASE_URL)}
                                   alt="Banner"
                                   style={{
                                     width: "50px",

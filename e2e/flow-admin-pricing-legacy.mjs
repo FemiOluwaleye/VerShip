@@ -1,6 +1,11 @@
 // Exercises the two paths the v2 flow does not: the legacy-model editor form,
 // and retiring a card on a provider that has more than one.
+//
+// Repeatable by construction: the base price is reset to a known baseline before
+// the browser flow, and the card the retire test consumes is handed back at the
+// end. Provider 417 looks identical before and after a run.
 import { chromium } from "@playwright/test";
+import { execSync } from "node:child_process";
 const BASE = "http://localhost:5000";
 const ADMIN = { email: "e2e-admin@vership.test", password: "AdminTest123!" };
 const SHOT = (n) => `/tmp/claude-1000/-home-runner-workspace/23df2438-5133-429c-88a7-803d4a64efa1/scratchpad/legacy-${n}.png`;
@@ -9,6 +14,21 @@ const check = (n, ok, d = "") => { results.push({ n, ok }); console.log(`  ${ok 
 
 const api = async (p, o = {}) =>
   (await fetch(`${BASE}${p}`, { ...o, headers: { "Content-Type": "application/json", ...(o.headers || {}) } })).json();
+
+// The retire endpoint has no inverse — there is deliberately no un-retire route
+// (see the comment above the pricing routes in server/routes/admin.js), so the
+// only way to give the card back is to go at the table directly. barrelsprices
+// is paranoid, so retiring only sets deletedAt: clearing it makes the card live
+// again, byte for byte. Also drop the audit row this run wrote, otherwise the
+// "retire is audit-logged" assertion would pass on a previous run's evidence.
+const restoreCard = (cardId) => execSync(
+  `node -e 'const db=require("/home/runner/workspace/server/models");const id=Number(process.env.CARD_ID);(async()=>{`
+  + `const n=await db.barrelsprices.update({deletedAt:null},{where:{id},paranoid:false});`
+  + `const a=await db.pricing_audit.destroy({where:{cardId:id,action:"retire"}});`
+  + `console.log("RESTORED:"+n+" audit:"+a);process.exit(0)})()`
+  + `.catch(e=>{console.error(e.message);process.exit(1)})'`,
+  { encoding: "utf8", env: { ...process.env, CARD_ID: String(cardId) } }
+).trim();
 const tok = (await api("/api/admin/login", { method: "POST", body: JSON.stringify(ADMIN) })).body.token;
 const H = { Authorization: `Bearer ${tok}` };
 
@@ -127,6 +147,21 @@ const after2 = await api("/api/admin/provider/417/pricing", { headers: H });
 check("card count drops by one", after2.body.cards.length === cards.length - 1, `${cards.length} → ${after2.body.cards.length}`);
 check("retired card moves to history", after2.body.history.some((h) => h.id === victim.id));
 check("retire is audit-logged", after2.body.audit.some((a) => a.action === "retire" && a.cardId === victim.id));
+
+// Give the card back. Without this the suite eats one of provider 417's live
+// cards per run, and once it is down to a single card the endpoint refuses to
+// retire at all ("their only live rate card") — the run would start failing for
+// a reason that has nothing to do with the code under test. Assert the restore
+// so a silent failure here cannot quietly drain the fixture again.
+console.log(`  ${restoreCard(victim.id)}`);
+const restored = await api("/api/admin/provider/417/pricing", { headers: H });
+check(
+  "retired card is restored, so the run is repeatable",
+  restored.body.cards.length === cards.length,
+  `${after2.body.cards.length} → ${restored.body.cards.length} (started at ${cards.length})`
+);
+check("restore leaves no retire audit residue",
+  !restored.body.audit.some((a) => a.action === "retire" && a.cardId === victim.id));
 
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

@@ -7,6 +7,7 @@ import Commonbanner from '../components/Commonbanner';
 import CheckoutForm from '../components/CheckoutForm';
 import { getPrepackedBarrel, createPrepackedOrder, confirmPrepackedPayment } from '../api/cms';
 import { API_URL } from '../api/axios';
+import { resolveFileUrl } from '../utils/fileUrl';
 import prepackedBarrelImg from '../assets/prepacked-barrel.png';
 
 // The 14 parishes of Jamaica — delivery is Jamaica-only for this product.
@@ -36,15 +37,7 @@ const groupContents = (contents = []) => {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Uploaded images are stored with a leading slash (e.g. `/images/x.png`).
-// Naively doing `${API_URL}/${img}` with the same-origin default (API_URL='')
-// produces `//images/x.png` — a protocol-relative URL the browser reads as the
-// host `images`, so nothing loads. Trim leading slashes before joining.
-const resolveImageUrl = (img) => {
-    if (!img) return null;
-    if (/^https?:\/\//.test(img)) return img;
-    return `${API_URL}/${img.replace(/^\/+/, '')}`;
-};
+const resolveImageUrl = (img) => resolveFileUrl(img, API_URL);
 
 // Door-to-door delivery reach — highlighted red everywhere it appears so buyers
 // immediately see where we deliver to the door. We now cover the whole island,

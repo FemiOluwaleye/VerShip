@@ -401,9 +401,8 @@ const ProviderList = () => {
     return filter ? filter.label : "All Data";
   };
 
-  const pricingFile = selectedProvider?.businessInfo?.pricingDocument
-    ? `${BASE_URL}/${selectedProvider.businessInfo.pricingDocument}`
-    : PLACEHOLDER;
+  const pricingFile =
+    getDocumentUrl(selectedProvider?.businessInfo?.pricingDocument) || PLACEHOLDER;
 
   const isPricingPDF = pricingFile.toLowerCase().endsWith(".pdf");
 
@@ -516,7 +515,7 @@ const ProviderList = () => {
                                 <td>
                                   {provider.image ? (
                                     <img
-                                      src={`${BASE_URL}/${provider.image}`}
+                                      src={getDocumentUrl(provider.image)}
                                       alt="Provider"
                                       style={{
                                         width: "50px",
@@ -738,7 +737,7 @@ const ProviderList = () => {
 
                   {selectedProvider.image ? (
                     <img
-                      src={`${BASE_URL}/${selectedProvider.image}`}
+                      src={getDocumentUrl(selectedProvider.image)}
                       className="rounded-circle me-3"
                       width="100"
                       height="100"

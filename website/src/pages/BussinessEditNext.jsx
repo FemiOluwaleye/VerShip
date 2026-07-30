@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import countriesData from "world-countries";
 import { FaSpinner } from "react-icons/fa";
 import { API_URL } from '../api/axios';
+import { resolveFileUrl } from '../utils/fileUrl';
 import Autocomplete from "react-google-autocomplete";
 
 const COUNTRY_LIST = ["USA"];
@@ -22,9 +23,7 @@ const BussinessEditNext = () => {
   const [image, setImage] = useState(null);
   const [apiLoaded, setApiLoaded] = useState(false);
 
-  const initialImage = user.image
-    ? (user.image.startsWith('http') ? user.image : `${API_URL}/${user.image}`)
-    : null;
+  const initialImage = resolveFileUrl(user.image, API_URL);
   const [previewUrl, setPreviewUrl] = useState(initialImage);
   const [formData, setFormData] = useState({
     businessName: "",
@@ -170,8 +169,7 @@ const BussinessEditNext = () => {
             state: info.state || "",
           });
           if (response.body.image) {
-            const imgPath = response.body.image;
-            setPreviewUrl(imgPath.startsWith('http') ? imgPath : `${API_URL}/${imgPath}`);
+            setPreviewUrl(resolveFileUrl(response.body.image, API_URL));
           }
         }
       } catch (error) {

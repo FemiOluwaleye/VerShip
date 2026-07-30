@@ -4,6 +4,7 @@ import { Menu, X, Bell, ChevronDown, ArrowUpRight } from "lucide-react";
 import { bell, newLogo as logo } from "../common/common-assets/assets-images";
 import Logout from "./Logout";
 import { API_URL } from "../api/axios";
+import { resolveFileUrlFresh } from "../utils/fileUrl";
 import {
   profile,
   profile1,
@@ -53,10 +54,7 @@ export default function Navbar() {
 
   const userData = user?.user || user;
   const userName = userData.firstName;
-  const timestamp = new Date().getTime();
-  const userImage = userData.image
-    ? (userData.image.startsWith("http") ? userData.image : `${API_URL}/${userData.image}?t=${timestamp}`)
-    : profile1;
+  const userImage = resolveFileUrlFresh(userData.image, API_URL) || profile1;
 
   // One class for every desktop menu item. Smaller than the old text-lg (18px)
   // so the whole bar reads as navigation rather than headline copy.
@@ -192,7 +190,7 @@ export default function Navbar() {
                     >
                       {userData.image && userData.image.trim() !== "" ? (
                         <img
-                          src={userData.image.startsWith("http") ? userData.image : `${API_URL}/${userData.image}?t=${new Date().getTime()}`}
+                          src={resolveFileUrlFresh(userData.image, API_URL)}
                           className="w-8 h-8 rounded-full object-cover border border-gray-200"
                           alt="profile"
                         />

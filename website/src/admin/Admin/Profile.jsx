@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import { axiosInstance, BASE_URL } from "../Config";
+import { resolveFileUrl } from "../../utils/fileUrl";
 import { Pencil } from "lucide-react";
 
 const SERVICE_FEE_LEGACY_NAMES = ["Customs Clearance", "Service fee"];
@@ -70,10 +71,7 @@ const Profile = () => {
 
           setInitialEmail(profileData.email || "");
 
-          const imageUrl = profileData.image && profileData.image.startsWith("http")
-            ? profileData.image
-            : `${BASE_URL}/${profileData.image}`;
-          setImagePreview(imageUrl);
+          setImagePreview(resolveFileUrl(profileData.image, BASE_URL));
 
           if (profileData.addons && profileData.addons.length > 0) {
             setServiceFee(pickServiceFeeAddon(profileData.addons));
@@ -283,10 +281,7 @@ const Profile = () => {
       }
 
       if (updatedData.image) {
-        const imageUrl = updatedData.image.startsWith("http")
-          ? updatedData.image
-          : `${BASE_URL}/${updatedData.image}`;
-        setImagePreview(imageUrl);
+        setImagePreview(resolveFileUrl(updatedData.image, BASE_URL));
       }
 
       if (updatedData.addons && updatedData.addons.length > 0) {

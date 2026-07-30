@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { MapPin, Clock, Star, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import instance, { API_URL } from "../api/axios";
+import { resolveFileUrl } from "../utils/fileUrl";
 import { getTopForwarders } from "../api/cms";
 import { headlinePrice } from "../utils/pricing";
 
@@ -64,7 +65,7 @@ const TopForwarders = () => {
                                 <div className="flex items-center justify-between">
                                     {/* {f.image ? (
                                         <img
-                                            src={f.image.startsWith("http") ? f.image : `${API_URL}/${f.image}`}
+                                            src={resolveFileUrl(f.image, API_URL)}
                                             alt={f.businessInfo?.businessName || f.firstName}
                                             className="w-10 h-10 rounded-lg object-cover"
                                         />

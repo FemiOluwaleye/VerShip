@@ -12,6 +12,7 @@ import {
 import { FaStar } from "react-icons/fa6";
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "../api/axios";
+import { resolveFileUrlFresh } from "../utils/fileUrl";
 const ProfileMain = () => {
   const rawUser = JSON.parse(localStorage.getItem("user") || "{}");
   const initialDetail = rawUser?.user || rawUser;
@@ -39,7 +40,7 @@ const ProfileMain = () => {
             <img src={logo} alt="" className="h-full w-auto p-4 object-cover opacity-80" />
           ) : detail.image && detail.image.trim() !== "" ? (
             <img
-              src={detail.image.startsWith("http") ? detail.image : `${API_URL}/${detail.image}?t=${new Date().getTime()}`}
+              src={resolveFileUrlFresh(detail.image, API_URL)}
               alt=""
               className="h-full w-full object-cover opacity-80"
             />

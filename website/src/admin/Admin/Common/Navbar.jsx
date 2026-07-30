@@ -3,6 +3,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import { axiosInstance, BASE_URL } from "../../Config";
+import { resolveFileUrl } from "../../../utils/fileUrl";
 import Swal from "sweetalert2";
 import { Lock, LogOut } from "react-feather";
 
@@ -32,7 +33,7 @@ function Navbar({ toggleSidebar }) {
         console.log("Profile response:", response);
         if (response.data && response.data.body) {
           const { image, firstName, lastName, email } = response.data.body;
-          setImage(`${BASE_URL}/${image}`);
+          setImage(resolveFileUrl(image, BASE_URL));
           setFirstName(firstName || "");
           setLastName(lastName || "");
           setEmail(email || "");
