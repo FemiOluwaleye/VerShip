@@ -659,4 +659,98 @@ sendOrderConfirmationToCustomer: async (email, orderDetails = {}) => {
         throw error;
     }
 },
+
+// Sent to a freight forwarder when a VerShip admin changes their rate card.
+// This is a notice, not a request: the change is already live for new quotes.
+// Admins may suppress it per-edit, but the default is to send — a forwarder's
+// published pricing is their commercial position and they are entitled to know
+// it moved, and to see exactly what moved.
+sendPricingChangedEmailToProvider: async (email, details = {}) => {
+    try {
+        const {
+            businessName,
+            route,
+            barrelType,
+            changes = {},
+            fieldLabels = {},
+            reason,
+            retired = false,
+        } = details;
+
+        // parishFees is a JSON blob; rendering the raw string would be useless,
+        // so summarise it and let the dashboard show the per-parish detail.
+        const renderValue = (field, value) => {
+            if (value === null || value === undefined || value === '') return '—';
+            if (field === 'parishFees') return 'see your dashboard for the full parish table';
+            if (field === 'isVolumeDiscount') return String(value) === '1' ? 'On' : 'Off';
+            return String(value);
+        };
+
+        const changeRows = Object.entries(changes).map(([field, { from, to }]) => `
+            <tr>
+                <td style="padding: 10px 0; color: #666; font-size: 14px; width: 44%; vertical-align: top;">${escapeHtml(fieldLabels[field] || field)}</td>
+                <td style="padding: 10px 0; color: #999; font-size: 14px; text-decoration: line-through;">${escapeHtml(renderValue(field, from))}</td>
+                <td style="padding: 10px 0; color: #2D413F; font-size: 14px; font-weight: 600;">${escapeHtml(renderValue(field, to))}</td>
+            </tr>
+        `).join('');
+
+        const mailOptions = {
+            from: DEFAULT_FROM,
+            to: email,
+            subject: retired
+                ? 'A rate card on your VerShip account was retired'
+                : 'Your VerShip pricing was updated by an administrator',
+            html: `
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.15);">
+                <div style="background: linear-gradient(135deg, #FFBF00 0%, #FFD864 100%); padding: 30px 20px; text-align: center;">
+                    <h1 style="margin: 0; color: #2D413F; font-size: 28px; font-weight: bold;">VerShip</h1>
+                    <p style="margin: 10px 0 0; color: #2D413F; font-size: 14px; opacity: 0.85;">The Smart Way to Ship</p>
+                </div>
+                <div style="padding: 40px 30px; background: #ffffff;">
+                    <h2 style="color: #2D413F; margin: 0 0 10px 0; font-size: 22px;">
+                        ${retired ? 'A rate card was retired' : 'Your pricing was updated'}${businessName ? ` — ${escapeHtml(businessName)}` : ''}
+                    </h2>
+                    <p style="color: #666; line-height: 1.6; margin: 0 0 24px 0; font-size: 15px;">
+                        A VerShip administrator ${retired ? 'retired one of your rate cards' : 'updated your rate card'}
+                        ${route ? ` for <strong>${escapeHtml(route)}</strong>` : ''}${barrelType ? ` (${escapeHtml(barrelType)})` : ''}.
+                        ${retired
+                            ? 'It will no longer be offered on new quotes.'
+                            : 'The new figures apply to new quotes from now on.'}
+                        Orders already placed keep the price they were booked at.
+                    </p>
+                    ${changeRows ? `
+                    <div style="background: #f8f9fa; border-radius: 12px; padding: 8px 20px; border: 1px solid #e8eceb;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <th style="text-align: left; padding: 8px 0; font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.5px;">Field</th>
+                                <th style="text-align: left; padding: 8px 0; font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.5px;">Was</th>
+                                <th style="text-align: left; padding: 8px 0; font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 0.5px;">Now</th>
+                            </tr>
+                            ${changeRows}
+                        </table>
+                    </div>` : ''}
+                    ${reason ? `
+                    <p style="color: #666; line-height: 1.6; margin: 24px 0 0 0; font-size: 14px;">
+                        <strong style="color: #2D413F;">Reason given:</strong> ${escapeHtml(reason)}
+                    </p>` : ''}
+                    <p style="color: #666; line-height: 1.6; margin: 24px 0 0 0; font-size: 14px;">
+                        You can review your full pricing any time under your business profile. If this change looks wrong,
+                        reply to this email and we'll take another look.
+                    </p>
+                </div>
+                <div style="background: #f8f9fa; padding: 18px; text-align: center; border-top: 1px solid #e0e0e0;">
+                    <p style="margin: 0; font-size: 12px; color: #999;">&copy; ${new Date().getFullYear()} VerShip. All rights reserved.</p>
+                </div>
+            </div>
+            `,
+        };
+
+        const info = await deliver(mailOptions);
+        console.log('✅ Pricing-change notice sent to forwarder: %s', email);
+        return info;
+    } catch (error) {
+        console.error('❌ Error sending pricing-change notice:', error);
+        throw error;
+    }
+},
 };

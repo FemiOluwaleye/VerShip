@@ -645,6 +645,16 @@ const ProviderList = () => {
                                     >
                                       <i className="ri-eye-fill font-size-16"></i>
                                     </button>
+                                    {/* Admins reach pricing from the provider
+                                        they are already looking at, not only
+                                        from the Pricing section's own list. */}
+                                    <Link
+                                      to={`${ADMIN_BASE}/pricing/${provider.id}`}
+                                      className="btn btn-soft-primary px-2 btn-sm me-1"
+                                      title="View / edit pricing"
+                                    >
+                                      <i className="ri-money-dollar-circle-line font-size-16"></i>
+                                    </Link>
                                     <button
                                       onClick={() =>
                                         deleteProviderHandler(provider.id)

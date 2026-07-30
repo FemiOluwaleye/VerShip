@@ -103,6 +103,13 @@ function Sidebar({ isOpen }) {
       pathname.includes("/prepacked/")
     ) {
       setActiveMenu("prepacked");
+    } else if (
+      pathname.includes("/providerlist") ||
+      pathname.includes("/pricing")
+    ) {
+      // Pricing deep-links (/pricing/:id) are followed from the listing, so the
+      // submenu has to open on direct navigation too, not just on click.
+      setActiveMenu("providersMenu");
     } else if (pathname.includes("/password")) {
       setActiveMenu("settings");
     } else {
@@ -201,6 +208,15 @@ function Sidebar({ isOpen }) {
                       onClick={handleLinkClick}
                     >
                       Providers listings
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      className={isActive("/pricing") ? "active" : ""}
+                      to={`${ADMIN_BASE}/pricing`}
+                      onClick={handleLinkClick}
+                    >
+                      Pricing
                     </Link>
                   </li>
                 </ul>

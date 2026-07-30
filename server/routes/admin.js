@@ -14,6 +14,7 @@ const reportController = require('../controller/admincontroller/reportController
 const bannerController = require('../controller/admincontroller/bannerController');
 const cookieController = require('../controller/admincontroller/cookieController');
 const prepackedController = require('../controller/admincontroller/prepackedController');
+const pricingController = require('../controller/admincontroller/pricingController');
 
 
 router.post('/login', auth.login);
@@ -48,6 +49,16 @@ router.delete("/provider/:id", provider.providerDelete);
 router.put("/provider/document-verify", provider.updateDocumentVerify);
 router.put("/provider/update-ranking", provider.updateRanking);
 router.get("/download-document", provider.downloadDocument);
+
+// Forwarder pricing (barrelsprices rate cards). Read endpoints are plain GETs;
+// both writes verify the admin's password in-request and are audit-logged, so
+// there is no separate step-up call to skip. Route identity (type / origin /
+// destination) is not editable and there is no create endpoint — admins adjust
+// the pricing a forwarder set up, they do not invent routes on their behalf.
+router.get("/pricing", pricingController.pricingOverview);
+router.get("/provider/:id/pricing", pricingController.providerPricing);
+router.put("/provider/:id/pricing/:cardId", pricingController.updateRateCard);
+router.delete("/provider/:id/pricing/:cardId", pricingController.retireRateCard);
 
 // router for contact us
 router.get('/contactList', contactUsController.contactGet);
