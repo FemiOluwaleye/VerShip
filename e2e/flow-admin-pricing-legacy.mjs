@@ -12,6 +12,23 @@ const api = async (p, o = {}) =>
 const tok = (await api("/api/admin/login", { method: "POST", body: JSON.stringify(ADMIN) })).body.token;
 const H = { Authorization: `Bearer ${tok}` };
 
+// Reset card 9509's base price to a known baseline first. Without this the run
+// is not repeatable: the previous run already saved 200, so the browser flow
+// types the value that is already there, "Review & save" has nothing to diff
+// and stays disabled, and the click times out.
+const BASELINE_BASE_PRICE = "150";
+const reset = await api("/api/admin/provider/417/pricing/9509", {
+  method: "PUT",
+  headers: H,
+  body: JSON.stringify({
+    patch: { basePrice: BASELINE_BASE_PRICE },
+    password: ADMIN.password,
+    reason: "e2e baseline reset",
+    notify: false,
+  }),
+});
+console.log(`  baseline: ${reset.success ? `card 9509 reset to $${BASELINE_BASE_PRICE}` : reset.message}`);
+
 // ---- Legacy editor in the browser -------------------------------------------
 console.log("\n== Legacy-model editor (provider 417) ==");
 const browser = await chromium.launch({ executablePath: process.env.REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE, args: ["--no-sandbox"] });
