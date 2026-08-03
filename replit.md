@@ -1,8 +1,30 @@
 # VerShip
 
 Shipping / freight-forwarding marketplace. This Replit runs the whole app as
-**one full-stack service** for staging; production targets **Render** as a single
-web service (see `RENDER_MIGRATION.md`).
+**one full-stack service**, and it is where **production** lives: the published
+Replit Deployment IS prod. The workspace Run button is stage. Render remains a
+possible target (`RENDER_MIGRATION.md` + `render.yaml`) but is not what serves
+users today.
+
+## Deploy
+
+- **Publish (Replit Deployment) = production.** `.replit` `[deployment]` is an
+  autoscale target: it builds the frontend, installs server deps, then runs
+  `cd server && node shipone.js`.
+- Publish builds from the **workspace filesystem, not from git** — uncommitted
+  edits ship. Commit for history/Render, not to make a deploy pick a change up.
+  (Replit also tends to auto-commit at publish time: the `Published your App`
+  commits.)
+- Stage vs prod is resolved automatically by `server/helper/envConfig.js`:
+  Replit sets `REPLIT_DEPLOYMENT=1` inside a Deployment, so `env('FOO')` reads
+  `PROD_FOO` there and `STAGE_FOO` in the workspace, falling back to an
+  unprefixed `FOO`. Override with `APP_ENV=stage|prod`. The startup log prints
+  which environment resolved.
+- `DATABASE_URL` is read straight from `process.env` in `server/models/index.js`
+  (**not** through `envConfig`), so the Deployment connects to whatever Replit
+  injects for it — it is not switched by the `PROD_` prefix.
+- Migrations (`server/migrate-*.js`) are **per environment**: running one in the
+  workspace does not touch the deployment's DB.
 
 ## Run & Operate
 
@@ -27,8 +49,9 @@ web service (see `RENDER_MIGRATION.md`).
   frontend + API.
 - `website/` — the ONE Vite frontend. Public site under `src/`, admin under
   `src/admin/` (lazy `/admin/*` route). Vendor theme assets under `public/vendor/`.
-- DB: **PostgreSQL** (Replit dev DB locally, Render managed Postgres in prod).
-  The DB layer auto-selects SSL by `DATABASE_URL` (off for Replit, on for Render).
+- DB: **PostgreSQL** (Replit Postgres; Render managed Postgres if/when that
+  target is used). The DB layer auto-selects SSL by `DATABASE_URL` (off for
+  Replit, on for Render).
 
 ## Gotchas
 
