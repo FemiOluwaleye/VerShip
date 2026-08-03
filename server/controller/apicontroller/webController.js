@@ -3008,7 +3008,10 @@ module.exports = {
                     {
                         model: db.users,
                         as: 'provider',
-                        where: { hashAccount: '1' },
+                        // status '1' is the admin's deactivate switch: a forwarder
+                        // the admin turned off must stop being quoted, the same
+                        // gate getForwarders() applies to the public listing.
+                        where: { hashAccount: '1', status: '1' },
                         attributes: ['id', 'firstName', 'image', 'email'],
                         include: [
                             {
@@ -5329,8 +5332,12 @@ module.exports = {
     providerList: async (req, res) => {
         try {
             const data = await db.users.findAll({
+                // This feeds the home page origin picker, so it has to honour
+                // the same deactivate switch as getForwarders(): a provider the
+                // admin turned off must not keep a lane advertised as bookable.
                 where: {
-                    role: "2"
+                    role: "2",
+                    status: "1"
                 },
                 include: [
                     {
