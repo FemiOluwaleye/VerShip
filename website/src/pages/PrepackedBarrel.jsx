@@ -555,7 +555,7 @@ const PrepackedBarrel = () => {
                             {isSubmitting ? 'Placing order…' : `Place order · ${currency} ${total}`}
                         </button>
                         <p className="text-xs text-[#595d5e] text-center mt-3">
-                            No online payment now — we'll contact you to arrange payment and shipping.
+                            Secure card payment on the next step — we'll arrange shipping after checkout.
                         </p>
                     </form>
                 </div>
