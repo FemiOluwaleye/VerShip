@@ -155,6 +155,9 @@ db.prepacked_orders.belongsTo(db.prepacked_barrel, { foreignKey: 'prepacked_barr
 db.booking_additional_costs.belongsTo(db.bookings, { foreignKey: 'booking_id', as: 'booking' });
 db.booking_additional_costs.belongsTo(db.users, { foreignKey: 'provider_id', as: 'provider' });
 db.bookings.hasMany(db.booking_additional_costs, { foreignKey: 'booking_id', as: 'additionalCosts' });
+// "Pay as Your Shipment Moves": deposit / customs_delivery / extra charges per booking.
+db.bookings.hasMany(db.booking_charges, { foreignKey: 'booking_id', as: 'charges' });
+db.booking_charges.belongsTo(db.bookings, { foreignKey: 'booking_id', as: 'booking' });
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;

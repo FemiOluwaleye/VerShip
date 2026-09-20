@@ -28,11 +28,12 @@ const BookingCompleted = () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      0: { label: "Cancelled", className: "bg-danger" },
-      1: { label: "Requested", className: "bg-primary" },
-      2: { label: "Approved", className: "bg-info" },
-      3: { label: "On going", className: "bg-success" },
-      4: { label: "Completed", className: "bg-warning" },
+      0: { label: "Pending", className: "bg-warning text-dark" },
+      1: { label: "Shipped", className: "bg-primary" },
+      2: { label: "Delivered", className: "bg-success" },
+      3: { label: "Dispatched", className: "bg-info" },
+      4: { label: "Completed", className: "bg-secondary" },
+      5: { label: "Arrived in Jamaica", className: "bg-info text-dark" },
     };
 
     return statusMap[status] || { label: "Unknown", className: "bg-light" };
@@ -212,10 +213,10 @@ const BookingCompleted = () => {
                         <thead>
                           <tr>
                             <th>Sr no.</th>
-                            <th>User Name</th>
-                            <th>Driver Name</th>
-                            <th>Price($)</th>
-                            <th>Admin Amount($)</th>
+                            <th>Customer</th>
+                            <th>Forwarder</th>
+                            <th>Total($)</th>
+                            <th>Commission($)</th>
                             <th>Status</th>
                             <th className="text-end">Action</th>
                           </tr>
@@ -284,7 +285,7 @@ const BookingCompleted = () => {
                                 colSpan="7"
                                 style={{ textAlign: "center", padding: "20px" }}
                               >
-                                No transactions found
+                                No completed bookings found
                               </td>
                             </tr>
                           )}
@@ -326,7 +327,7 @@ const BookingCompleted = () => {
                 className="offcanvas-title mb-0 me-3 fw-semibold"
                 id="offcanvasRightLabel"
               >
-                Transaction Details
+                Booking Details
               </h5>
             </div>
             <button
@@ -346,76 +347,68 @@ const BookingCompleted = () => {
               >
                 <tbody>
                   <tr>
-                    <td>Transaction ID :</td>
+                    <td>Order ID :</td>
                     <td className="text-end text-black fw-medium">
-                      {selectedMatch.id}
+                      {selectedMatch.orderId || `#${selectedMatch.id}`}
                     </td>
                   </tr>
                   <tr>
-                    <td>User Name :</td>
+                    <td>Customer :</td>
                     <td className="text-end text-black fw-medium">
-                      {`${selectedMatch.userbook?.firstName || ""} ${selectedMatch.userbook?.lastName || ""
-                        }`}
+                      {`${selectedMatch.userbook?.firstName || ""} ${selectedMatch.userbook?.lastName || ""}`.trim() || "—"}
                     </td>
                   </tr>
                   <tr>
-                    <td>Driver Name:</td>
+                    <td>Forwarder :</td>
                     <td className="text-end text-black fw-medium">
-                      {`${selectedMatch.driverbook?.firstName || ""} ${selectedMatch.driverbook?.lastName || ""
-                        }`}
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <td>Price:</td>
-                    <td className="text-end text-black fw-medium">
-                      {formatCurrency(selectedMatch.bookingPrice)}
+                      {`${selectedMatch.driverbook?.firstName || ""} ${selectedMatch.driverbook?.lastName || ""}`.trim() || "—"}
                     </td>
                   </tr>
                   <tr>
-                    <td>Admin Amount($):</td>
+                    <td>Route :</td>
                     <td className="text-end text-black fw-medium">
-                      {formatCurrency(selectedMatch.adminAmount)}
+                      {selectedMatch.bookingRequest
+                        ? `${selectedMatch.bookingRequest.origin || "?"} → ${selectedMatch.bookingRequest.destination || "Jamaica"}${selectedMatch.consignee_state ? ` · ${selectedMatch.consignee_state}` : ""}`
+                        : "—"}
                     </td>
                   </tr>
                   <tr>
-                    <td>Booking Date:</td>
-                    <td className="text-end text-black fw-medium">
-                      {selectedMatch.bookingDate
-                        ? new Date(
-                          selectedMatch.bookingDate
-                        ).toLocaleDateString()
-                        : ""}
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <td>Pickup Location:</td>
-                    <td className="text-end text-black fw-medium">
-                      {selectedMatch.pickupLocation || ""}
-                    </td>
+                    <td>Barrels :</td>
+                    <td className="text-end text-black fw-medium">{selectedMatch.bookingRequest?.quantity || "—"}</td>
                   </tr>
                   <tr>
-                    <td>Drop Location:</td>
+                    <td>Total :</td>
+                    <td className="text-end text-black fw-medium">${parseFloat(selectedMatch.total_amount || selectedMatch.bookingPrice || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td>VerShip commission :</td>
+                    <td className="text-end text-black fw-medium">{formatCurrency(selectedMatch.adminAmount)}</td>
+                  </tr>
+                  <tr>
+                    <td>Booked :</td>
                     <td className="text-end text-black fw-medium">
-                      {selectedMatch.dropLocation || ""}
+                      {selectedMatch.bookingDate || selectedMatch.createdAt ? new Date(selectedMatch.bookingDate || selectedMatch.createdAt).toLocaleDateString() : ""}
                     </td>
                   </tr>
-                  {/* <tr>
-                    <td>Number Of Passenger:</td>
-                    <td className="text-end text-black fw-medium">
-                      {selectedMatch.numberOfPassenger || ""}
-                    </td>
-                  </tr> */}
                   <tr>
-                    <td>Payment Method:</td>
+                    <td>Pickup address :</td>
                     <td className="text-end text-black fw-medium">
-                      {selectedMatch.paymentMethod === "0"
-                        ? "Cash"
-                        : selectedMatch.paymentMethod === "1"
-                          ? "Online"
-                          : ""}
+                      {[selectedMatch.shiper_full_address || selectedMatch.shiper_address, selectedMatch.shiper_city, selectedMatch.shiper_state].filter(Boolean).join(", ") || "—"}
                     </td>
+                  </tr>
+                  <tr>
+                    <td>Delivery address :</td>
+                    <td className="text-end text-black fw-medium">
+                      {[selectedMatch.consignee_full_address || selectedMatch.consignee_address, selectedMatch.consignee_city, selectedMatch.consignee_state].filter(Boolean).join(", ") || "—"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Transaction :</td>
+                    <td className="text-end text-black fw-medium font-monospace font-12">{selectedMatch.trasaction_id || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td>Payment :</td>
+                    <td className="text-end text-black fw-medium">{Number(selectedMatch.payment_status) === 1 ? "Paid by card (Stripe)" : "Unpaid"}</td>
                   </tr>
                   <tr>
                     <td>Status :</td>

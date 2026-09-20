@@ -7,7 +7,7 @@
 //     labelClassName = "text-lg font-medium",
 //     inputClassName = "",
 //     buttonClassName = "",
-//     placeholder = "Enter phone number",
+//     placeholder,
 //     value,
 //     onChange,
 //     countryCode = "+1",
@@ -126,14 +126,14 @@
 // export default PhoneInput;
 import React, { useState, useRef, useEffect } from "react";
 import { FiChevronDown, FiSearch } from "react-icons/fi";
-import { COUNTRY_LIST } from "../utils/countryPhoneData";
+import { COUNTRY_LIST, phonePlaceholderForCountry } from "../utils/countryPhoneData";
 
 const PhoneInput = ({
   label,
   labelClassName = "text-sm font-medium",
   inputClassName = "",
   buttonClassName = "",
-  placeholder = "Enter phone number",
+  placeholder,
   value,
   onChange,
   country = { dialCode: "+1", code: "US" },
@@ -253,7 +253,8 @@ const PhoneInput = ({
           disabled={disabled}
           value={value}
           onChange={handlePhoneChange}
-          placeholder={placeholder}
+          placeholder={placeholder || phonePlaceholderForCountry(selectedCountry?.dialCode)}
+          inputMode="tel"
           className={`flex-1 min-w-0 bg-transparent border border-white/20 text-white placeholder:text-white/40 rounded-[16px] px-4 py-2.5 focus:outline-none focus:border-yellow-400 ${
             disabled ? "opacity-50 cursor-not-allowed" : ""
           } ${inputClassName}`}

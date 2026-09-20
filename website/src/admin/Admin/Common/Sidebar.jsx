@@ -105,6 +105,7 @@ function Sidebar({ isOpen }) {
       setActiveMenu("prepacked");
     } else if (
       pathname.includes("/providerlist") ||
+      pathname.includes("/payouts") ||
       pathname.includes("/pricing")
     ) {
       // Pricing deep-links (/pricing/:id) are followed from the listing, so the
@@ -217,6 +218,15 @@ function Sidebar({ isOpen }) {
                       onClick={handleLinkClick}
                     >
                       Pricing
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      className={isActive("/payouts") ? "active" : ""}
+                      to={`${ADMIN_BASE}/payouts`}
+                      onClick={handleLinkClick}
+                    >
+                      Payouts
                     </Link>
                   </li>
                 </ul>

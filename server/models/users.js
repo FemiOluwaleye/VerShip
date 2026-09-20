@@ -218,6 +218,22 @@ module.exports = function (sequelize, DataTypes) {
             defaultValue: "0",
             comment: "for Stripe Payment   0=>pending,1=>complete"
         },
+        // Guest checkout creates the account silently at "Pay now"
+        // ('pending_password'); the customer sets a password afterwards via the
+        // success page or the tokenised link in the receipt email.
+        account_state: {
+            type: DataTypes.STRING(32),
+            allowNull: false,
+            defaultValue: "active"
+        },
+        setup_token: {
+            type: DataTypes.STRING(128),
+            allowNull: true
+        },
+        setup_token_expires: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
         country: {
             type: DataTypes.STRING(255),
             allowNull: false,

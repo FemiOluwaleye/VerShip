@@ -53,6 +53,29 @@ users today.
   target is used). The DB layer auto-selects SSL by `DATABASE_URL` (off for
   Replit, on for Render).
 
+## Checkout, milestone payments & held payouts (2026-09-20)
+
+- Plan, decisions and acceptance status: `CHECKOUT_PAYOUTS_PLAN.md`.
+- Money is priced **server-side** (`server/helper/pricing.js`, mirrored by
+  `website/src/utils/pricing.js` for display; `server/tests/pricing.test.mjs`
+  keeps them equal). Charges live in `booking_charges` (deposit /
+  customs_delivery / extra); the card is only ever charged for a row's
+  `amount_cents` (`helper/paymentService.js`).
+- Forwarders are quoted once doc-verified + active; no Stripe needed. Payments
+  to un-onboarded forwarders are platform charges ledgered in
+  `forwarder_payouts` and transferred when Stripe confirms their account
+  (`helper/payoutService.js`, webhook in `helper/stripeWebhook.js`). Admin:
+  `/admin/payouts`. Owner must keep a Stripe **minimum balance** ≥ held total.
+- Booking status `'5'` = Arrived in Jamaica → customs & delivery charge due.
+- Guest checkout creates the account at Pay now (`account_state =
+  pending_password`); password via success page or `/account-setup?token=`.
+- Migration per env: `node server/migrate-checkout-payouts.js`.
+- Rollback: `PAYOUTS_HELD_ENABLED=false`.
+- Dev: `MAIL_PREVIEW_DIR=<dir>` writes emails to disk instead of sending.
+- Browser suites (server on :5000, Stripe test keys): `e2e/payouts.mjs`,
+  `e2e/checkout.mjs`, `e2e/guest.mjs`, `e2e/phone-and-routes.mjs`,
+  `server/tests/payouts.api.test.mjs`.
+
 ## Gotchas
 
 - The unified build works on Replit now that `swiper` (firewall-blocked) was

@@ -29,20 +29,20 @@ const ActiveBookingList = () => {
 
   const statusFilters = [
     { value: "all", label: "All Active" },
-    { value: "1", label: "Arrived" },
-    { value: "2", label: "Ride Started" },
+    { value: "1", label: "Shipped" },
+    { value: "5", label: "Arrived in Jamaica" },
+    { value: "2", label: "Delivered" },
   ];
 
-  const getRideTypeLabel = (rideType) => {
-    if (rideType === "0") return "Single Ride";
-    if (rideType === "1") return "Pool Ride";
-    return "Unknown";
-  };
-
   const getStatusBadge = (status) => {
+    // Booking statuses (labels used to be ride-hailing leftovers).
     const statusMap = {
-      1: { label: "Arrived", className: "bg-primary" },
-      2: { label: "Ride Started", className: "bg-warning" },
+      0: { label: "Pending", className: "bg-warning text-dark" },
+      1: { label: "Shipped", className: "bg-primary" },
+      2: { label: "Delivered", className: "bg-success" },
+      3: { label: "Dispatched", className: "bg-info" },
+      4: { label: "Cancelled", className: "bg-secondary" },
+      5: { label: "Arrived in Jamaica", className: "bg-info text-dark" },
     };
 
     return statusMap[status] || { label: "Unknown", className: "bg-light" };
@@ -144,12 +144,12 @@ const ActiveBookingList = () => {
             setTotalPages(newTotalPages);
           }
 
-          Swal.fire("Deleted!", "Ride has been deleted.", "success");
+          Swal.fire("Deleted!", "Booking has been deleted.", "success");
         }
       } catch (error) {
         Swal.fire(
           "Error!",
-          error.response?.data?.message || "Error deleting Ride",
+          error.response?.data?.message || "Error deleting booking",
           "error"
         );
       }
@@ -168,7 +168,7 @@ const ActiveBookingList = () => {
           <div className="page-content">
             <div className="container-fluid">
               <div className="title-box mb-3 pb-1">
-                <h4 className="mb-0 page-title">Active Ride List</h4>
+                <h4 className="mb-0 page-title">Active Bookings</h4>
                 <nav aria-label="breadcrumb" className="mt-1">
                   <ol className="breadcrumb mb-0">
                     <li className="breadcrumb-item">
@@ -178,11 +178,11 @@ const ActiveBookingList = () => {
                     </li>
                     <li className="breadcrumb-item">
                       <Link to={`${ADMIN_BASE}/`} className="new">
-                        <i className="ri-group-2-line me-1" /> Rides
+                        <i className="ri-group-2-line me-1" /> Bookings
                       </Link>
                     </li>
                     <li className="breadcrumb-item active" aria-current="page">
-                      Active Ride Listings
+                      Active bookings
                     </li>
                   </ol>
                 </nav>
@@ -261,10 +261,10 @@ const ActiveBookingList = () => {
                         <thead>
                           <tr>
                             <th>Sr no.</th>
-                            <th>User Name</th>
-                            <th>Driver Name</th>
-                            <th>Ride Type</th>
-                            <th>Price($)</th>
+                            <th>Customer</th>
+                            <th>Forwarder</th>
+                            <th>Route</th>
+                            <th>Total($)</th>
                             <th>Status</th>
                             <th className="text-end">Action</th>
                           </tr>
@@ -288,8 +288,8 @@ const ActiveBookingList = () => {
                                     match.driverbook?.lastName || ""
                                   }`}</td>
 
-                                  <td>{getRideTypeLabel(match.rideType)}</td>
-                                  <td>${match.bookingPrice || "0"}</td>
+                                  <td>{match.bookingRequest ? `${match.bookingRequest.origin || "?"} → ${match.consignee_state || match.bookingRequest.destination || "Jamaica"}` : "—"}</td>
+                                  <td>${parseFloat(match.total_amount || match.bookingPrice || 0).toFixed(2)}</td>
                                   <td>
                                     <span className={`badge ${className}`}>
                                       {label}
@@ -316,7 +316,7 @@ const ActiveBookingList = () => {
                                           borderColor: "#ea5455",
                                           color: "#fff",
                                         }}
-                                        title="Delete ride"
+                                        title="Delete booking"
                                       >
                                         <i className="ri-delete-bin-line font-size-16"></i>
                                       </button>
@@ -331,7 +331,7 @@ const ActiveBookingList = () => {
                                 colSpan="7"
                                 style={{ textAlign: "center", padding: "20px" }}
                               >
-                                No active rides found
+                                No active bookings found
                               </td>
                             </tr>
                           )}
@@ -373,7 +373,7 @@ const ActiveBookingList = () => {
                 className="offcanvas-title mb-0 me-3 fw-semibold"
                 id="offcanvasRightLabel"
               >
-                Ride Details
+                Booking Details
               </h5>
             </div>
             <button
@@ -393,77 +393,74 @@ const ActiveBookingList = () => {
               >
                 <tbody>
                   <tr>
-                    <td>Ride ID :</td>
+                    <td>Order ID :</td>
                     <td className="text-end text-black fw-medium">
-                      {selectedMatch.id}
+                      {selectedMatch.orderId || `#${selectedMatch.id}`}
                     </td>
                   </tr>
                   <tr>
-                    <td>User Name :</td>
+                    <td>Customer :</td>
                     <td className="text-end text-black fw-medium">
-                      {`${selectedMatch.userbook?.firstName || ""} ${
-                        selectedMatch.userbook?.lastName || ""
-                      }`}
+                      {`${selectedMatch.userbook?.firstName || ""} ${selectedMatch.userbook?.lastName || ""}`.trim() || "—"}
                     </td>
                   </tr>
                   <tr>
-                    <td>Driver Name:</td>
+                    <td>Forwarder :</td>
                     <td className="text-end text-black fw-medium">
-                      {`${selectedMatch.driverbook?.firstName || ""} ${
-                        selectedMatch.driverbook?.lastName || ""
-                      }`}
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <td>Ride Type :</td>
-                    <td className="text-end text-black fw-medium">
-                      {getRideTypeLabel(selectedMatch.rideType)}
+                      {`${selectedMatch.driverbook?.firstName || ""} ${selectedMatch.driverbook?.lastName || ""}`.trim() || "—"}
                     </td>
                   </tr>
                   <tr>
-                    <td>Price:</td>
+                    <td>Route :</td>
                     <td className="text-end text-black fw-medium">
-                      ${selectedMatch.bookingPrice || "0"}
+                      {selectedMatch.bookingRequest
+                        ? `${selectedMatch.bookingRequest.origin || "?"} → ${selectedMatch.bookingRequest.destination || "Jamaica"}${selectedMatch.consignee_state ? ` · ${selectedMatch.consignee_state}` : ""}`
+                        : "—"}
                     </td>
                   </tr>
                   <tr>
-                    <td>Booking Date:</td>
+                    <td>Barrels :</td>
                     <td className="text-end text-black fw-medium">
-                      {selectedMatch.bookingDate
-                        ? new Date(
-                            selectedMatch.bookingDate
-                          ).toLocaleDateString()
+                      {selectedMatch.bookingRequest?.quantity || "—"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Total :</td>
+                    <td className="text-end text-black fw-medium">
+                      ${parseFloat(selectedMatch.total_amount || selectedMatch.bookingPrice || 0).toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Booked :</td>
+                    <td className="text-end text-black fw-medium">
+                      {selectedMatch.bookingDate || selectedMatch.createdAt
+                        ? new Date(selectedMatch.bookingDate || selectedMatch.createdAt).toLocaleDateString()
                         : ""}
                     </td>
                   </tr>
-
                   <tr>
-                    <td>Pickup Location:</td>
+                    <td>Pickup address :</td>
                     <td className="text-end text-black fw-medium">
-                      {selectedMatch.pickupLocation || ""}
+                      {[selectedMatch.shiper_full_address || selectedMatch.shiper_address, selectedMatch.shiper_city, selectedMatch.shiper_state].filter(Boolean).join(", ") || "—"}
                     </td>
                   </tr>
                   <tr>
-                    <td>Drop Location:</td>
+                    <td>Delivery address :</td>
                     <td className="text-end text-black fw-medium">
-                      {selectedMatch.dropLocation || ""}
+                      {[selectedMatch.consignee_full_address || selectedMatch.consignee_address, selectedMatch.consignee_city, selectedMatch.consignee_state].filter(Boolean).join(", ") || "—"}
                     </td>
                   </tr>
                   <tr>
-                    <td>Number Of Passenger:</td>
+                    <td>Recipient :</td>
                     <td className="text-end text-black fw-medium">
-                      {selectedMatch.numberOfPassenger || ""}
+                      {`${selectedMatch.primary_firstName || ""} ${selectedMatch.primary_lastName || ""}`.trim() || selectedMatch.primary_name || "—"}
+                      {selectedMatch.primary_phone_number ? ` · ${selectedMatch.primary_country_code || ""} ${selectedMatch.primary_phone_number}` : ""}
                     </td>
                   </tr>
                   <tr>
-                    <td>Payment Method:</td>
+                    <td>Payment :</td>
                     <td className="text-end text-black fw-medium">
-                      {selectedMatch.paymentMethod === "0"
-                        ? "Cash"
-                        : selectedMatch.paymentMethod === "1"
-                        ? "Online"
-                        : ""}
+                      {Number(selectedMatch.payment_status) === 1 ? "Paid by card (Stripe)" : "Unpaid"}
                     </td>
                   </tr>
                   <tr>
@@ -478,13 +475,35 @@ const ActiveBookingList = () => {
                       </span>
                     </td>
                   </tr>
+                  {/* Pay as Your Shipment Moves: one row per charge with its state */}
+                  {selectedMatch.charges?.length > 0 && (
+                    <>
+                      <tr className="table-light">
+                        <td colSpan="2" className="fw-bold">Payments</td>
+                      </tr>
+                      {selectedMatch.charges.map((c) => (
+                        <tr key={c.id}>
+                          <td>
+                            {c.kind === "deposit" ? "Deposit (sea freight & service fee)" : c.kind === "customs_delivery" ? (c.description || "Customs & delivery") : `Extra: ${c.description}`}
+                            {c.kind === "customs_delivery" && c.status === "pending" && (
+                              <span className="text-muted font-12"> — {c.due_at ? "due (arrived)" : "due on arrival"}</span>
+                            )}
+                          </td>
+                          <td className="text-end text-black fw-medium">
+                            ${(c.amount_cents / 100).toFixed(2)}{" "}
+                            <span className={`badge bg-${c.status === "paid" ? "success" : c.status === "cancelled" ? "secondary" : "warning text-dark"}`}>{c.status}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
+                  )}
                 </tbody>
               </table>
             </>
           ) : (
             <div className="text-center py-5">
               <i className="ri-user-line font-size-48 text-muted"></i>
-              <p className="mt-3 text-muted">No rides selected</p>
+              <p className="mt-3 text-muted">No booking selected</p>
             </div>
           )}
         </div>

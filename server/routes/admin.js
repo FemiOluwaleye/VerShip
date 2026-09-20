@@ -15,6 +15,7 @@ const bannerController = require('../controller/admincontroller/bannerController
 const cookieController = require('../controller/admincontroller/cookieController');
 const prepackedController = require('../controller/admincontroller/prepackedController');
 const pricingController = require('../controller/admincontroller/pricingController');
+const payoutController = require('../controller/admincontroller/payoutController');
 
 
 router.post('/login', auth.login);
@@ -59,6 +60,11 @@ router.get("/pricing", pricingController.pricingOverview);
 router.get("/provider/:id/pricing", pricingController.providerPricing);
 router.put("/provider/:id/pricing/:cardId", pricingController.updateRateCard);
 router.delete("/provider/:id/pricing/:cardId", pricingController.retireRateCard);
+
+// Held forwarder payouts (forwarders paid before finishing Stripe onboarding).
+router.get("/payouts", payoutController.list);
+router.post("/payouts/:id/retry", payoutController.retry);
+router.post("/payouts/:id/write-off", payoutController.writeOff);
 
 // router for contact us
 router.get('/contactList', contactUsController.contactGet);

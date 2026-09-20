@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, Calendar, Info, MapPin, Search, ArrowUpRight, Target, Flag } from "lucide-react";
-import { container, profile1, loc, calender, iccon } from "../common/common-assets/assets-images";
+import { profile1, loc, calender, iccon } from "../common/common-assets/assets-images";
 import { useNavigate, useLocation } from "react-router-dom";
-import { saveBookingRequest, getProviderList } from "../api/cms";
+import { saveBookingRequest, getProviderList, getPrepackedBarrel } from "../api/cms";
 import { toast } from "sonner";
 import { API_URL } from "../api/axios";
+import { resolveFileUrl } from "../utils/fileUrl";
+import BarrelMedia from "./BarrelMedia";
 import { JAMAICA_PARISHES } from "../utils/parishes";
 import { ADVERTISED_ORIGINS, normalizeCity } from "../utils/origins";
 
@@ -17,6 +19,14 @@ import { ADVERTISED_ORIGINS, normalizeCity } from "../utils/origins";
 // capturing it here (rather than later, in the recipient's address) lets every
 // shipment be categorised by parish from the very first step.
 const DESTINATION_COUNTRY = "Jamaica";
+
+// The hero shows the same media as the pre-packed barrel product (its `image`
+// lives in the DB — see server/seed-prepacked.js and the admin product form),
+// so the landing page and the product page never drift apart. This is the
+// served animation the seed currently points at: painting it immediately means
+// no blank hero / pop-in while the product request is in flight, and the fetch
+// below only swaps it if the product's media has since been changed.
+const DEFAULT_BARREL_MEDIA = "/images/barrel-animation-v3.mp4";
 
 const CITY_COORDINATES = {
   "Fort Lauderdale, FL": { lat: "26.1224", lng: "-80.1373" },
@@ -147,6 +157,24 @@ const Banner = () => {
     fetchProviders();
   }, []);
 
+  const [barrelMedia, setBarrelMedia] = useState(DEFAULT_BARREL_MEDIA);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await getPrepackedBarrel();
+        if (!active) return;
+        const list = Array.isArray(res?.body) ? res.body : res?.body ? [res.body] : [];
+        const image = list[0]?.image;
+        if (res?.success && image) setBarrelMedia(resolveFileUrl(image, API_URL));
+      } catch {
+        // Keep the default animation — the hero must never go blank over this.
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
   const fetchProviders = async () => {
     try {
       const response = await getProviderList();
@@ -262,9 +290,18 @@ const Banner = () => {
 
     const userStr = localStorage.getItem("user");
     if (!userStr) {
-      localStorage.setItem("pending_booking_payload", JSON.stringify(payload));
-      toast.info("Please login to proceed with your request");
-      navigate("/login");
+      // Guests get quotes without an account. The payload is priced by
+      // /website/guest-quotes and only persisted when they pay at checkout
+      // (which creates the account). Barrel drop-off requests still need the
+      // drop-off form, so those keep the sign-in step.
+      if (isRequestBarrel) {
+        localStorage.setItem("pending_booking_payload", JSON.stringify(payload));
+        toast.info("Please login to proceed with your request");
+        navigate("/login");
+        return;
+      }
+      localStorage.setItem("guest_booking_payload", JSON.stringify(payload));
+      navigate("/quotes-shipown");
       return;
     }
 
@@ -296,12 +333,13 @@ const Banner = () => {
       {/* Hero Section */}
       <section className="bg-[#F8FAFA] pt-4 md:pt-5 pb-2 md:pb-3 px-4 md:px-6 flex flex-col items-center overflow-hidden relative">
 
-        {/* Container Image (Layered on top) */}
-        <div className="relative mt-0 md:mt-[-28px] mb-1 md:mb-2 z-30 w-full max-w-[400px] flex justify-center">
-          <img
-            src={container}
-            alt="VerShip — shipping barrels to Jamaica made easy"
-            className="w-full object-contain drop-shadow-[0_16px_18px_rgba(0,0,0,0.15)]"
+        {/* Pre-packed barrel media (the same animation/image the product page shows) */}
+        <div className="relative mb-1 md:mb-2 z-30 w-full max-w-[560px] rounded-[22px] overflow-hidden">
+          <BarrelMedia
+            src={barrelMedia}
+            alt="VerShip pre-packed food barrel — shipping barrels to Jamaica made easy"
+            mediaClass="w-full aspect-video object-contain bg-white"
+            placeholderClass="w-full aspect-video bg-[#0D4D4D]/5 flex items-center justify-center p-4"
           />
         </div>
 
@@ -313,11 +351,9 @@ const Banner = () => {
             Door-to-door delivery to Jamaica
           </span>
 
-          {/* Headline — the hero artwork above already reads "Shipping Barrels to
-              Jamaica Made Easy", so showing a second version of the same line here
-              just repeated the message. The text lives on as a visually-hidden h1
-              so search engines and screen readers still get a real page heading
-              (the artwork's words are baked-in pixels they can't read). */}
+          {/* Headline lives on as a visually-hidden h1 so search engines and
+              screen readers still get a real page heading — the hero media above
+              is an animation/artwork whose words they can't read. */}
           <h1 className="sr-only">Shipping Barrels to Jamaica Made Easy</h1>
 
           {/* Supporting copy */}

@@ -50,7 +50,9 @@ module.exports = {
                             required: false,
                         }
                     ]
-                }
+                },
+                // "Pay as Your Shipment Moves": deposit / customs & delivery / extras
+                { model: db.booking_charges, as: 'charges', required: false },
             ];
 
             // Date filter
@@ -137,9 +139,9 @@ module.exports = {
             const statusFilter = req.query.statusFilter || "all"; // Add status filter
 
             const whereClause = {
-                // Only show status 1 and 2 (Arrived and Ride Started)
+                // In transit: shipped, arrived in Jamaica (customs due), delivered
                 status: {
-                    [db.Sequelize.Op.in]: ["1", "2"]
+                    [db.Sequelize.Op.in]: ["1", "5", "2"]
                 },
                 payment_status: 1
             };
@@ -154,7 +156,9 @@ module.exports = {
                     model: db.users,
                     as: 'userbook',
                     required: false,
-                }
+                },
+                { model: db.booking_charges, as: 'charges', required: false },
+                { model: db.booking_requests, as: 'bookingRequest', required: false, attributes: ['id', 'origin', 'destination', 'quantity', 'parish'] },
             ];
 
             // Date filter
@@ -241,7 +245,9 @@ module.exports = {
                     model: db.users,
                     as: 'userbook',
                     required: false,
-                }
+                },
+                { model: db.booking_charges, as: 'charges', required: false },
+                { model: db.booking_requests, as: 'bookingRequest', required: false, attributes: ['id', 'origin', 'destination', 'quantity', 'parish'] },
             ];
 
             if (dateFilter !== 'all') {
@@ -360,7 +366,9 @@ module.exports = {
                     model: db.users,
                     as: 'userbook',
                     required: false,
-                }
+                },
+                { model: db.booking_charges, as: 'charges', required: false },
+                { model: db.booking_requests, as: 'bookingRequest', required: false, attributes: ['id', 'origin', 'destination', 'quantity', 'parish'] },
             ];
 
             if (dateFilter !== 'all') {

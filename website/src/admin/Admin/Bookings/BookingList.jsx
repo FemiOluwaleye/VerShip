@@ -34,12 +34,6 @@ const BookingList = () => {
     { value: "365", label: "Last Year" },
   ];
 
-  const getRideTypeLabel = (rideType) => {
-    if (rideType === "0") return "Single Ride";
-    if (rideType === "1") return "Pool Ride";
-    return "Unknown";
-  };
-
   const getStatusBadge = (status) => {
     const statusMap = {
       0: { label: "Pending", className: "bg-warning text-dark" },
@@ -47,6 +41,7 @@ const BookingList = () => {
       2: { label: "Delivered", className: "bg-success" },
       3: { label: "Dispatched", className: "bg-info" },
       4: { label: "Completed", className: "bg-secondary" },
+      5: { label: "Arrived in Jamaica", className: "bg-info text-dark" },
     };
 
     return statusMap[status] || { label: "Unknown", className: "bg-light text-dark" };
@@ -83,7 +78,7 @@ const BookingList = () => {
       } else {
         Swal.fire(
           "Error",
-          response.data.message || "Failed to load ride",
+          response.data.message || "Failed to load bookings",
           "error"
         );
       }
@@ -146,12 +141,12 @@ const BookingList = () => {
             setTotalPages(newTotalPages);
           }
 
-          Swal.fire("Deleted!", "Ride has been deleted.", "success");
+          Swal.fire("Deleted!", "Booking has been deleted.", "success");
         }
       } catch (error) {
         Swal.fire(
           "Error!",
-          error.response?.data?.message || "Error deleting Ride",
+          error.response?.data?.message || "Error deleting booking",
           "error"
         );
       }
@@ -214,7 +209,7 @@ const BookingList = () => {
                     </li>
                     {/* <li className="breadcrumb-item">
                       <Link to={`${ADMIN_BASE}/`} className="new">
-                        <i className="ri-group-2-line me-1" /> Rides
+                        <i className="ri-group-2-line me-1" /> Bookings
                       </Link>
                     </li> */}
                     <li className="breadcrumb-item active" aria-current="page">
@@ -332,7 +327,7 @@ const BookingList = () => {
                                           borderColor: "#ea5455",
                                           color: "#fff",
                                         }}
-                                        title="Delete ride"
+                                        title="Delete booking"
                                       >
                                         <i className="ri-delete-bin-line font-size-16"></i>
                                       </button> */}
@@ -652,6 +647,29 @@ const BookingList = () => {
                         ${selectedMatch.pay_later_price || "0"}
                       </td>
                     </tr>
+                  )}
+
+                  {/* Pay as Your Shipment Moves: one row per charge with its state */}
+                  {selectedMatch.charges?.length > 0 && (
+                    <>
+                      <tr className="table-light">
+                        <td colSpan="2" className="fw-bold">Payments</td>
+                      </tr>
+                      {selectedMatch.charges.map((c) => (
+                        <tr key={c.id}>
+                          <td>
+                            {c.kind === "deposit" ? "Deposit (sea freight & service fee)" : c.kind === "customs_delivery" ? (c.description || "Customs & delivery") : `Extra: ${c.description}`}
+                            {c.kind === "customs_delivery" && c.status === "pending" && (
+                              <span className="text-muted font-12"> — {c.due_at ? "due (arrived)" : "due on arrival"}</span>
+                            )}
+                          </td>
+                          <td className="text-end text-black fw-medium">
+                            ${(c.amount_cents / 100).toFixed(2)}{" "}
+                            <span className={`badge bg-${c.status === "paid" ? "success" : c.status === "cancelled" ? "secondary" : "warning text-dark"}`}>{c.status}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
                   )}
 
                   {/* Documents Section */}

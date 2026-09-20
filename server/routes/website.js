@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const webController = require('../controller/apicontroller/webController');
 
-const { verifyUser } = require('../middleware/authtoken');
+const { verifyUser, optionalUser } = require('../middleware/authtoken');
+const checkoutController = require('../controller/apicontroller/checkoutController');
 const { otpRequestLimiter, otpVerifyLimiter, loginLimiter } = require('../middleware/rateLimiters');
 
 // Pre-packed food barrel (owner-sold fixed product) — public, no auth.
@@ -126,7 +127,7 @@ router.post('/additional-cost/pay-intent', verifyUser, (req, res, next) => {
     webController.payAdditionalCostIntent(req, res);
 });
 router.post('/additional-cost/confirm', verifyUser, (req, res, next) => {
-    webController.confirmAdditionalCostPayment(req, res);
+    checkoutController.confirmCharge(req, res);
 });
 router.get('/get-earnings', verifyUser, (req, res, next) => {
     webController.getEarnings(req, res);
@@ -138,8 +139,10 @@ router.post('/update-booking-status', verifyUser, (req, res, next) => {
     webController.updateBookingStatus(req, res);
 });
 
-router.post('/update-booking-payment', verifyUser, (req, res, next) => {
-    webController.updateBookingPayment(req, res);
+// Legacy name kept for older clients: now verifies the PaymentIntent with
+// Stripe and applies the same idempotent update as the webhook.
+router.post('/update-booking-payment', verifyUser, (req, res) => {
+    checkoutController.confirmCharge(req, res);
 });
 
 router.post('/update-pay-later-status', verifyUser, (req, res, next) => {
@@ -158,8 +161,10 @@ router.get('/get-notifications', verifyUser, (req, res, next) => {
 });
 const stripeController = require('../controller/apicontroller/stripeController');
 
-router.post('/create-payment-intent', verifyUser, (req, res, next) => {
-    stripeController.createPaymentIntent(req, res);
+// Legacy name kept for older clients: the amount now comes from the booking's
+// deposit charge (server-priced); any amount in the body is ignored.
+router.post('/create-payment-intent', verifyUser, (req, res) => {
+    checkoutController.chargeIntent(req, res);
 });
 router.post('/createStripeAccount', verifyUser, (req, res, next) => {
     stripeController.createStripeAccount(req, res);
@@ -185,4 +190,24 @@ router.get('/get-user-cookies', verifyUser, (req, res, next) => {
 router.get('/get-forwarders', (req, res, next) => {
     webController.getForwarders(req, res);
 });
+
+// ── Checkout redesign: guest quotes, server-priced breakdown, milestone charges,
+//    guest checkout, post-payment account setup, forwarder held payouts ──
+router.post('/guest-quotes', (req, res) => checkoutController.guestQuotes(req, res));
+// Publishable key for mounting the Payment Element before a PaymentIntent exists.
+router.get('/stripe-config', (req, res) => {
+    const { env } = require('../helper/envConfig');
+    res.json({ success: true, body: { publishableKey: env('STRIPE_PUBLISHABLE_KEY') || '' } });
+});
+router.get('/quote-breakdown', optionalUser, (req, res) => checkoutController.quoteBreakdown(req, res));
+router.post('/quote-breakdown', optionalUser, (req, res) => checkoutController.quoteBreakdown(req, res));
+router.post('/guest-checkout', (req, res) => checkoutController.guestCheckout(req, res));
+router.post('/charge-intent', verifyUser, (req, res) => checkoutController.chargeIntent(req, res));
+router.post('/confirm-charge', verifyUser, (req, res) => checkoutController.confirmCharge(req, res));
+router.get('/booking-charges', verifyUser, (req, res) => checkoutController.bookingCharges(req, res));
+router.get('/my-charges', verifyUser, (req, res) => checkoutController.myCharges(req, res));
+router.post('/account-setup', optionalUser, (req, res) => checkoutController.accountSetup(req, res));
+router.get('/payouts/me', verifyUser, (req, res) => checkoutController.myPayouts(req, res));
+router.post('/payouts/collect', verifyUser, (req, res) => checkoutController.collectPayouts(req, res));
+
 module.exports = router;

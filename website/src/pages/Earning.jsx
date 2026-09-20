@@ -4,6 +4,7 @@ import { green } from "../common/common-assets/assets-images";
 import { getEarnings } from "../api/cms";
 import moment from "moment";
 import { Loader2 } from "lucide-react";
+import PayoutsCard from "../components/PayoutsCard";
 
 const Earning = () => {
   const [loading, setLoading] = useState(true);
@@ -50,6 +51,7 @@ const Earning = () => {
       <Commonbanner title="Payment & Earning" />
       <div className="md:px-4 px-0 py-10">
         <div className="container mx-auto">
+          <PayoutsCard />
           <div className="bg-[#2D413F] rounded-3xl p-4 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
 
             {/* LEFT SIDE */}

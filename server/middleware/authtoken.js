@@ -116,6 +116,25 @@ module.exports = {
       return helper.failure(res, "Key not matched!");
     }
   },
+  // Like verifyUser, but a missing/invalid token just leaves req.user unset.
+  // For endpoints that serve both guests and signed-in customers (quote
+  // breakdown, account setup by emailed token).
+  optionalUser: async (req, res, next) => {
+    req.user = null;
+    try {
+      const parts = String(req.headers.authorization || '').split(' ');
+      if (parts[0] === 'Bearer' && parts[1]) {
+        const decoded = jwt.verify(parts[1], process.env.JWT_SECRET);
+        const userData = await db.users.findByPk(decoded.id, { attributes: { exclude: ['password'] } });
+        if (userData && userData.status !== '0' &&
+            !(decoded.loginTime && userData.loginTime && Number(userData.loginTime) !== Number(decoded.loginTime))) {
+          req.user = userData;
+        }
+      }
+    } catch (e) { /* guest */ }
+    next();
+  },
+
   verifyUser: async (req, res, next) => {
     try {
       if (!req.headers.authorization) {

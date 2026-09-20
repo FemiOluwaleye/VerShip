@@ -406,7 +406,6 @@ const Signup = () => {
                 if (formData.number) validateField("number", formData.number);
               }}
               error={errors.number}
-              placeholder="Enter"
             />
           </div>
 

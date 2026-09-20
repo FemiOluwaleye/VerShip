@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Commonbanner from "../components/Commonbanner";
-import { getBookings, updateBookingStatus, uploadBookingDocument, submitRating, checkRatingStatus, getMyPrepackedOrders, addBookingAdditionalCost, payAdditionalCost, confirmAdditionalCostPayment } from "../api/cms";
+import { getBookings, updateBookingStatus, uploadBookingDocument, submitRating, checkRatingStatus, getMyPrepackedOrders, addBookingAdditionalCost, payAdditionalCost, confirmAdditionalCostPayment, createChargeIntent, confirmCharge } from "../api/cms";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "../components/CheckoutForm";
@@ -215,6 +215,26 @@ const History = () => {
   const [addCostModal, setAddCostModal] = useState(null);   // booking (provider)
   const [payCostModal, setPayCostModal] = useState(null);   // { cost, clientSecret, stripePromise } (customer)
 
+  // "Pay as Your Shipment Moves": pay any pending booking_charges row through
+  // the server-priced intent (customs & delivery on arrival, forwarder extras).
+  const startPayCharge = async (charge) => {
+    try {
+      const res = await createChargeIntent({ bookingChargeId: charge.id });
+      if (res.success && res.clientSecret) {
+        setPayCostModal({
+          cost: { id: charge.id, description: charge.description, amount: (charge.amount_cents / 100).toFixed(2) },
+          charge,
+          clientSecret: res.clientSecret,
+          stripePromise: loadStripe(res.publishkey),
+        });
+      } else {
+        toast.error(res.message || "Could not start payment.");
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not start payment.");
+    }
+  };
+
   const startPayAdditionalCost = async (cost) => {
     try {
       const res = await payAdditionalCost({ additionalCostId: cost.id });
@@ -331,7 +351,7 @@ const History = () => {
     setRatedBookings(prev => ({ ...prev, [bookingId]: true }));
   };
 
-  const currentBookings = bookings.filter(b => ["0", "1", "3"].includes(b.status));
+  const currentBookings = bookings.filter(b => ["0", "1", "3", "5"].includes(b.status));
   const pastBookings = bookings.filter(b => ["2"].includes(b.status));
   const orders = activeTab === "current" ? currentBookings : pastBookings;
 
@@ -342,6 +362,7 @@ const History = () => {
       case "2": return "Delivered";
       case "3": return "Dispatched";
       case "4": return "Completed";
+      case "5": return "Arrived in Jamaica";
       default: return "Unknown";
     }
   };
@@ -353,6 +374,7 @@ const History = () => {
       case "2": return "text-green-400 border-green-400";
       case "3": return "text-orange-400 border-orange-400";
       case "4": return "text-green-500 border-green-500";
+      case "5": return "text-teal-300 border-teal-300";
       default: return "text-[#FF9900] border-[#FF9900]";
     }
   };
@@ -403,7 +425,7 @@ const History = () => {
             </div>
           ) : (
             orders.map((item, index) => (
-              <div key={index} className="bg-[#2D413F] rounded-xl shadow-lg overflow-hidden">
+              <div key={index} className="bg-[#2D413F] rounded-xl shadow-lg overflow-hidden" data-testid={`booking-card-${item.id}`}>
               <div
                 onClick={() => navigate("/businessdetail", { state: item })}
                 className="cursor-pointer px-6 py-4 flex md:items-center items-start justify-between flex-col md:flex-row gap-5 md:gap-0"
@@ -510,7 +532,9 @@ const History = () => {
                       >
                         <option value="0" disabled={item.status !== "0"}>Pending</option>
                         <option value="3" disabled={item.status === "1" || item.status === "2"}>Dispatched</option>
-                        <option value="1" disabled={item.status === "2"}>Shipped</option>
+                        <option value="1" disabled={item.status === "2" || item.status === "5"}>Shipped</option>
+                        {/* Arrival makes the customs & delivery milestone due (customer is emailed a pay link). */}
+                        <option value="5" disabled={item.status === "2"}>Arrived in Jamaica</option>
                         <option value="2">Delivered</option>
                       </select>
                     </div>
@@ -552,35 +576,52 @@ const History = () => {
                 </div>
               </div>
 
-              {/* Additional costs requested by the forwarder */}
-              {item.additionalCosts?.length > 0 && (
-                <div className="border-t border-[#4E6B5D]/40 px-6 py-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-                  <p className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Additional Costs</p>
-                  {item.additionalCosts.map((cost) => (
-                    <div key={cost.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="text-sm text-gray-200">
-                        {cost.description}
-                        <span className="text-gray-400"> · {moment(cost.createdAt).format("MMM D")}</span>
+              {/* Payments on this booking — deposit, customs & delivery (due on arrival), forwarder extras */}
+              {(item.charges?.length > 0 || item.additionalCosts?.length > 0) && (() => {
+                const charges = item.charges?.length ? item.charges : (item.additionalCosts || []).map((c) => ({
+                  id: `legacy-${c.id}`, kind: "extra", description: c.description, amount_cents: Math.round(parseFloat(c.amount) * 100),
+                  status: c.status === "1" ? "paid" : c.status === "2" ? "cancelled" : "pending", createdAt: c.createdAt, _legacy: c,
+                }));
+                const label = (c) => c.kind === "deposit" ? "Sea freight & service fee" : c.kind === "customs_delivery" ? (c.description || "Customs & delivery") : c.description;
+                const dueNote = (c) => c.kind === "customs_delivery" && c.status === "pending"
+                  ? (c.due_at ? "Due now — your barrel has arrived" : "Due when your barrel arrives in Jamaica") : null;
+                return (
+                  <div className="border-t border-[#4E6B5D]/40 px-6 py-3 space-y-2" onClick={(e) => e.stopPropagation()} data-testid={`charges-${item.id}`}>
+                    <p className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Payments</p>
+                    {charges.filter((c) => c.status !== "cancelled").map((c) => (
+                      <div key={c.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="text-sm text-gray-200">
+                          {label(c)}
+                          <span className="text-gray-400"> · {moment(c.paid_at || c.createdAt).format("MMM D")}</span>
+                          {dueNote(c) && <span className={`block text-xs ${c.due_at ? "text-[#FFC928]" : "text-gray-400"}`}>{dueNote(c)}</span>}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[#FFC928] font-bold">${(c.amount_cents / 100).toFixed(2)}</span>
+                          {c.status === "paid" ? (
+                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600/30 text-green-300">Paid</span>
+                          ) : userRole === "1" ? (
+                            (c.kind !== "customs_delivery" || c.due_at) ? (
+                              <button
+                                onClick={() => (c._legacy ? startPayAdditionalCost(c._legacy) : startPayCharge(c))}
+                                data-testid={`pay-charge-${c.id}`}
+                                className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#FFC928] text-black hover:bg-[#ffe58f] transition"
+                              >
+                                Pay Now
+                              </button>
+                            ) : (
+                              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-gray-300">Not due yet</span>
+                            )
+                          ) : (
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${c.kind === "customs_delivery" && !c.due_at ? "bg-white/10 text-gray-300" : "bg-red-600/30 text-red-300"}`}>
+                              {c.kind === "customs_delivery" && !c.due_at ? "Due on arrival" : "Unpaid"}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[#FFC928] font-bold">${parseFloat(cost.amount).toFixed(2)}</span>
-                        {cost.status === "1" ? (
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600/30 text-green-300">Paid</span>
-                        ) : userRole === "1" ? (
-                          <button
-                            onClick={() => startPayAdditionalCost(cost)}
-                            className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#FFC928] text-black hover:bg-[#ffe58f] transition"
-                          >
-                            Pay Now
-                          </button>
-                        ) : (
-                          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-600/30 text-red-300">Awaiting payment</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                );
+              })()}
               </div>
             ))
           )}
@@ -679,14 +720,15 @@ const History = () => {
       {payCostModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-6" onClick={() => setPayCostModal(null)}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-[#071618] text-xl font-bold mb-1">Pay Additional Cost</h3>
+            <h3 className="text-[#071618] text-xl font-bold mb-1">{payCostModal.charge?.kind === "customs_delivery" ? "Pay Customs & Delivery" : "Pay Additional Cost"}</h3>
             <p className="text-gray-500 text-sm mb-4">{payCostModal.cost.description}</p>
             <Elements stripe={payCostModal.stripePromise} options={{ clientSecret: payCostModal.clientSecret }}>
               <CheckoutForm
                 amount={parseFloat(payCostModal.cost.amount).toFixed(2)}
                 onSuccess={async (paymentIntent) => {
                   try {
-                    await confirmAdditionalCostPayment({ paymentId: paymentIntent.id });
+                    if (payCostModal.charge) await confirmCharge(paymentIntent.id);
+                    else await confirmAdditionalCostPayment({ paymentId: paymentIntent.id });
                   } catch (e) {
                     console.error("Additional cost confirm failed", e); // webhook reconciles
                   }

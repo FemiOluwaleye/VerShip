@@ -3,7 +3,8 @@ import { checkk } from "../common/common-assets/assets-images";
 import { useNavigate } from 'react-router-dom';
 import ProfileMain from '../components/ProfileMain';
 import Commonbanner from '../components/Commonbanner';
-import { getProviderProfile, createStripeAccount } from '../api/cms';
+import { getProviderProfile } from '../api/cms';
+import PayoutsCard from '../components/PayoutsCard';
 import { toast } from 'sonner';
 import { API_URL } from '../api/axios';
 import { resolveFileUrl } from '../utils/fileUrl';
@@ -12,7 +13,6 @@ import { JAMAICA_PARISHES } from '../utils/parishes';
 const BussinessProfile = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isStripeConnecting, setIsStripeConnecting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,30 +41,7 @@ const BussinessProfile = () => {
     fetchProfile();
   }, []);
 
-  const handleStripeConnect = async () => {
-    setIsStripeConnecting(true);
-    try {
-      const response = await createStripeAccount();
-      if (response.success) {
-        const url = response.body?.url || response.url;
-        if (url) {
-          window.location.href = url;
-          return;
-        }
-      }
-      toast.error(response.message || 'Failed to start Stripe Connect.');
-    } catch (error) {
-      console.error('Stripe connect error:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Unable to start Stripe Connect.';
-      toast.error(errorMessage);
-    } finally {
-      setIsStripeConnecting(false);
-    }
-  };
 
-  const localUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const localHashAccount = localUser?.hashAccount || localUser?.user?.hashAccount;
-  const isStripeConnected = profileData?.hashAccount === '1' || localHashAccount === '1';
 
   if (loading) {
     return (
@@ -389,25 +366,9 @@ const BussinessProfile = () => {
             <div className='w-full xl:mt-0 container mx-auto px-5 py-5 text-[14px] sm:text-[16px] md:text-[18px]'>
               <p className='text-[17px] sm:text-[19px] font-bold my-5 text-white text-start'>My Profile</p>
 
-              {!isStripeConnected ? (
-                <div className='mb-6 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4'>
-                  <p className='text-sm text-yellow-100 mb-3'>You can't be paid yet. Set up payments with Stripe to receive money from customers and appear in booking quotes.</p>
-                  <button
-                    type='button'
-                    onClick={handleStripeConnect}
-                    disabled={isStripeConnecting}
-                    className='inline-flex items-center justify-center rounded-full bg-yellow-400 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-60'
-                  >
-                    {/* Names the outcome, not the vendor — forwarders understand
-                        "start collecting payments" far quicker than "Connect Stripe". */}
-                    {isStripeConnecting ? 'Setting up...' : 'Start Collecting Payments'}
-                  </button>
-                </div>
-              ) : (
-                <div className='mb-6 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-emerald-100'>
-                  <p className='text-sm'>Stripe is connected. Your account is eligible to receive payments and bookable by users.</p>
-                </div>
-              )}
+              {/* Money held for this forwarder + the way to collect it. Being
+                  quoted no longer depends on Stripe, so this is about payouts only. */}
+              <PayoutsCard />
 
               {/* ── Personal Info ── */}
               <Row label="Contact Name" value={`${profileData?.firstName || ''} ${profileData?.lastName || ''}`.trim()} />

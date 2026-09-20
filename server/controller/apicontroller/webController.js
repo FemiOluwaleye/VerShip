@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendResetEmail, sendSubscriptionEmail, sendBookingStatusUpdateEmailToUser, sendOtpEmail, sendOtpEmail12, sendVerificationOtpEmail, sendFreightForwarderRegistrationEmail, sendNewOrderPlacedEmailToProvider, sendNewOrderPlacedEmailToProvider12, sendAdditionalCostRequestEmail, sendOrderConfirmationToCustomer } = require('../../helper/mailHelper');
 const otpHelper = require('../../helper/otpHelper');
+const { ensureBookingCharges, markArrived } = require('../../helper/chargeService');
 const { env } = require('../../helper/envConfig');
 
 // Destination matching is country-level, not city-level.
@@ -83,6 +84,750 @@ const buildRedirectState = async (user) => {
     }
     return state;
 };
+
+/*
+ * Quote matching for one booking request, shared by the logged-in quotes page
+ * (getAvailableQuotes) and guest quotes (guestQuotes). `latestRequest` may be a
+ * persisted booking_requests row or a transient object with the same shape
+ * (origin, destination, items[], pickup_date, delivery_date). `userSurveyStr`
+ * is the customer's saved survey ("1,2,3") or "" for guests → lowest price.
+ *
+ * Gate: a forwarder is quotable when the admin has verified their documents and
+ * has not deactivated them. Stripe onboarding (users.hashAccount) is no longer
+ * required — payments to un-onboarded forwarders are held by VerShip and
+ * transferred once they connect (see helper/payoutService.js).
+ */
+async function matchQuotesForRequest(latestRequest, userSurveyStr = "") {
+            // Extract matching criteria
+            // Handle origin/destination - could be "Country" or "City, Country"
+            const getCountry = (str) => {
+                if (!str) return "";
+                const parts = str.split(',');
+                // If parts > 1, assume "City, Country" format, get last part
+                // If parts == 1, assume "Country"
+                return parts[parts.length - 1].trim().toLowerCase();
+            };
+
+            const requestedOriginCountry = getCountry(latestRequest.origin);
+            const requestedDestinationCountry = getCountry(latestRequest.destination);
+
+            // Map requested items to types (lowercase)
+            const requestedItemTypes = latestRequest.items
+                ? latestRequest.items.map(item => (item.sub_type || item.item_type || "").toLowerCase())
+                : [];
+            console.log("requestedItemTypes", requestedItemTypes);
+            // Should also check latestRequest.quantity/item_type if items array is empty
+            // (backward compatibility if data saved in main table only)?
+            // But verifyBookingRequest saves to items table now.
+
+            console.log("Criteria -> Origin:", requestedOriginCountry, "Dest:", requestedDestinationCountry, "Items:", requestedItemTypes);
+
+            // Fetch all verified providers with their details and service areas
+            // Accessing serviceAreaRoutes via the User model association
+            const providers = await db.providerDetails.findAll({
+                include: [
+                    {
+                        model: db.users,
+                        as: 'provider',
+                        // status '1' is the admin's deactivate switch: a forwarder
+                        // the admin turned off must stop being quoted, the same
+                        // gate getForwarders() applies to the public listing.
+                        where: require('../../helper/payoutService').heldPayoutsEnabled()
+                            ? { status: '1' }
+                            : { status: '1', hashAccount: '1' },
+                        attributes: ['id', 'firstName', 'image', 'email'],
+                        include: [
+                            {
+                                model: db.serviceAreaRoutes,
+                                as: 'serviceArea'
+                            }
+                        ]
+                    },
+                    {
+                        model: db.barrelsprices,
+                        as: 'barrelPrices',
+                    },
+                    {
+                        model: db.provider_shipment_item_types,
+                        as: 'shipmentItemTypes'
+                    }
+                ],
+                where: {
+                    documentVerify: 1
+                }
+            });
+            console.log(`Found`, providers.length);
+            if (providers.length > 0) {
+                console.log("First provider sample barrelPrices:", providers[0].barrelPrices ? providers[0].barrelPrices.length : 0);
+            }
+            for (let provider of providers) {
+                const providerUserId = provider.provider?.id;
+                let averageRating = 0;
+                let totalCompletedBookings = 0;
+
+                if (providerUserId) {
+                    const reviews = await db.reviewrating.findAll({
+                        where: { ratedTo: providerUserId },
+                    });
+
+                    const totalReviews = reviews.length;
+                    if (totalReviews > 0) {
+                        const totalRating = reviews.reduce((sum, review) => {
+                            return sum + (parseFloat(review.rating) || 0);
+                        }, 0);
+                        averageRating = totalRating / totalReviews;
+                    }
+
+
+                    const completedBookings = await db.bookings.count({
+                        where: {
+                            driverId: providerUserId,
+                            status: '2'
+                        }
+                    });
+
+                    totalCompletedBookings = completedBookings;
+
+                    provider.setDataValue('averageRating', parseFloat(averageRating.toFixed(1)));
+                    provider.setDataValue('totalCompletedBookings', totalCompletedBookings);
+                } else {
+                    provider.setDataValue('averageRating', 0);
+                    provider.setDataValue('totalCompletedBookings', 0);
+                }
+            }
+
+            const matchedProviders = providers.filter(providerDetail => {
+                const providerUser = providerDetail.provider;
+                if (!providerUser) return false;
+
+                const isBarrelRequest = requestedItemTypes.some(t => t.toLowerCase().includes('barrel'));
+                console.log("isBarrelRequest", isBarrelRequest);
+                if (isBarrelRequest) {
+                    console.log(`Checking barrel match for provider ${providerDetail.id} in Quotes...`, providerDetail);
+                    const hasBarrelMatch = providerDetail.barrelPrices && providerDetail.barrelPrices.some(bp => {
+                        console.log("bp", bp);
+                        const bpTypeNormalized = (bp.type || "").toLowerCase().trim();
+                        // Match sub_type strings like "Request Barrel Drop-Off" with internal codes like "dropoff"
+                        console.log(requestedItemTypes, "===>", bpTypeNormalized);
+
+                        const matchesType = requestedItemTypes.some(t => {
+                            const sub = t.toLowerCase();
+                            if (sub.includes('request barrel drop-off') || sub.includes('drop-off barrel') || sub.includes('dropoff'))
+                                return bpTypeNormalized === 'dropoff';
+                            console.log(sub, "========>");
+
+                            if (sub.includes('ship your own barrel') || sub.includes('own barrel'))
+                                return bpTypeNormalized === 'own';
+                            return false;
+                        });
+
+                        console.log(matchesType, "====>hasBarrelMatch");
+
+
+                        const bpOrigin = (bp.originCountry || "").toLowerCase().trim();
+                        const bpDest = (bp.destinationCountry || "").toLowerCase().trim();
+                        const reqOriginAddress = (latestRequest.origin || "").toLowerCase().trim();
+                        const reqDestAddress = (latestRequest.destination || "").toLowerCase().trim();
+                        console.log("bpOrigin", bpOrigin);
+                        console.log("bpDest", bpDest);
+                        console.log("reqOriginAddress", reqOriginAddress);
+                        console.log("reqDestAddress", reqDestAddress);
+                        console.log("requestedOriginCountry", requestedOriginCountry);
+                        console.log("requestedDestinationCountry", requestedDestinationCountry);
+                        // Origin stays an exact city match; destination matches on
+                        // country (see destinationsMatch above).
+                        const originMatch = (bpOrigin === reqOriginAddress);
+                        const destMatch = destinationsMatch(bpDest, reqDestAddress);
+
+                        console.log(`Provider ${providerDetail.id} Quotes Match Debug: type=${bp.type}, matchesType=${matchesType}, originMatch=${originMatch}, destMatch=${destMatch}`);
+                        return matchesType && originMatch && destMatch;
+                    });
+
+                    console.log(`Mai Provider ${providerDetail.id} Quotes final hasBarrelMatch:`, !!hasBarrelMatch);
+                    if (!hasBarrelMatch) return false;
+
+                    // Override basePrice/pricePerMile for display if barrel match found
+                    const matchingBarrel = providerDetail.barrelPrices?.find(bp => {
+                        const bpTypeNormalized = (bp.type || "").toLowerCase().trim();
+                        const isTypeMatch = requestedItemTypes.some(type => {
+                            const sub = type.toLowerCase();
+                            if (sub.includes('ship your own barrel') || sub.includes('own barrel')) return bpTypeNormalized === 'own';
+                            if (sub.includes('request barrel drop-off') || sub.includes('drop-off barrel') || sub.includes('dropoff')) return bpTypeNormalized === 'dropoff';
+                            return true;
+                        });
+                        const bpOrigin = (bp.originCountry || "").toLowerCase().trim();
+                        const bpDest = (bp.destinationCountry || "").toLowerCase().trim();
+                        const reqOrigin = (latestRequest.origin || "").toLowerCase().trim();
+                        const reqDest = (latestRequest.destination || "").toLowerCase().trim();
+
+                        const isOriginMatch = (bpOrigin === reqOrigin);
+                        const isDestinationMatch = destinationsMatch(bpDest, reqDest);
+                        return isTypeMatch && isOriginMatch && isDestinationMatch;
+                    });
+
+                    if (matchingBarrel) {
+                        providerDetail.setDataValue('basePrice', matchingBarrel.barrelPrice);
+                        providerDetail.setDataValue('pricePerMile', matchingBarrel.pricePerMile);
+                    }
+                } else {
+                    // General criteria for non-barrel
+                    const providerOrigin = providerDetail.countryOfRegistration
+                        ? providerDetail.countryOfRegistration.toLowerCase()
+                        : "";
+
+                    const providerOriginField = providerDetail.originCountry
+                        ? providerDetail.originCountry.toLowerCase()
+                        : "";
+
+                    const originMatch =
+                        (providerOrigin && providerOrigin.includes(requestedOriginCountry)) ||
+                        (providerOriginField && providerOriginField.includes(requestedOriginCountry));
+
+                    if (!originMatch) return false;
+
+                    const legacyOrigin = providerDetail.originCountry
+                        ? providerDetail.originCountry.toLowerCase()
+                        : "";
+
+                    const legacyDest = providerDetail.destinationCountry
+                        ? providerDetail.destinationCountry.toLowerCase()
+                        : "";
+
+                    const legacyOriginMatch = legacyOrigin.includes(requestedOriginCountry);
+                    const legacyDestMatch = legacyDest.includes(requestedDestinationCountry);
+
+                    if (!legacyOriginMatch || !legacyDestMatch) return false;
+
+                    if (providerDetail.shipmentType && requestedItemTypes.length > 0) {
+                        const supportedTypes = providerDetail.shipmentType.toLowerCase();
+                        const hasMainTypeMatch = requestedItemTypes.some(type =>
+                            supportedTypes.includes(type)
+                        );
+
+                        if (!hasMainTypeMatch) return false;
+                    }
+                }
+
+                /* ---------------- DATE RANGE MATCH (NEW) ---------------- */
+                let pickupDate = latestRequest.pickup_date;
+                let deliveryDate = latestRequest.delivery_date;
+                console.log("Provider Validity:", {
+                    pickupDate,
+                    deliveryDate
+                });
+
+                if (pickupDate && deliveryDate) {
+                    const validFrom = providerDetail.validFrom
+                        ? new Date(providerDetail.validFrom)
+                        : null;
+
+                    const validTo = providerDetail.validTo
+                        ? new Date(providerDetail.validTo)
+                        : null;
+
+
+                    // provider must be valid for FULL request duration (if dates are set)
+                    const isBeforeEnd = !validTo || deliveryDate <= validTo;
+                    const isAfterStart = !validFrom || pickupDate >= validFrom;
+
+                    if (!isBeforeEnd || !isAfterStart) {
+                        console.log(
+                            `Provider ${providerDetail.id} failed date match`,
+                            { pickupDate, deliveryDate, validFrom, validTo }
+                        );
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+            console.log("matchedProviders count:", matchedProviders.length);
+            if (matchedProviders.length > 0) {
+                console.log("First provider barrelPrices:", JSON.stringify(matchedProviders[0].barrelPrices, null, 2));
+            }
+            let adminUser = await db.users.findOne({
+                where: {
+                    role: "0"
+                }
+            });
+            console.log("matchedProviders", matchedProviders);
+            let adminCommission = adminUser ? adminUser.adminCommission : "0";
+
+            // ── Survey-based sorting & Best Quote Matching ──────────────────
+            const surveyIds = userSurveyStr.split(',').map(s => s.trim()).filter(Boolean);
+
+            console.log("surveyIds selected:", surveyIds);
+
+            // 1. Calculate metrics for all matched providers
+            const providersWithMetrics = await Promise.all(matchedProviders.map(async (pd) => {
+                const providerId = pd.provider?.id;
+                const metrics = {
+                    id: pd.id,
+                    avgTime: 9999,
+                    avgRating: parseFloat(pd.provider?.avg_rating) || 0,
+                    price: parseFloat(pd.getDataValue('basePrice')) || 0
+                };
+
+                if (providerId && surveyIds.includes('1')) {
+                    const result = await db.bookings.findOne({
+                        where: { driverId: providerId, status: '2', avg_time: { [db.Sequelize.Op.ne]: null } },
+                        attributes: [[db.Sequelize.fn('AVG', db.Sequelize.col('avg_time')), 'avgTime']],
+                        raw: true
+                    });
+                    metrics.avgTime = parseFloat(result?.avgTime) || 9999;
+                }
+
+                return { pd, metrics };
+            }));
+
+            // 2. Identify "Best" in each selected category
+            const bestInCategories = new Set();
+
+            if (surveyIds.includes('1')) {
+                // Fastest Delivery
+                const fastest = [...providersWithMetrics].sort((a, b) => a.metrics.avgTime - b.metrics.avgTime)[0];
+                if (fastest && fastest.metrics.avgTime < 9999) bestInCategories.add(fastest.pd.id);
+            }
+            if (surveyIds.includes('2')) {
+                // Safest (Highest Rating)
+                const safest = [...providersWithMetrics].sort((a, b) => b.metrics.avgRating - a.metrics.avgRating)[0];
+                if (safest && safest.metrics.avgRating > 0) bestInCategories.add(safest.pd.id);
+            }
+            if (surveyIds.includes('3') || !surveyIds.some((id) => ['1', '2'].includes(id))) {
+                // Lowest Price (Default if none selected)
+                const cheapest = [...providersWithMetrics].sort((a, b) => a.metrics.price - b.metrics.price)[0];
+                if (cheapest) bestInCategories.add(cheapest.pd.id);
+            }
+
+            // 3. Mark providers and sort
+            const finalProviders = providersWithMetrics.map(({ pd }) => {
+                pd.setDataValue('isBestQuote', bestInCategories.has(pd.id));
+                return pd;
+            });
+
+            // Primary sort: isBestQuote first. Secondary sort: by price.
+            finalProviders.sort((a, b) => {
+                if (a.getDataValue('isBestQuote') && !b.getDataValue('isBestQuote')) return -1;
+                if (!a.getDataValue('isBestQuote') && b.getDataValue('isBestQuote')) return 1;
+                return (parseFloat(a.getDataValue('basePrice')) || 0) - (parseFloat(b.getDataValue('basePrice')) || 0);
+            });
+
+            console.log("finalProviders count:", finalProviders.length);
+
+            return { providers: finalProviders, adminCommission, userSurvey: userSurveyStr };
+}
+
+
+/*
+ * Creates (or refreshes) one booking per selected provider for a booking
+ * request. Shared by createBooking (logged-in) and guestCheckout, which
+ * creates the account first and then calls this with the new user's id.
+ * Throws on validation failure; returns the created/updated bookings.
+ */
+async function createBookingsCore(userId, body) {
+        // Store phones as local digits behind the dial code (e.g. 7 digits for
+        // +1876) whatever the client typed — same rule as helper/phone.js.
+        const { normalizePhoneForCountry } = require('../../helper/phone');
+        for (const k of ['primary', 'secondary', 'consignee', 'shiper']) {
+            if (body[`${k}_phone_number`]) {
+                body[`${k}_phone_number`] = normalizePhoneForCountry(body[`${k}_country_code`] || '+1', body[`${k}_phone_number`]);
+            }
+        }
+
+        const {
+            booking_request_id,
+            providerIds,
+            pickupName,
+            pickupContact,
+            pickupEmail,
+            pickupLocation,
+            primary_email,
+            dropName,
+            dropContact,
+            dropEmail,
+            dropLocation,
+            primary_name,
+            primary_firstName,
+            primary_lastName,
+            primary_phone_number,
+            primary_country_code,
+            secondary_name,
+            secondary_firstName,
+            secondary_lastName,
+            secondary_phone_number,
+            secondary_country_code,
+            secondary_email,
+            secondary_streetAddress,
+            secondary_city,
+            secondary_state,
+            addOns,
+            primary_address,
+            primary_streetAddress,
+            primary_city,
+            primary_state,
+            primary_suite_apt_building,
+            primary_full_address,
+            secondary_address,
+            secondary_suite_apt_building,
+            secondary_full_address,
+            shiper_name,
+            shiper_firstName,
+            shiper_lastName,
+            shiper_phone_number,
+            shiper_country_code,
+            shiper_email,
+            shiper_address,
+            shiper_city,
+            shiper_streetAddress,
+            shiper_state,
+            shiper_suite_apt_building,
+            shiper_full_address,
+            consignee_name,
+            consignee_firstName,
+            consignee_lastName,
+            consignee_phone_number,
+            consignee_country_code,
+            consignee_email,
+            consignee_address,
+            consignee_suite_apt_building,
+            consignee_full_address,
+            consignee_lat,
+            consignee_city,
+            consignee_streetAddress,
+            consignee_state,
+            consignee_lng,
+            shiper_lat,
+            shiper_lng,
+            primary_lat,
+            primary_lng,
+            secondary_lat,
+            secondary_lng,
+            barrel_type,
+            pickup_date,
+            delivery_date
+        } = body;
+
+        console.log("createBooking Payload:", body);
+
+        /* ---------------- BASIC VALIDATION ---------------- */
+
+        const { Validator } = require('node-input-validator');
+        // const v = new Validator(body, {
+        //     booking_request_id: 'required|integer',
+        //     providerIds: 'required|array',
+        //     primary_name: 'required|string',
+        //     primary_phone_number: 'required|string',
+        //     primary_email: 'required|email',
+        //     secondary_email: 'email',
+        //     primary_address: 'required|string',
+        //     secondary_address: 'required|string',
+        //     shiper_name: 'required|string',
+        //     shiper_phone_number: 'required|string',
+        //     shiper_email: 'required|email',
+        //     shiper_address: 'required|string',
+        //     consignee_name: 'required|string',
+        //     consignee_phone_number: 'required|string',
+        //     consignee_email: 'required|email',
+        //     consignee_address: 'required|string'
+        // });
+
+        // const errorResponse = await helper.checkValidation(v);
+        // if (errorResponse) {
+        //     return helper.failure(res, errorResponse);
+        // }
+
+        /* ---------------- SANITIZER ---------------- */
+
+        const clean = (val) => {
+            if (typeof val !== 'string') return '';
+            const v = val.trim().toLowerCase();
+            if (!v || v === 'undefined' || v === 'null') return '';
+            return v;
+        };
+
+        // Coerce values destined for numeric/DECIMAL columns. Barrel prices are
+        // stored as strings and can be empty (""), which Postgres rejects with
+        // "invalid input syntax for type numeric". Empty/non-numeric => fallback.
+        const toDecimal = (val, fallback = null) => {
+            if (val === null || val === undefined) return fallback;
+            const s = String(val).trim();
+            if (s === '' || isNaN(Number(s))) return fallback;
+            return s;
+        };
+
+        /* ---------------- EMAIL VALIDATION ---------------- */
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        const emailFields = {
+            primary_email,
+            secondary_email,
+            shiper_email,
+            consignee_email
+        };
+
+        const seenEmails = {};
+
+        for (const field in emailFields) {
+            const email = clean(emailFields[field]);
+            if (!email) continue;
+
+            if (!emailRegex.test(email)) {
+                throw new Error(`Invalid email format in ${field}`);
+            }
+
+            // if (seenEmails[email]) {
+            //     return helper.failure(
+            //         res,
+            //         `Email in "${field}" matches with "${seenEmails[email]}"`
+            //     );
+            // }
+
+            seenEmails[email] = field;
+        }
+
+        /* ---------------- PHONE VALIDATION ---------------- */
+
+        const phoneRegex = /^[6-9]\d{9}$/;
+
+        const phoneFields = {
+            primary_phone_number,
+            secondary_phone_number,
+            shiper_phone_number,
+            consignee_phone_number
+        };
+
+        const seenPhones = {};
+
+        for (const field in phoneFields) {
+            const raw = phoneFields[field];
+            const phone = typeof raw === 'string' ? raw.trim() : '';
+
+            if (!phone || phone === 'undefined' || phone === 'null') continue;
+
+            // if (!phoneRegex.test(phone)) {
+            //     return helper.failure(res, `Invalid phone number in ${field}`);
+            // }
+
+            // if (seenPhones[phone]) {
+            //     return helper.failure(
+            //         res,
+            //         `Phone number in "${field}" matches with "${seenPhones[phone]}"`
+            //     );
+            // }
+
+            seenPhones[phone] = field;
+        }
+
+        /* ---------------- CREATE BOOKINGS ---------------- */
+
+        const createdBookings = [];
+
+        // Fetch booking request to get origin/destination for barrel matching
+        const bookingReq = await db.booking_requests.findOne({
+            where: { id: booking_request_id },
+            include: [{ model: db.booking_requests_items, as: 'items' }]
+        });
+
+        for (const providerId of providerIds) {
+            const providerDetail = await db.providerDetails.findOne({
+                where: { providerId },
+            });
+
+            const adminUser = await db.users.findOne({
+                where: { role: '0' }
+            });
+
+            const adminCommission = adminUser ? adminUser.adminCommission : "0";
+
+            /* ── Determine barrel type from frontend or from booking request items ── */
+            let resolvedBarrelType = barrel_type || '';
+            if (!resolvedBarrelType && bookingReq && bookingReq.items) {
+                const hasOwn = bookingReq.items.some(i => {
+                    const sub = (i.sub_type || '').toLowerCase();
+                    return sub.includes('ship your own barrel') || sub.includes('own barrel');
+                });
+                const hasDropoff = bookingReq.items.some(i => {
+                    const sub = (i.sub_type || '').toLowerCase();
+                    return sub.includes('request barrel drop-off') || sub.includes('drop-off barrel') || sub.includes('dropoff');
+                });
+                if (hasOwn) resolvedBarrelType = 'own';
+                else if (hasDropoff) resolvedBarrelType = 'dropoff';
+            }
+
+            /* ── Find matching barrel price from barrelsprices ── */
+            const reqOrigin = (bookingReq?.origin || '').toLowerCase().trim();
+            const reqDest = (bookingReq?.destination || '').toLowerCase().trim();
+
+            const matchingBarrel = await db.barrelsprices.findOne({
+                where: {
+                    providerId: providerId,
+                    type: resolvedBarrelType || 'dropoff'
+                }
+            });
+
+            // Try to find a barrel that also matches origin/destination
+            let bestBarrel = null;
+            if (providerDetail) {
+                const allBarrels = await db.barrelsprices.findAll({
+                    where: { providerId: providerId }
+                });
+
+                bestBarrel = allBarrels.find(bp => {
+                    const bpType = (bp.type || '').toLowerCase().trim();
+                    const bpOrigin = (bp.originCountry || '').toLowerCase().trim();
+                    const bpDest = (bp.destinationCountry || '').toLowerCase().trim();
+                    return bpType === (resolvedBarrelType || 'dropoff')
+                        && bpOrigin === reqOrigin
+                        && bpDest === reqDest;
+                });
+
+                // Fallback: match by type only
+                if (!bestBarrel) {
+                    bestBarrel = allBarrels.find(bp => {
+                        return (bp.type || '').toLowerCase().trim() === (resolvedBarrelType || 'dropoff');
+                    });
+                }
+
+                // Fallback: first barrel
+                if (!bestBarrel && allBarrels.length > 0) {
+                    bestBarrel = allBarrels[0];
+                }
+            }
+
+            // No providerDetails.basePrice fallback: it was a stale copy of
+            // this same card price, and bestBarrel is only null when the
+            // provider has no cards at all — in which case they are neither
+            // listed nor quotable, so there is nothing to book.
+            const barrelBasePrice = bestBarrel ? bestBarrel.basePrice : "0";
+            const barrelIsVolumeDiscount = bestBarrel ? (bestBarrel.isVolumeDiscount || 0) : 0;
+            const barrelDiscountAfter = bestBarrel ? (bestBarrel.discountAfter || 0) : 0;
+            const barrelDiscountPercent = bestBarrel ? (bestBarrel.discountPercent || 0) : 0;
+            const barrelFreeMiles = bestBarrel ? (bestBarrel.freeMiles || "0") : "0";
+            const bookingPrice = bestBarrel ? bestBarrel.barrelPrice : "0";
+
+            // Check for existing booking for this request, provider and user
+            let booking = await db.bookings.findOne({
+                where: {
+                    booking_request_id: booking_request_id,
+                    driverId: providerId,
+                    userId: userId
+                }
+            });
+
+            const bookingData = {
+                booking_request_id,
+                userId,
+                driverId: providerId,
+                status: '0',
+                primary_name: primary_name || `${primary_firstName || ''} ${primary_lastName || ''}`.trim(),
+                primary_firstName,
+                primary_lastName,
+                primary_phone_number,
+                primary_country_code,
+                primary_email,
+                primary_address,
+                primary_streetAddress,
+                primary_city,
+                primary_state,
+                primary_suite_apt_building,
+                primary_full_address: primary_full_address || `${primary_address || ''} ${primary_suite_apt_building || ''}`.trim(),
+                primary_lat,
+                primary_lng,
+                secondary_name: secondary_name || `${secondary_firstName || ''} ${secondary_lastName || ''}`.trim(),
+                secondary_firstName,
+                secondary_lastName,
+                secondary_phone_number,
+                secondary_country_code,
+                secondary_email,
+                secondary_address,
+                secondary_streetAddress,
+                secondary_city,
+                secondary_state,
+                secondary_suite_apt_building,
+                secondary_full_address: secondary_full_address || `${secondary_address || ''} ${secondary_suite_apt_building || ''}`.trim(),
+                secondary_lat,
+                secondary_lng,
+                shiper_name: shiper_name || `${shiper_firstName || ''} ${shiper_lastName || ''}`.trim(),
+                shiper_firstName,
+                shiper_lastName,
+                shiper_phone_number,
+                shiper_country_code,
+                shiper_streetAddress,
+                shiper_email,
+                shiper_address,
+                shiper_city,
+                shiper_state,
+                shiper_suite_apt_building,
+                shiper_full_address: shiper_full_address || `${shiper_address || ''} ${shiper_suite_apt_building || ''}`.trim(),
+                shiper_lat,
+                shiper_lng,
+                consignee_name: consignee_name || `${consignee_firstName || ''} ${consignee_lastName || ''}`.trim(),
+                consignee_firstName,
+                consignee_lastName,
+                consignee_phone_number,
+                consignee_country_code,
+                consignee_email,
+                consignee_streetAddress,
+                consignee_address,
+                consignee_city,
+                consignee_state,
+                consignee_suite_apt_building,
+                consignee_full_address: consignee_full_address || `${consignee_address || ''} ${consignee_suite_apt_building || ''}`.trim(),
+                consignee_lat,
+                consignee_lng,
+                bookingPrice: toDecimal(bookingPrice, "0"),
+                base_price: toDecimal(barrelBasePrice, null),
+                isVolumeDiscount: barrelIsVolumeDiscount,
+                discountAfter: barrelDiscountAfter,
+                discountPercent: barrelDiscountPercent,
+                freeMiles: barrelFreeMiles,
+                adminCommission: toDecimal(adminCommission, "0"),
+                addOns: JSON.stringify(Array.isArray(addOns) ? addOns : []),
+                paymentMethod: '0',
+                bookingDate: new Date(),
+                pickup_date,
+                delivery_date
+            };
+            console.log("bookingData=----------------------->>>>>", bookingData);
+            // return
+            if (booking) {
+                await booking.update(bookingData);
+            } else {
+                const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+                booking = await db.bookings.create({
+                    ...bookingData,
+                    orderId
+                });
+            }
+
+            createdBookings.push(booking);
+        }
+
+        // Acknowledge the placed order to the customer (best-effort — the
+        // booking is saved regardless of email delivery). No dollar total is
+        // shown here: at creation the authoritative amount isn't settled yet
+        // (total_amount/pay_now_price are written at payment), so the email
+        // confirms receipt and points to My History for the final figure.
+        try {
+            const buyer = await db.users.findByPk(userId, { attributes: ['email', 'firstName'] });
+            const buyerEmail = buyer?.email || primary_email;
+            if (buyerEmail && createdBookings.length) {
+                const orderNumbers = createdBookings.map((b) => b.orderId).filter(Boolean).join(', ');
+                await sendOrderConfirmationToCustomer(buyerEmail, {
+                    customerName: buyer?.firstName || primary_firstName || 'there',
+                    orderId: orderNumbers,
+                    orderType: 'Shipment',
+                    note: "We've received your shipment request. Complete payment (if you haven't yet) and see the full total and track everything under My History after signing in.",
+                });
+            }
+        } catch (mailErr) {
+            console.error('Order confirmation email (booking) failed:', mailErr.message);
+        }
+
+        return createdBookings;
+}
+
 module.exports = {
     logout: async (req, res) => {
         try {
@@ -557,7 +1302,11 @@ module.exports = {
     },
     register: async (req, res) => {
         try {
-            const { name, email, password, role, number, countryCode, survey, surveyOther, streetAddress, city, state } = req.body;
+            const { name, email, password, role, countryCode, survey, surveyOther, streetAddress, city, state } = req.body;
+            // Local digits only (a Jamaican who typed 876… again keeps 7 digits).
+            const { normalizePhoneForCountry } = require('../../helper/phone');
+            const number = req.body.number ? normalizePhoneForCountry(countryCode || '+1', req.body.number) : req.body.number;
+            req.body.number = number;
             console.log("survey=----------------------->>>>>", survey);
             // return
             let createObj = ""
@@ -878,6 +1627,23 @@ module.exports = {
                 description: String(description).trim(),
                 status: '0',
             });
+            // Mirror into booking_charges so History / admin show one list and the
+            // charge is paid through the same server-priced intent as milestones.
+            const { extraPlatformFeeCents } = require('../../helper/chargeService');
+            const amountCents = Math.round(amt * 100);
+            await db.booking_charges.create({
+                booking_id: booking.id,
+                provider_id: req.user.id,
+                user_id: booking.userId,
+                kind: 'extra',
+                description: String(description).trim(),
+                amount_cents: amountCents,
+                platform_fee_cents: extraPlatformFeeCents(amountCents, booking),
+                status: 'pending',
+                due_trigger: 'manual',
+                due_at: new Date(),
+                legacy_additional_cost_id: cost.id,
+            });
 
             // Email the customer (best-effort — the charge still shows in History).
             try {
@@ -906,46 +1672,35 @@ module.exports = {
     // Customer pays a requested additional cost — same Connect split as bookings.
     payAdditionalCostIntent: async (req, res) => {
         try {
-            const { additionalCostId } = req.body;
-            const cost = await db.booking_additional_costs.findOne({ where: { id: additionalCostId } });
+            const costId = req.body.costId || req.body.additionalCostId;
+            if (!costId) return helper.failure(res, "costId is required.");
+            const cost = await db.booking_additional_costs.findOne({ where: { id: costId } });
             if (!cost) return helper.failure(res, "Charge not found.");
             if (String(cost.user_id) !== String(req.user.id)) return helper.forbidden(res, "Not your charge.");
-            if (cost.status !== '0') return helper.failure(res, "This charge is not payable.");
-
-            const booking = await db.bookings.findOne({ where: { id: cost.booking_id } });
-            const provider = await db.users.findByPk(cost.provider_id);
-            if (!provider) return helper.failure(res, "Provider not found.");
-
-            const stripe = require('stripe')(env('STRIPE_SECRET_KEY'));
-            const amountInCents = Math.round(parseFloat(cost.amount) * 100);
-            const payload = {
-                amount: amountInCents,
-                currency: 'usd',
-                metadata: { additionalCostId: String(cost.id), bookingRef: String(cost.booking_id) },
-                automatic_payment_methods: { enabled: true },
-            };
-
-            // Split to the forwarder's connected account, same commission as the booking.
-            if (String(provider.hashAccount || '0') === '1' && provider.accountId) {
-                const commissionPercent = Number(booking?.adminCommission || 0) + Number(booking?.serviceFee || 0);
-                const pct = Number.isFinite(commissionPercent) && commissionPercent >= 0 && commissionPercent <= 100 ? commissionPercent : 0;
-                payload.application_fee_amount = Math.round((amountInCents * pct) / 100);
-                payload.transfer_data = { destination: provider.accountId };
+            if (cost.status === '1') return helper.failure(res, "This charge is already paid.");
+            if (cost.status === '2') return helper.failure(res, "This charge was cancelled.");
+            // Pay through booking_charges (created alongside the cost, or by the migration).
+            let charge = await db.booking_charges.findOne({ where: { legacy_additional_cost_id: cost.id } });
+            if (!charge) {
+                const { extraPlatformFeeCents } = require('../../helper/chargeService');
+                const bookingRow = await db.bookings.findByPk(cost.booking_id);
+                const amountCents = Math.round(parseFloat(cost.amount) * 100);
+                charge = await db.booking_charges.create({
+                    booking_id: cost.booking_id, provider_id: cost.provider_id, user_id: cost.user_id, kind: 'extra',
+                    description: cost.description, amount_cents: amountCents,
+                    platform_fee_cents: extraPlatformFeeCents(amountCents, bookingRow), status: 'pending', due_trigger: 'manual',
+                    legacy_additional_cost_id: cost.id,
+                });
             }
-
-            const paymentIntent = await stripe.paymentIntents.create(payload);
-            return helper.success(res, "Payment intent created.", {
-                clientSecret: paymentIntent.client_secret,
-                publishkey: env('STRIPE_PUBLISHABLE_KEY'),
-                amount: cost.amount,
-            });
+            const { createIntentForCharge } = require('../../helper/paymentService');
+            const booking = await db.bookings.findByPk(cost.booking_id);
+            const out = await createIntentForCharge(charge, booking);
+            return helper.success(res, "Payment intent created.", { clientSecret: out.clientSecret, publishkey: out.publishkey, amount: out.amount, chargeId: charge.id });
         } catch (error) {
             console.log("error=------payAdditionalCostIntent-------->>>>>", error);
             return helper.failure(res, error.message);
         }
     },
-
-    // Server-side verify + mark paid (mirrors confirmPrepackedPayment).
     confirmAdditionalCostPayment: async (req, res) => {
         try {
             const { paymentId } = req.body;
@@ -2977,322 +3732,9 @@ module.exports = {
                 return helper.failure(res, "No booking request found. Please create one first.");
             }
 
-            // Extract matching criteria
-            // Handle origin/destination - could be "Country" or "City, Country"
-            const getCountry = (str) => {
-                if (!str) return "";
-                const parts = str.split(',');
-                // If parts > 1, assume "City, Country" format, get last part
-                // If parts == 1, assume "Country"
-                return parts[parts.length - 1].trim().toLowerCase();
-            };
-
-            const requestedOriginCountry = getCountry(latestRequest.origin);
-            const requestedDestinationCountry = getCountry(latestRequest.destination);
-
-            // Map requested items to types (lowercase)
-            const requestedItemTypes = latestRequest.items
-                ? latestRequest.items.map(item => (item.sub_type || item.item_type || "").toLowerCase())
-                : [];
-            console.log("requestedItemTypes", requestedItemTypes);
-            // Should also check latestRequest.quantity/item_type if items array is empty
-            // (backward compatibility if data saved in main table only)?
-            // But verifyBookingRequest saves to items table now.
-
-            console.log("Criteria -> Origin:", requestedOriginCountry, "Dest:", requestedDestinationCountry, "Items:", requestedItemTypes);
-
-            // Fetch all verified providers with their details and service areas
-            // Accessing serviceAreaRoutes via the User model association
-            const providers = await db.providerDetails.findAll({
-                include: [
-                    {
-                        model: db.users,
-                        as: 'provider',
-                        // status '1' is the admin's deactivate switch: a forwarder
-                        // the admin turned off must stop being quoted, the same
-                        // gate getForwarders() applies to the public listing.
-                        where: { hashAccount: '1', status: '1' },
-                        attributes: ['id', 'firstName', 'image', 'email'],
-                        include: [
-                            {
-                                model: db.serviceAreaRoutes,
-                                as: 'serviceArea'
-                            }
-                        ]
-                    },
-                    {
-                        model: db.barrelsprices,
-                        as: 'barrelPrices',
-                    },
-                    {
-                        model: db.provider_shipment_item_types,
-                        as: 'shipmentItemTypes'
-                    }
-                ],
-                where: {
-                    documentVerify: 1
-                }
-            });
-            console.log(`Found`, providers.length);
-            if (providers.length > 0) {
-                console.log("First provider sample barrelPrices:", providers[0].barrelPrices ? providers[0].barrelPrices.length : 0);
-            }
-            for (let provider of providers) {
-                const providerUserId = provider.provider?.id;
-                let averageRating = 0;
-                let totalCompletedBookings = 0;
-
-                if (providerUserId) {
-                    const reviews = await db.reviewrating.findAll({
-                        where: { ratedTo: providerUserId },
-                    });
-
-                    const totalReviews = reviews.length;
-                    if (totalReviews > 0) {
-                        const totalRating = reviews.reduce((sum, review) => {
-                            return sum + (parseFloat(review.rating) || 0);
-                        }, 0);
-                        averageRating = totalRating / totalReviews;
-                    }
-
-
-                    const completedBookings = await db.bookings.count({
-                        where: {
-                            driverId: providerUserId,
-                            status: '2'
-                        }
-                    });
-
-                    totalCompletedBookings = completedBookings;
-
-                    provider.setDataValue('averageRating', parseFloat(averageRating.toFixed(1)));
-                    provider.setDataValue('totalCompletedBookings', totalCompletedBookings);
-                } else {
-                    provider.setDataValue('averageRating', 0);
-                    provider.setDataValue('totalCompletedBookings', 0);
-                }
-            }
-
-            const matchedProviders = providers.filter(providerDetail => {
-                const providerUser = providerDetail.provider;
-                if (!providerUser) return false;
-
-                const isBarrelRequest = requestedItemTypes.some(t => t.toLowerCase().includes('barrel'));
-                console.log("isBarrelRequest", isBarrelRequest);
-                if (isBarrelRequest) {
-                    console.log(`Checking barrel match for provider ${providerDetail.id} in Quotes...`, providerDetail);
-                    const hasBarrelMatch = providerDetail.barrelPrices && providerDetail.barrelPrices.some(bp => {
-                        console.log("bp", bp);
-                        const bpTypeNormalized = (bp.type || "").toLowerCase().trim();
-                        // Match sub_type strings like "Request Barrel Drop-Off" with internal codes like "dropoff"
-                        console.log(requestedItemTypes, "===>", bpTypeNormalized);
-
-                        const matchesType = requestedItemTypes.some(t => {
-                            const sub = t.toLowerCase();
-                            if (sub.includes('request barrel drop-off') || sub.includes('drop-off barrel') || sub.includes('dropoff'))
-                                return bpTypeNormalized === 'dropoff';
-                            console.log(sub, "========>");
-
-                            if (sub.includes('ship your own barrel') || sub.includes('own barrel'))
-                                return bpTypeNormalized === 'own';
-                            return false;
-                        });
-
-                        console.log(matchesType, "====>hasBarrelMatch");
-
-
-                        const bpOrigin = (bp.originCountry || "").toLowerCase().trim();
-                        const bpDest = (bp.destinationCountry || "").toLowerCase().trim();
-                        const reqOriginAddress = (latestRequest.origin || "").toLowerCase().trim();
-                        const reqDestAddress = (latestRequest.destination || "").toLowerCase().trim();
-                        console.log("bpOrigin", bpOrigin);
-                        console.log("bpDest", bpDest);
-                        console.log("reqOriginAddress", reqOriginAddress);
-                        console.log("reqDestAddress", reqDestAddress);
-                        console.log("requestedOriginCountry", requestedOriginCountry);
-                        console.log("requestedDestinationCountry", requestedDestinationCountry);
-                        // Origin stays an exact city match; destination matches on
-                        // country (see destinationsMatch above).
-                        const originMatch = (bpOrigin === reqOriginAddress);
-                        const destMatch = destinationsMatch(bpDest, reqDestAddress);
-
-                        console.log(`Provider ${providerDetail.id} Quotes Match Debug: type=${bp.type}, matchesType=${matchesType}, originMatch=${originMatch}, destMatch=${destMatch}`);
-                        return matchesType && originMatch && destMatch;
-                    });
-
-                    console.log(`Mai Provider ${providerDetail.id} Quotes final hasBarrelMatch:`, !!hasBarrelMatch);
-                    if (!hasBarrelMatch) return false;
-
-                    // Override basePrice/pricePerMile for display if barrel match found
-                    const matchingBarrel = providerDetail.barrelPrices?.find(bp => {
-                        const bpTypeNormalized = (bp.type || "").toLowerCase().trim();
-                        const isTypeMatch = requestedItemTypes.some(type => {
-                            const sub = type.toLowerCase();
-                            if (sub.includes('ship your own barrel') || sub.includes('own barrel')) return bpTypeNormalized === 'own';
-                            if (sub.includes('request barrel drop-off') || sub.includes('drop-off barrel') || sub.includes('dropoff')) return bpTypeNormalized === 'dropoff';
-                            return true;
-                        });
-                        const bpOrigin = (bp.originCountry || "").toLowerCase().trim();
-                        const bpDest = (bp.destinationCountry || "").toLowerCase().trim();
-                        const reqOrigin = (latestRequest.origin || "").toLowerCase().trim();
-                        const reqDest = (latestRequest.destination || "").toLowerCase().trim();
-
-                        const isOriginMatch = (bpOrigin === reqOrigin);
-                        const isDestinationMatch = destinationsMatch(bpDest, reqDest);
-                        return isTypeMatch && isOriginMatch && isDestinationMatch;
-                    });
-
-                    if (matchingBarrel) {
-                        providerDetail.setDataValue('basePrice', matchingBarrel.barrelPrice);
-                        providerDetail.setDataValue('pricePerMile', matchingBarrel.pricePerMile);
-                    }
-                } else {
-                    // General criteria for non-barrel
-                    const providerOrigin = providerDetail.countryOfRegistration
-                        ? providerDetail.countryOfRegistration.toLowerCase()
-                        : "";
-
-                    const providerOriginField = providerDetail.originCountry
-                        ? providerDetail.originCountry.toLowerCase()
-                        : "";
-
-                    const originMatch =
-                        (providerOrigin && providerOrigin.includes(requestedOriginCountry)) ||
-                        (providerOriginField && providerOriginField.includes(requestedOriginCountry));
-
-                    if (!originMatch) return false;
-
-                    const legacyOrigin = providerDetail.originCountry
-                        ? providerDetail.originCountry.toLowerCase()
-                        : "";
-
-                    const legacyDest = providerDetail.destinationCountry
-                        ? providerDetail.destinationCountry.toLowerCase()
-                        : "";
-
-                    const legacyOriginMatch = legacyOrigin.includes(requestedOriginCountry);
-                    const legacyDestMatch = legacyDest.includes(requestedDestinationCountry);
-
-                    if (!legacyOriginMatch || !legacyDestMatch) return false;
-
-                    if (providerDetail.shipmentType && requestedItemTypes.length > 0) {
-                        const supportedTypes = providerDetail.shipmentType.toLowerCase();
-                        const hasMainTypeMatch = requestedItemTypes.some(type =>
-                            supportedTypes.includes(type)
-                        );
-
-                        if (!hasMainTypeMatch) return false;
-                    }
-                }
-
-                /* ---------------- DATE RANGE MATCH (NEW) ---------------- */
-                let pickupDate = latestRequest.pickup_date;
-                let deliveryDate = latestRequest.delivery_date;
-                console.log("Provider Validity:", {
-                    pickupDate,
-                    deliveryDate
-                });
-
-                if (pickupDate && deliveryDate) {
-                    const validFrom = providerDetail.validFrom
-                        ? new Date(providerDetail.validFrom)
-                        : null;
-
-                    const validTo = providerDetail.validTo
-                        ? new Date(providerDetail.validTo)
-                        : null;
-
-
-                    // provider must be valid for FULL request duration (if dates are set)
-                    const isBeforeEnd = !validTo || deliveryDate <= validTo;
-                    const isAfterStart = !validFrom || pickupDate >= validFrom;
-
-                    if (!isBeforeEnd || !isAfterStart) {
-                        console.log(
-                            `Provider ${providerDetail.id} failed date match`,
-                            { pickupDate, deliveryDate, validFrom, validTo }
-                        );
-                        return false;
-                    }
-                }
-
-                return true;
-            });
-            console.log("matchedProviders count:", matchedProviders.length);
-            if (matchedProviders.length > 0) {
-                console.log("First provider barrelPrices:", JSON.stringify(matchedProviders[0].barrelPrices, null, 2));
-            }
-            let adminUser = await db.users.findOne({
-                where: {
-                    role: "0"
-                }
-            });
-            console.log("matchedProviders", matchedProviders);
-            let adminCommission = adminUser ? adminUser.adminCommission : "0";
-
-            // ── Survey-based sorting & Best Quote Matching ──────────────────
             const currentUser = await db.users.findOne({ where: { id: userId }, attributes: ['survey'] });
             const userSurveyStr = (currentUser?.survey || "").trim();
-            const surveyIds = userSurveyStr.split(',').map(s => s.trim()).filter(Boolean);
-
-            console.log("surveyIds selected:", surveyIds);
-
-            // 1. Calculate metrics for all matched providers
-            const providersWithMetrics = await Promise.all(matchedProviders.map(async (pd) => {
-                const providerId = pd.provider?.id;
-                const metrics = {
-                    id: pd.id,
-                    avgTime: 9999,
-                    avgRating: parseFloat(pd.provider?.avg_rating) || 0,
-                    price: parseFloat(pd.getDataValue('basePrice')) || 0
-                };
-
-                if (providerId && surveyIds.includes('1')) {
-                    const result = await db.bookings.findOne({
-                        where: { driverId: providerId, status: '2', avg_time: { [db.Sequelize.Op.ne]: null } },
-                        attributes: [[db.Sequelize.fn('AVG', db.Sequelize.col('avg_time')), 'avgTime']],
-                        raw: true
-                    });
-                    metrics.avgTime = parseFloat(result?.avgTime) || 9999;
-                }
-
-                return { pd, metrics };
-            }));
-
-            // 2. Identify "Best" in each selected category
-            const bestInCategories = new Set();
-
-            if (surveyIds.includes('1')) {
-                // Fastest Delivery
-                const fastest = [...providersWithMetrics].sort((a, b) => a.metrics.avgTime - b.metrics.avgTime)[0];
-                if (fastest && fastest.metrics.avgTime < 9999) bestInCategories.add(fastest.pd.id);
-            }
-            if (surveyIds.includes('2')) {
-                // Safest (Highest Rating)
-                const safest = [...providersWithMetrics].sort((a, b) => b.metrics.avgRating - a.metrics.avgRating)[0];
-                if (safest && safest.metrics.avgRating > 0) bestInCategories.add(safest.pd.id);
-            }
-            if (surveyIds.includes('3') || !surveyIds.some((id) => ['1', '2'].includes(id))) {
-                // Lowest Price (Default if none selected)
-                const cheapest = [...providersWithMetrics].sort((a, b) => a.metrics.price - b.metrics.price)[0];
-                if (cheapest) bestInCategories.add(cheapest.pd.id);
-            }
-
-            // 3. Mark providers and sort
-            const finalProviders = providersWithMetrics.map(({ pd }) => {
-                pd.setDataValue('isBestQuote', bestInCategories.has(pd.id));
-                return pd;
-            });
-
-            // Primary sort: isBestQuote first. Secondary sort: by price.
-            finalProviders.sort((a, b) => {
-                if (a.getDataValue('isBestQuote') && !b.getDataValue('isBestQuote')) return -1;
-                if (!a.getDataValue('isBestQuote') && b.getDataValue('isBestQuote')) return 1;
-                return (parseFloat(a.getDataValue('basePrice')) || 0) - (parseFloat(b.getDataValue('basePrice')) || 0);
-            });
-
-            console.log("finalProviders count:", finalProviders.length);
-
+            const { providers: finalProviders, adminCommission } = await matchQuotesForRequest(latestRequest, userSurveyStr);
             return helper.success(res, "Quotes fetched successfully.", {
                 bookingRequest: latestRequest,
                 providers: finalProviders,
@@ -3792,401 +4234,9 @@ module.exports = {
 
     createBooking: async (req, res) => {
         try {
-            const userId = req.user.id;
-
-            const {
-                booking_request_id,
-                providerIds,
-                pickupName,
-                pickupContact,
-                pickupEmail,
-                pickupLocation,
-                primary_email,
-                dropName,
-                dropContact,
-                dropEmail,
-                dropLocation,
-                primary_name,
-                primary_firstName,
-                primary_lastName,
-                primary_phone_number,
-                primary_country_code,
-                secondary_name,
-                secondary_firstName,
-                secondary_lastName,
-                secondary_phone_number,
-                secondary_country_code,
-                secondary_email,
-                secondary_streetAddress,
-                secondary_city,
-                secondary_state,
-                addOns,
-                primary_address,
-                primary_streetAddress,
-                primary_city,
-                primary_state,
-                primary_suite_apt_building,
-                primary_full_address,
-                secondary_address,
-                secondary_suite_apt_building,
-                secondary_full_address,
-                shiper_name,
-                shiper_firstName,
-                shiper_lastName,
-                shiper_phone_number,
-                shiper_country_code,
-                shiper_email,
-                shiper_address,
-                shiper_city,
-                shiper_streetAddress,
-                shiper_state,
-                shiper_suite_apt_building,
-                shiper_full_address,
-                consignee_name,
-                consignee_firstName,
-                consignee_lastName,
-                consignee_phone_number,
-                consignee_country_code,
-                consignee_email,
-                consignee_address,
-                consignee_suite_apt_building,
-                consignee_full_address,
-                consignee_lat,
-                consignee_city,
-                consignee_streetAddress,
-                consignee_state,
-                consignee_lng,
-                shiper_lat,
-                shiper_lng,
-                primary_lat,
-                primary_lng,
-                secondary_lat,
-                secondary_lng,
-                barrel_type,
-                pickup_date,
-                delivery_date
-            } = req.body;
-
-            console.log("createBooking Payload:", req.body);
-
-            /* ---------------- BASIC VALIDATION ---------------- */
-
-            const { Validator } = require('node-input-validator');
-            // const v = new Validator(req.body, {
-            //     booking_request_id: 'required|integer',
-            //     providerIds: 'required|array',
-            //     primary_name: 'required|string',
-            //     primary_phone_number: 'required|string',
-            //     primary_email: 'required|email',
-            //     secondary_email: 'email',
-            //     primary_address: 'required|string',
-            //     secondary_address: 'required|string',
-            //     shiper_name: 'required|string',
-            //     shiper_phone_number: 'required|string',
-            //     shiper_email: 'required|email',
-            //     shiper_address: 'required|string',
-            //     consignee_name: 'required|string',
-            //     consignee_phone_number: 'required|string',
-            //     consignee_email: 'required|email',
-            //     consignee_address: 'required|string'
-            // });
-
-            // const errorResponse = await helper.checkValidation(v);
-            // if (errorResponse) {
-            //     return helper.failure(res, errorResponse);
-            // }
-
-            /* ---------------- SANITIZER ---------------- */
-
-            const clean = (val) => {
-                if (typeof val !== 'string') return '';
-                const v = val.trim().toLowerCase();
-                if (!v || v === 'undefined' || v === 'null') return '';
-                return v;
-            };
-
-            // Coerce values destined for numeric/DECIMAL columns. Barrel prices are
-            // stored as strings and can be empty (""), which Postgres rejects with
-            // "invalid input syntax for type numeric". Empty/non-numeric => fallback.
-            const toDecimal = (val, fallback = null) => {
-                if (val === null || val === undefined) return fallback;
-                const s = String(val).trim();
-                if (s === '' || isNaN(Number(s))) return fallback;
-                return s;
-            };
-
-            /* ---------------- EMAIL VALIDATION ---------------- */
-
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-            const emailFields = {
-                primary_email,
-                secondary_email,
-                shiper_email,
-                consignee_email
-            };
-
-            const seenEmails = {};
-
-            for (const field in emailFields) {
-                const email = clean(emailFields[field]);
-                if (!email) continue;
-
-                if (!emailRegex.test(email)) {
-                    return helper.failure(res, `Invalid email format in ${field}`);
-                }
-
-                // if (seenEmails[email]) {
-                //     return helper.failure(
-                //         res,
-                //         `Email in "${field}" matches with "${seenEmails[email]}"`
-                //     );
-                // }
-
-                seenEmails[email] = field;
-            }
-
-            /* ---------------- PHONE VALIDATION ---------------- */
-
-            const phoneRegex = /^[6-9]\d{9}$/;
-
-            const phoneFields = {
-                primary_phone_number,
-                secondary_phone_number,
-                shiper_phone_number,
-                consignee_phone_number
-            };
-
-            const seenPhones = {};
-
-            for (const field in phoneFields) {
-                const raw = phoneFields[field];
-                const phone = typeof raw === 'string' ? raw.trim() : '';
-
-                if (!phone || phone === 'undefined' || phone === 'null') continue;
-
-                // if (!phoneRegex.test(phone)) {
-                //     return helper.failure(res, `Invalid phone number in ${field}`);
-                // }
-
-                // if (seenPhones[phone]) {
-                //     return helper.failure(
-                //         res,
-                //         `Phone number in "${field}" matches with "${seenPhones[phone]}"`
-                //     );
-                // }
-
-                seenPhones[phone] = field;
-            }
-
-            /* ---------------- CREATE BOOKINGS ---------------- */
-
-            const createdBookings = [];
-
-            // Fetch booking request to get origin/destination for barrel matching
-            const bookingReq = await db.booking_requests.findOne({
-                where: { id: booking_request_id },
-                include: [{ model: db.booking_requests_items, as: 'items' }]
-            });
-
-            for (const providerId of providerIds) {
-                const providerDetail = await db.providerDetails.findOne({
-                    where: { providerId },
-                });
-
-                const adminUser = await db.users.findOne({
-                    where: { role: '0' }
-                });
-
-                const adminCommission = adminUser ? adminUser.adminCommission : "0";
-
-                /* ── Determine barrel type from frontend or from booking request items ── */
-                let resolvedBarrelType = barrel_type || '';
-                if (!resolvedBarrelType && bookingReq && bookingReq.items) {
-                    const hasOwn = bookingReq.items.some(i => {
-                        const sub = (i.sub_type || '').toLowerCase();
-                        return sub.includes('ship your own barrel') || sub.includes('own barrel');
-                    });
-                    const hasDropoff = bookingReq.items.some(i => {
-                        const sub = (i.sub_type || '').toLowerCase();
-                        return sub.includes('request barrel drop-off') || sub.includes('drop-off barrel') || sub.includes('dropoff');
-                    });
-                    if (hasOwn) resolvedBarrelType = 'own';
-                    else if (hasDropoff) resolvedBarrelType = 'dropoff';
-                }
-
-                /* ── Find matching barrel price from barrelsprices ── */
-                const reqOrigin = (bookingReq?.origin || '').toLowerCase().trim();
-                const reqDest = (bookingReq?.destination || '').toLowerCase().trim();
-
-                const matchingBarrel = await db.barrelsprices.findOne({
-                    where: {
-                        providerId: providerId,
-                        type: resolvedBarrelType || 'dropoff'
-                    }
-                });
-
-                // Try to find a barrel that also matches origin/destination
-                let bestBarrel = null;
-                if (providerDetail) {
-                    const allBarrels = await db.barrelsprices.findAll({
-                        where: { providerId: providerId }
-                    });
-
-                    bestBarrel = allBarrels.find(bp => {
-                        const bpType = (bp.type || '').toLowerCase().trim();
-                        const bpOrigin = (bp.originCountry || '').toLowerCase().trim();
-                        const bpDest = (bp.destinationCountry || '').toLowerCase().trim();
-                        return bpType === (resolvedBarrelType || 'dropoff')
-                            && bpOrigin === reqOrigin
-                            && bpDest === reqDest;
-                    });
-
-                    // Fallback: match by type only
-                    if (!bestBarrel) {
-                        bestBarrel = allBarrels.find(bp => {
-                            return (bp.type || '').toLowerCase().trim() === (resolvedBarrelType || 'dropoff');
-                        });
-                    }
-
-                    // Fallback: first barrel
-                    if (!bestBarrel && allBarrels.length > 0) {
-                        bestBarrel = allBarrels[0];
-                    }
-                }
-
-                // No providerDetails.basePrice fallback: it was a stale copy of
-                // this same card price, and bestBarrel is only null when the
-                // provider has no cards at all — in which case they are neither
-                // listed nor quotable, so there is nothing to book.
-                const barrelBasePrice = bestBarrel ? bestBarrel.basePrice : "0";
-                const barrelIsVolumeDiscount = bestBarrel ? (bestBarrel.isVolumeDiscount || 0) : 0;
-                const barrelDiscountAfter = bestBarrel ? (bestBarrel.discountAfter || 0) : 0;
-                const barrelDiscountPercent = bestBarrel ? (bestBarrel.discountPercent || 0) : 0;
-                const barrelFreeMiles = bestBarrel ? (bestBarrel.freeMiles || "0") : "0";
-                const bookingPrice = bestBarrel ? bestBarrel.barrelPrice : "0";
-
-                // Check for existing booking for this request, provider and user
-                let booking = await db.bookings.findOne({
-                    where: {
-                        booking_request_id: booking_request_id,
-                        driverId: providerId,
-                        userId: userId
-                    }
-                });
-
-                const bookingData = {
-                    booking_request_id,
-                    userId,
-                    driverId: providerId,
-                    status: '0',
-                    primary_name: primary_name || `${primary_firstName || ''} ${primary_lastName || ''}`.trim(),
-                    primary_firstName,
-                    primary_lastName,
-                    primary_phone_number,
-                    primary_country_code,
-                    primary_email,
-                    primary_address,
-                    primary_streetAddress,
-                    primary_city,
-                    primary_state,
-                    primary_suite_apt_building,
-                    primary_full_address: primary_full_address || `${primary_address || ''} ${primary_suite_apt_building || ''}`.trim(),
-                    primary_lat,
-                    primary_lng,
-                    secondary_name: secondary_name || `${secondary_firstName || ''} ${secondary_lastName || ''}`.trim(),
-                    secondary_firstName,
-                    secondary_lastName,
-                    secondary_phone_number,
-                    secondary_country_code,
-                    secondary_email,
-                    secondary_address,
-                    secondary_streetAddress,
-                    secondary_city,
-                    secondary_state,
-                    secondary_suite_apt_building,
-                    secondary_full_address: secondary_full_address || `${secondary_address || ''} ${secondary_suite_apt_building || ''}`.trim(),
-                    secondary_lat,
-                    secondary_lng,
-                    shiper_name: shiper_name || `${shiper_firstName || ''} ${shiper_lastName || ''}`.trim(),
-                    shiper_firstName,
-                    shiper_lastName,
-                    shiper_phone_number,
-                    shiper_country_code,
-                    shiper_streetAddress,
-                    shiper_email,
-                    shiper_address,
-                    shiper_city,
-                    shiper_state,
-                    shiper_suite_apt_building,
-                    shiper_full_address: shiper_full_address || `${shiper_address || ''} ${shiper_suite_apt_building || ''}`.trim(),
-                    shiper_lat,
-                    shiper_lng,
-                    consignee_name: consignee_name || `${consignee_firstName || ''} ${consignee_lastName || ''}`.trim(),
-                    consignee_firstName,
-                    consignee_lastName,
-                    consignee_phone_number,
-                    consignee_country_code,
-                    consignee_email,
-                    consignee_streetAddress,
-                    consignee_address,
-                    consignee_city,
-                    consignee_state,
-                    consignee_suite_apt_building,
-                    consignee_full_address: consignee_full_address || `${consignee_address || ''} ${consignee_suite_apt_building || ''}`.trim(),
-                    consignee_lat,
-                    consignee_lng,
-                    bookingPrice: toDecimal(bookingPrice, "0"),
-                    base_price: toDecimal(barrelBasePrice, null),
-                    isVolumeDiscount: barrelIsVolumeDiscount,
-                    discountAfter: barrelDiscountAfter,
-                    discountPercent: barrelDiscountPercent,
-                    freeMiles: barrelFreeMiles,
-                    adminCommission: toDecimal(adminCommission, "0"),
-                    addOns: JSON.stringify(Array.isArray(addOns) ? addOns : []),
-                    paymentMethod: '0',
-                    bookingDate: new Date(),
-                    pickup_date,
-                    delivery_date
-                };
-                console.log("bookingData=----------------------->>>>>", bookingData);
-                // return
-                if (booking) {
-                    await booking.update(bookingData);
-                } else {
-                    const orderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-                    booking = await db.bookings.create({
-                        ...bookingData,
-                        orderId
-                    });
-                }
-
-                createdBookings.push(booking);
-            }
-
-            // Acknowledge the placed order to the customer (best-effort — the
-            // booking is saved regardless of email delivery). No dollar total is
-            // shown here: at creation the authoritative amount isn't settled yet
-            // (total_amount/pay_now_price are written at payment), so the email
-            // confirms receipt and points to My History for the final figure.
-            try {
-                const buyer = await db.users.findByPk(userId, { attributes: ['email', 'firstName'] });
-                const buyerEmail = buyer?.email || primary_email;
-                if (buyerEmail && createdBookings.length) {
-                    const orderNumbers = createdBookings.map((b) => b.orderId).filter(Boolean).join(', ');
-                    await sendOrderConfirmationToCustomer(buyerEmail, {
-                        customerName: buyer?.firstName || primary_firstName || 'there',
-                        orderId: orderNumbers,
-                        orderType: 'Shipment',
-                        note: "We've received your shipment request. Complete payment (if you haven't yet) and see the full total and track everything under My History after signing in.",
-                    });
-                }
-            } catch (mailErr) {
-                console.error('Order confirmation email (booking) failed:', mailErr.message);
-            }
-
-            return helper.success(res, "Bookings created successfully.", createdBookings);
-
+            const createdBookings = await createBookingsCore(req.user.id, req.body);
+            const charges = await ensureBookingCharges(createdBookings);
+            return helper.success(res, "Bookings created successfully.", { bookings: createdBookings, charges });
         } catch (error) {
             console.log("error=------createBooking----------------->>>>>", error);
             return helper.failure(res, error.message);
@@ -4273,6 +4323,11 @@ module.exports = {
                     {
                         model: db.booking_additional_costs,
                         as: 'additionalCosts',
+                        required: false
+                    },
+                    {
+                        model: db.booking_charges,
+                        as: 'charges',
                         required: false
                     }
                 ],
@@ -4537,7 +4592,8 @@ module.exports = {
                 "0": "Pending",
                 "1": "Shipped",
                 "2": "Delivered",
-                "3": "Dispatched"
+                "3": "Dispatched",
+                "5": "Arrived in Jamaica"
             };
             const statusLabel = statusLabels[statusStr] || "Updated";
 
@@ -4563,6 +4619,12 @@ module.exports = {
             }
 
             await booking.save();
+            // "Pay as Your Shipment Moves": arrival in Jamaica makes the customs &
+            // delivery milestone due. markArrived emails/pushes the customer with
+            // the amount and a pay link (separate from the generic status email).
+            if (statusStr === "5") {
+                markArrived(booking, providerName).catch((e) => console.error('[updateBookingStatus] markArrived failed:', e.message));
+            }
 
             (async () => {
                 try {
@@ -5366,3 +5428,7 @@ module.exports = {
     }
 };
 
+
+// Internal helpers reused by checkoutController (guest quotes / guest checkout).
+module.exports._matchQuotesForRequest = matchQuotesForRequest;
+module.exports._createBookingsCore = createBookingsCore;

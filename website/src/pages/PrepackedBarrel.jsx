@@ -5,10 +5,10 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import Commonbanner from '../components/Commonbanner';
 import CheckoutForm from '../components/CheckoutForm';
+import BarrelMedia from '../components/BarrelMedia';
 import { getPrepackedBarrel, createPrepackedOrder, confirmPrepackedPayment } from '../api/cms';
 import { API_URL } from '../api/axios';
 import { resolveFileUrl } from '../utils/fileUrl';
-import prepackedBarrelImg from '../assets/prepacked-barrel.png';
 
 // The 14 parishes of Jamaica — delivery is Jamaica-only for this product.
 const JAMAICA_PARISHES = [
@@ -45,50 +45,6 @@ const resolveImageUrl = (img) => resolveFileUrl(img, API_URL);
 const DeliveryReach = () => (
     <span className="text-red-600 font-bold">Islandwide</span>
 );
-
-// A barrel's media can be a still image or a video/animation (e.g. an uploaded
-// .mp4). Detect by extension so we can render the right element.
-const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov)(\?|#|$)/i.test(url || '');
-
-// Renders a barrel's media: a looping muted video for animations, an <img> for
-// stills, and the bundled placeholder when there's nothing (or the media fails
-// to load). `mediaClass` styles the loaded media; `placeholderClass` the
-// centered-placeholder wrapper.
-const BarrelMedia = ({ src, alt, mediaClass, placeholderClass }) => {
-    if (src && isVideoUrl(src)) {
-        // An animation must always play and show in full wherever it renders
-        // (detail view AND the multi-barrel card grid). Force object-contain on a
-        // white backdrop so it's never cropped, and autoplay/loop so it's never a
-        // frozen frame. `!` overrides any object-cover passed by the caller.
-        return (
-            <video
-                src={src}
-                className={`${mediaClass} !object-contain bg-white`}
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="auto"
-                aria-label={alt}
-            />
-        );
-    }
-    if (src) {
-        return (
-            <img
-                src={src}
-                alt={alt}
-                className={mediaClass}
-                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = prepackedBarrelImg; }}
-            />
-        );
-    }
-    return (
-        <div className={placeholderClass}>
-            <img src={prepackedBarrelImg} alt={alt} className="h-full w-auto object-contain" />
-        </div>
-    );
-};
 
 const PrepackedBarrel = () => {
     const navigate = useNavigate();
@@ -413,59 +369,91 @@ const PrepackedBarrel = () => {
                         ← Choose a different barrel
                     </button>
                 )}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-                {/* ---------- Product ---------- */}
-                <div>
-                    <div className="bg-white rounded-[22px] border border-[#0D4D4D]/10 overflow-hidden shadow-sm">
-                        <BarrelMedia
-                            src={imageSrc}
-                            alt={product?.name || 'VerShip pre-packed barrel'}
-                            mediaClass="w-full h-80 md:h-[420px] object-contain bg-white"
-                            placeholderClass="w-full h-80 md:h-[420px] bg-[#0D4D4D]/5 flex items-center justify-center p-4"
-                        />
-                        <div className="p-6 md:p-8">
-                            <h1 className="text-2xl md:text-[28px] font-bold text-[#071618] leading-tight">
-                                Send a Pre-Packed Food Barrel to Jamaica
-                            </h1>
-                            <p className="text-base md:text-lg font-semibold text-[#0D4D4D] mt-1 leading-tight">
-                                <DeliveryReach /> Door-to-Door Delivery — all 14 parishes
-                            </p>
-                            {(product.name || product.tagline) && (
-                                <p className="text-sm md:text-base text-[#595d5e] mt-3 leading-relaxed">
-                                    {product.name && (
-                                        <span className="font-semibold text-[#C1A35E]">{product.name} </span>
-                                    )}
-                                    {product.tagline}
-                                </p>
-                            )}
-
-                            <div className="mt-5">
-                                <div className="flex items-center flex-wrap gap-x-3 gap-y-2">
-                                    {regularPrice > unitPrice && (
-                                        <span className="text-xl font-semibold text-[#595d5e] line-through">{currency} {regularPrice.toFixed(2)}</span>
-                                    )}
-                                    <span className="text-3xl font-bold text-[#0D4D4D]">{currency} {unitPrice.toFixed(2)}</span>
-                                    <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
-                                        Promotional offer
-                                    </span>
-                                </div>
-                                {product.transitTime && (
-                                    <p className="text-sm text-[#595d5e] mt-2">Delivery in {product.transitTime}</p>
+                {/* ---------- Product (full width: media beside the details) ---------- */}
+                <div className="bg-white rounded-[22px] border border-[#0D4D4D]/10 overflow-hidden shadow-sm lg:grid lg:grid-cols-2">
+                    <BarrelMedia
+                        src={imageSrc}
+                        alt={product?.name || 'VerShip pre-packed barrel'}
+                        mediaClass="w-full h-72 md:h-96 lg:h-full lg:min-h-[360px] object-contain bg-white"
+                        placeholderClass="w-full h-72 md:h-96 lg:h-full lg:min-h-[360px] bg-[#0D4D4D]/5 flex items-center justify-center p-4"
+                    />
+                    <div className="p-6 md:p-8 flex flex-col justify-center">
+                        <h1 className="text-2xl md:text-[28px] font-bold text-[#071618] leading-tight">
+                            Send a Pre-Packed Food Barrel to Jamaica
+                        </h1>
+                        <p className="text-base md:text-lg font-semibold text-[#0D4D4D] mt-1 leading-tight">
+                            <DeliveryReach /> Door-to-Door Delivery — all 14 parishes
+                        </p>
+                        {(product.name || product.tagline) && (
+                            <p className="text-sm md:text-base text-[#595d5e] mt-3 leading-relaxed">
+                                {product.name && (
+                                    <span className="font-semibold text-[#C1A35E]">{product.name} </span>
                                 )}
+                                {product.tagline}
+                            </p>
+                        )}
+
+                        <div className="mt-5">
+                            <div className="flex items-center flex-wrap gap-x-3 gap-y-2">
+                                {regularPrice > unitPrice && (
+                                    <span className="text-xl font-semibold text-[#595d5e] line-through">{currency} {regularPrice.toFixed(2)}</span>
+                                )}
+                                <span className="text-3xl font-bold text-[#0D4D4D]">{currency} {unitPrice.toFixed(2)}</span>
+                                <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[11px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full">
+                                    Promotional offer
+                                </span>
                             </div>
-
-                            {product.description && (
-                                <p className="text-[#595d5e] leading-relaxed mt-5 whitespace-pre-line">{product.description}</p>
+                            {product.transitTime && (
+                                <p className="text-sm text-[#595d5e] mt-2">Delivery in {product.transitTime}</p>
                             )}
-
                         </div>
+
+                        {product.description && (
+                            <p className="text-[#595d5e] leading-relaxed mt-5 whitespace-pre-line">{product.description}</p>
+                        )}
+
                     </div>
                 </div>
 
-                {/* ---------- Order form ---------- */}
-                <div>
+                {/* Contents on the left, order form on the right, so buyers can see
+                    what they're sending while they fill in who it's going to. */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mt-8 lg:mt-10">
+                {/* ---------- Barrel contents ---------- */}
+                {Array.isArray(product?.contents) && product.contents.length > 0 && (
+                    <div className="bg-white rounded-[22px] border border-[#0D4D4D]/10 p-6 md:p-8 shadow-sm">
+                        <h2 className="text-xl md:text-2xl font-bold text-[#071618] mb-4">What's in the barrel?</h2>
+                        {groupContents(product.contents).map((group) => (
+                            <section key={group.label} className="mt-6 first:mt-0">
+                                <h3 className="flex items-baseline gap-2 text-sm font-bold uppercase tracking-wide text-[#0D4D4D] border-b border-[#0D4D4D]/20 pb-2 mb-3">
+                                    {group.label}
+                                    <span className="text-xs font-semibold normal-case tracking-normal text-[#595d5e]">
+                                        {group.items.length} item{group.items.length === 1 ? '' : 's'}
+                                    </span>
+                                </h3>
+                                {/* One column beside the form — half-width is too narrow for
+                                    name + size to sit on one line in two columns. */}
+                                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-10 gap-y-2">
+                                    {group.items.map((item) => (
+                                        <li key={item.id} className="flex items-center justify-between gap-3 text-[#071618] border-b border-dashed border-[#0D4D4D]/15 py-1.5">
+                                            <span className="flex items-center gap-2 min-w-0">
+                                                <span aria-hidden="true">{item.icon || '•'}</span>
+                                                <span className="break-words">{item.name}</span>
+                                            </span>
+                                            {item.quantity && (
+                                                <span className="text-[#0D4D4D] font-semibold text-sm whitespace-nowrap">{item.quantity}</span>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </section>
+                        ))}
+                    </div>
+                )}
+
+                {/* ---------- Order form (sticks beside the long contents list) ---------- */}
+                <div className="lg:sticky lg:top-6 lg:self-start">
                     <form onSubmit={handleSubmit} className="bg-white rounded-[22px] border border-[#0D4D4D]/10 p-6 md:p-8 shadow-sm">
-                        <h2 className="text-xl md:text-2xl font-bold text-[#071618] mb-6">Order this barrel</h2>
+                        <h2 className="text-xl md:text-2xl font-bold text-[#071618] mb-6">Send Love</h2>
 
                         {/* Quantity */}
                         <div className="mb-5">
@@ -561,35 +549,6 @@ const PrepackedBarrel = () => {
                 </div>
                 </div>
 
-                {/* ---------- Barrel contents (full width so every item is clearly readable) ---------- */}
-                {Array.isArray(product?.contents) && product.contents.length > 0 && (
-                    <div className="mt-10 bg-white rounded-[22px] border border-[#0D4D4D]/10 p-6 md:p-8 shadow-sm">
-                        <h2 className="text-xl md:text-2xl font-bold text-[#071618] mb-4">What's in the barrel?</h2>
-                        {groupContents(product.contents).map((group) => (
-                            <section key={group.label} className="mt-6 first:mt-0">
-                                <h3 className="flex items-baseline gap-2 text-sm font-bold uppercase tracking-wide text-[#0D4D4D] border-b border-[#0D4D4D]/20 pb-2 mb-3">
-                                    {group.label}
-                                    <span className="text-xs font-semibold normal-case tracking-normal text-[#595d5e]">
-                                        {group.items.length} item{group.items.length === 1 ? '' : 's'}
-                                    </span>
-                                </h3>
-                                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-2">
-                                    {group.items.map((item) => (
-                                        <li key={item.id} className="flex items-center justify-between gap-3 text-[#071618] border-b border-dashed border-[#0D4D4D]/15 py-1.5">
-                                            <span className="flex items-center gap-2 min-w-0">
-                                                <span aria-hidden="true">{item.icon || '•'}</span>
-                                                <span className="break-words">{item.name}</span>
-                                            </span>
-                                            {item.quantity && (
-                                                <span className="text-[#0D4D4D] font-semibold text-sm whitespace-nowrap">{item.quantity}</span>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </section>
-                        ))}
-                    </div>
-                )}
             </div>
             )}
         </div>

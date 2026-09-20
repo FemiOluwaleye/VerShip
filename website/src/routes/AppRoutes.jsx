@@ -7,10 +7,10 @@ import Login from '../pages/Login';
 import Forgot from '../pages/Forgot';
 import Verification from '../pages/Verification';
 import Profile from '../pages/Profile';
-import Quotes from '../pages/Quotes';
 import QuotesShipown from '../pages/QuotesShipown';
-import QuotesShipownHistory from '../pages/QuotesShipownHistory';
-import Details from '../pages/Details';
+import Checkout from "../pages/Checkout";
+import CheckoutSuccess from "../pages/CheckoutSuccess";
+import AccountSetup from "../pages/AccountSetup";
 import History from '../pages/History';
 import Support from '../pages/Support';
 import Edit from '../pages/Edit';
@@ -119,10 +119,15 @@ const AppRoutes = () => {
 
             {/* ---------- USER ---------- */}
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/quotes" element={<ProtectedRoute><Quotes /></ProtectedRoute>} />
-            <Route path="/quotes-shipown" element={<ProtectedRoute><QuotesShipown /></ProtectedRoute>} />
-            <Route path="/quotes-shipown-history/:id" element={<ProtectedRoute><QuotesShipownHistory /></ProtectedRoute>} />
-            <Route path="/detail" element={<ProtectedRoute><Details /></ProtectedRoute>} />
+            <Route path="/quotes" element={<ProtectedRoute><QuotesShipown /></ProtectedRoute>} />
+            {/* Quotes and checkout serve guests too (account is created at Pay now). */}
+            <Route path="/quotes-shipown" element={<QuotesShipown />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/checkout/success" element={<CheckoutSuccess />} />
+            <Route path="/account-setup" element={<AccountSetup />} />
+            <Route path="/quotes-shipown-history/:id" element={<ProtectedRoute><QuotesShipown /></ProtectedRoute>} />
+            {/* /detail (the old Payment Overview + modal) is retired: payment happens on /checkout. */}
+            <Route path="/detail" element={<Navigate to="/history" replace />} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
             <Route path="/support" element={<ProtectedRoute><Support /></ProtectedRoute>} />
             <Route path="/edit" element={<ProtectedRoute><Edit /></ProtectedRoute>} />

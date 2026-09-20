@@ -37,6 +37,7 @@ import BookingCompleted from "./Admin/Bookings/BookingCompleted";
 import Bookinglist from "./Admin/Bookings/BookingList";
 import ProviderList from "./Admin/Providers/ProvidersListing";
 import PricingListing from "./Admin/Pricing/PricingListing";
+import PayoutsListing from "./Admin/Payouts/PayoutsListing";
 import PricingEditor from "./Admin/Pricing/PricingEditor";
 import CookieList from "./Admin/Cookies/CookieList";
 import CookieAdd from "./Admin/Cookies/CookieAdd";
@@ -84,6 +85,7 @@ const AdminApp = () => {
             <Route path="providerlist" element={<PrivateRoute element={<ProviderList />} />} />
             <Route path="pricing" element={<PrivateRoute element={<PricingListing />} />} />
             <Route path="pricing/:id" element={<PrivateRoute element={<PricingEditor />} />} />
+            <Route path="payouts" element={<PrivateRoute element={<PayoutsListing />} />} />
             <Route path="contactlist" element={<PrivateRoute element={<ContactList />} />} />
             <Route path="privacypolicy" element={<PrivateRoute element={<PrivacyPolicy />} />} />
             <Route path="aboutus" element={<PrivateRoute element={<AboutUs />} />} />

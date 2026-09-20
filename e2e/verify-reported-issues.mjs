@@ -43,7 +43,7 @@ async function adminLogin(page) {
     await page.goto(`${BASE}/prepacked-barrel`, { waitUntil: 'networkidle' });
     await sleep(1200);
     let bodyText = await page.locator('body').innerText();
-    const visibleBefore = /Send a Pre-Packed Food Barrel|Order this barrel|Choose your barrel|Select/i.test(bodyText)
+    const visibleBefore = /Send a Pre-Packed Food Barrel|Send Love|Order this barrel|Choose your barrel|Select/i.test(bodyText)
       && !/No pre-packed barrel is available/i.test(bodyText);
     say(`  [3a] public barrel page visible BEFORE hide: ${visibleBefore}`);
 
@@ -68,7 +68,7 @@ async function adminLogin(page) {
     await sleep(1500);
     bodyText = await page.locator('body').innerText();
     const goneAfter = /No pre-packed barrel is available/i.test(bodyText)
-      || !/Order this barrel|Choose your barrel/i.test(bodyText);
+      || !/Send Love|Order this barrel|Choose your barrel/i.test(bodyText);
     say(`  [3d] public barrel page GONE after hide: ${goneAfter}  ${goneAfter ? '(reproduces "cannot access barrel")' : ''}`);
 
     // 3e. admin list still shows it (Hidden badge) -> not locked out of admin
@@ -87,7 +87,7 @@ async function adminLogin(page) {
     await page.goto(`${BASE}/prepacked-barrel`, { waitUntil: 'networkidle' });
     await sleep(1500);
     bodyText = await page.locator('body').innerText();
-    const recovered = /Order this barrel|Choose your barrel|Send a Pre-Packed/i.test(bodyText)
+    const recovered = /Send Love|Order this barrel|Choose your barrel|Send a Pre-Packed/i.test(bodyText)
       && !/No pre-packed barrel is available/i.test(bodyText);
     say(`  [3f] recovered to Active -> public visible again: ${recovered}`);
 

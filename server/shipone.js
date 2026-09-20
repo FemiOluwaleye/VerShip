@@ -55,128 +55,47 @@ app.set('view engine', 'ejs');
 app.use(logger('dev'));
 
 app.post('/stripe/webhook', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
-  console.log('[WEBHOOK] Stripe webhook received');
-
   const { env } = require('./helper/envConfig');
   const stripe = require('stripe')(env('STRIPE_SECRET_KEY'));
-  console.log('[WEBHOOK] Stripe initialized');
-
-  const db = require('./models');
-  console.log('[WEBHOOK] Database models loaded');
-
+  const { handleStripeEvent } = require('./helper/stripeWebhook');
   const sig = req.headers['stripe-signature'];
-  console.log('[WEBHOOK] Stripe signature captured:', sig ? 'Present' : 'Missing');
 
+  const endpointSecret = env('STRIPE_WEBHOOK_SECRET');
+  if (!endpointSecret) {
+    console.error('[WEBHOOK] STRIPE_WEBHOOK_SECRET is not configured — rejecting unverifiable webhook');
+    return res.status(500).send('Webhook secret not configured');
+  }
+  // Verify the event genuinely came from Stripe using the raw request body.
+  // Without this, anyone could POST a forged payment_intent.succeeded and mark
+  // bookings as paid.
+  let event;
   try {
-    const endpointSecret = env('STRIPE_WEBHOOK_SECRET');
-    if (!endpointSecret) {
-      console.error('[WEBHOOK] STRIPE_WEBHOOK_SECRET is not configured — rejecting unverifiable webhook');
-      return res.status(500).send('Webhook secret not configured');
-    }
-    // Verify the event genuinely came from Stripe using the raw request body.
-    // Without this, anyone could POST a forged payment_intent.succeeded and mark
-    // bookings as paid.
-    const event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    console.log('[WEBHOOK] Event verified, type:', event.type);
-
-    if (event.type === 'account.updated') {
-      console.log('[WEBHOOK] Processing account.updated event');
-      const acct = event.data.object;
-      console.log('[WEBHOOK] Account data extracted, account ID:', acct?.id);
-
-      try {
-        if (acct && acct.id) {
-          console.log('[WEBHOOK] Updating user with accountId:', acct.id);
-          await db.users.update(
-            { hashAccount: '1' },
-            { where: { accountId: acct.id } }
-          );
-          console.log('[WEBHOOK] User updated successfully for accountId:', acct.id);
-        } else {
-          console.log('[WEBHOOK] Account or account ID missing, skipping update');
-        }
-      } catch (e) {
-        console.error('[WEBHOOK] Error updating user on account.updated webhook:', e);
-      }
-    }
-
-    if (event.type === 'payment_intent.succeeded') {
-      console.log('[WEBHOOK] Processing payment_intent.succeeded event');
-      const paymentIntent = event.data.object;
-      console.log('[WEBHOOK] Payment intent ID:', paymentIntent.id);
-
-      // Pre-packed barrel orders carry prepackedOrderId instead of bookingId.
-      const prepackedOrderId = paymentIntent?.metadata?.prepackedOrderId;
-      if (prepackedOrderId) {
-        console.log('[WEBHOOK] Marking prepacked order paid, ID:', prepackedOrderId);
-        await db.prepacked_orders.update(
-          { payment_status: 1 },
-          { where: { id: prepackedOrderId } }
-        );
-        console.log('[WEBHOOK] Prepacked order updated:', prepackedOrderId);
-      }
-
-      // Forwarder-requested additional costs carry additionalCostId.
-      const additionalCostId = paymentIntent?.metadata?.additionalCostId;
-      if (additionalCostId) {
-        console.log('[WEBHOOK] Marking additional cost paid, ID:', additionalCostId);
-        await db.booking_additional_costs.update(
-          { status: '1', transaction_id: paymentIntent.id },
-          { where: { id: additionalCostId } }
-        );
-        console.log('[WEBHOOK] Additional cost updated:', additionalCostId);
-      }
-
-      const bookingId = paymentIntent?.metadata?.bookingId;
-      console.log('[WEBHOOK] Booking ID from metadata:', bookingId);
-
-      if (bookingId) {
-        console.log('[WEBHOOK] Searching for booking with ID:', bookingId);
-        const booking = await db.bookings.findOne({ where: { id: bookingId } });
-
-        if (booking) {
-          console.log('[WEBHOOK] Booking found, updating payment status');
-          await db.bookings.update(
-            {
-              payment_status: '1',
-              trasaction_id: paymentIntent.id,
-            },
-            { where: { id: bookingId } }
-          );
-          console.log('[WEBHOOK] Booking updated successfully, transaction ID:', paymentIntent.id);
-
-          if (booking.booking_request_id) {
-            console.log('[WEBHOOK] Updating booking request ID:', booking.booking_request_id);
-            await db.booking_requests.update(
-              { payment_status: 1 },
-              { where: { id: booking.booking_request_id } }
-            );
-            console.log('[WEBHOOK] Booking request updated successfully');
-          } else {
-            console.log('[WEBHOOK] No booking_request_id found on booking');
-          }
-        } else {
-          console.log('[WEBHOOK] Booking not found for ID:', bookingId);
-        }
-      } else {
-        console.log('[WEBHOOK] No bookingId in payment intent metadata');
-      }
-    }
-
-    console.log('[WEBHOOK] Sending success response');
-    res.json({ received: true });
-    console.log('[WEBHOOK] Response sent successfully');
-
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
   } catch (err) {
-    console.error('[WEBHOOK] Error caught in try-catch block');
-    console.error('[WEBHOOK] Error message:', err.message);
-    console.error('[WEBHOOK] Error stack:', err.stack);
-
-    console.log('[WEBHOOK] Sending error response with status 400');
-    res.status(400).send(`Webhook Error: ${err.message}`);
-    console.log('[WEBHOOK] Error response sent');
+    console.error('[WEBHOOK] signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+  try {
+    const result = await handleStripeEvent(event);
+    console.log('[WEBHOOK]', event.type, JSON.stringify(result));
+    res.json({ received: true });
+  } catch (err) {
+    // 500 makes Stripe retry the delivery, which is what we want for a DB hiccup.
+    console.error('[WEBHOOK] handler failed for', event.type, err);
+    res.status(500).send('Webhook handler error');
   }
 });
+
+// Daily pass over forwarders who are owed money but can't receive it yet:
+// reminder emails (day 1/3/7/weekly) and auto-collect once they connect.
+// Guarded by job_runs so a restart or second instance can't double-send.
+{
+  const { runReminderJob } = require('./helper/payoutService');
+  const tick = () => runReminderJob().then((r) => { if (!r.skipped) console.log('[payouts] reminder job:', JSON.stringify(r)); })
+    .catch((e) => console.error('[payouts] reminder job failed:', e.message));
+  setTimeout(tick, 60 * 1000).unref?.();
+  setInterval(tick, 6 * 3600 * 1000).unref?.();
+}
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -559,3 +559,16 @@ export const getRatings = async () => {
         throw error;
     }
 };
+/* ── Checkout redesign / milestone payments / held payouts ── */
+export const getGuestQuotes = async (payload) => (await axios.post('/website/guest-quotes', payload)).data;
+export const getQuoteBreakdown = async (params) => (await axios.get('/website/quote-breakdown', { params })).data;
+export const postQuoteBreakdown = async (payload) => (await axios.post('/website/quote-breakdown', payload)).data;
+export const guestCheckout = async (payload) => (await axios.post('/website/guest-checkout', payload)).data;
+export const createChargeIntent = async (payload) => (await axios.post('/website/charge-intent', payload)).data;
+export const confirmCharge = async (paymentId) => (await axios.post('/website/confirm-charge', { paymentId })).data;
+export const getBookingCharges = async (bookingId) => (await axios.get('/website/booking-charges', { params: { bookingId } })).data;
+export const getMyCharges = async () => (await axios.get('/website/my-charges')).data;
+export const accountSetup = async (payload) => (await axios.post('/website/account-setup', payload)).data;
+export const getMyPayouts = async () => (await axios.get('/website/payouts/me')).data;
+export const collectPayouts = async () => (await axios.post('/website/payouts/collect')).data;
+export const getStripeConfig = async () => (await axios.get('/website/stripe-config')).data;
