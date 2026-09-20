@@ -39,13 +39,14 @@ await db.users.update({ accountId: '', hashAccount: '0' }, { where: { id: PROVID
 await db.forwarder_payouts.destroy({ where: { provider_id: PROVIDER_ID } });
 
 // ── 1.1 gate switch: un-onboarded forwarder is quoted; unverified one is not ──
-const req = await api('/website/save-booking-request', { method: 'POST', token: customer, body: {
+const requestPayload = {
     origin: 'Pittsburgh, PA', destination: 'Kingston, Jamaica', parish: 'St. Andrew',
     pickup_date: new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10),
     delivery_date: new Date(Date.now() + 20 * 864e5).toISOString().slice(0, 10),
     items: [{ item_type: 'Barrel', sub_type: 'Ship Your Own Barrel', quantity: 2 }],
     origin_lat: '40.4387', origin_long: '-79.9972', destination_lat: '18.0179', destination_long: '-76.8099',
-} });
+};
+const req = await api('/website/save-booking-request', { method: 'POST', token: customer, body: requestPayload });
 assert.ok(req.body?.id, 'booking request saved');
 const requestId = req.body.id;
 const quotes = await api('/website/get-available-quotes', { token: customer });
@@ -64,7 +65,7 @@ assert.equal(noAuth, 404, '0.2 unknown provider → 404');
 ok(`0.2 breakdown: now $${bd.body.dueNow.total} / later $${bd.body.later.total} (${bd.body.parish})`);
 
 // ── 2.1 create booking → deposit + customs_delivery rows ──
-const cb = await api('/website/create-booking', { method: 'POST', token: customer, body: {
+const bookingPayload = {
     booking_request_id: requestId, providerIds: [PROVIDER_ID], barrel_type: 'own',
     primary_firstName: 'Elvis', primary_lastName: 'Livingston', primary_phone_number: '5551234', primary_country_code: '+1876', primary_email: 'elvis@example.com',
     primary_address: '15 Molynes Road', primary_city: 'Kingston 10', primary_state: 'St. Andrew',
@@ -72,7 +73,8 @@ const cb = await api('/website/create-booking', { method: 'POST', token: custome
     shiper_address: '100 Grant St', shiper_city: 'Pittsburgh', shiper_state: 'PA', shiper_lat: '40.4406', shiper_lng: '-79.9959',
     consignee_firstName: 'Elvis', consignee_lastName: 'Livingston', consignee_email: 'elvis@example.com', consignee_phone_number: '5551234', consignee_country_code: '+1876',
     consignee_address: '15 Molynes Road', consignee_city: 'Kingston 10', consignee_state: 'St. Andrew', consignee_lat: '18.0179', consignee_lng: '-76.8099',
-} });
+};
+const cb = await api('/website/create-booking', { method: 'POST', token: customer, body: bookingPayload });
 assert.equal(cb.status, 200, `create-booking: ${cb.message}`);
 const booking = cb.body.bookings[0];
 const { deposit, customsDelivery } = cb.body.charges[0];
@@ -181,12 +183,27 @@ assert.equal(after.status, 'reversed', '1.9 ledger row reversed');
 const reversals = await stripe.transfers.listReversals(row.transfer_id);
 assert.equal(reversals.data.length, 1, '1.9 transfer reversed on Stripe');
 ok(`1.9 refund → reversal ${reversals.data[0].id}`);
+// A refunded deposit ends the booking: cancelled, and its pending customs charge voided.
+const cancelledBooking = await db.bookings.findByPk(booking.id);
+assert.equal(String(cancelledBooking.status), '4', '1.9 booking cancelled after deposit refund');
+const stillPending = await db.booking_charges.count({ where: { booking_id: booking.id, status: 'pending' } });
+assert.equal(stillPending, 0, '1.9 no pending charges remain on a refunded booking');
+ok('1.9 refunded booking cancelled, pending charges voided');
 
-// ── 2.4 Arrived → customs due (email/push best-effort) ──
-const arrived = await api('/website/update-booking-status', { method: 'POST', token: forwarder, body: { bookingId: booking.id, status: '5' } });
+// ── 2.4 Arrived → customs due (email/push best-effort) ── on a fresh booking (the first one is now refunded + cancelled)
+const req2 = await api('/website/save-booking-request', { method: 'POST', token: customer, body: requestPayload });
+assert.equal(req2.status, 200, `save-booking-request #2: ${req2.message}`);
+const cb2 = await api('/website/create-booking', { method: 'POST', token: customer, body: { ...bookingPayload, booking_request_id: req2.body.id } });
+assert.equal(cb2.status, 200, `create-booking #2: ${cb2.message}`);
+const booking2 = cb2.body.bookings[0];
+assert.notEqual(booking2.id, booking.id, '2.4 uses a fresh booking');
+const customsDelivery2 = cb2.body.charges[0].customsDelivery;
+await db.booking_charges.update({ status: 'paid', paid_at: new Date() }, { where: { id: cb2.body.charges[0].deposit.id } });
+await db.bookings.update({ payment_status: '1' }, { where: { id: booking2.id } });
+const arrived = await api('/website/update-booking-status', { method: 'POST', token: forwarder, body: { bookingId: booking2.id, status: '5' } });
 assert.equal(arrived.status, 200, `arrived: ${arrived.message}`);
 await new Promise((r) => setTimeout(r, 800));
-const cd = await db.booking_charges.findByPk(customsDelivery.id);
+const cd = await db.booking_charges.findByPk(customsDelivery2.id);
 assert.ok(cd.due_at && cd.notified_at, '2.4 customs_delivery marked due + notified');
 const pending = await api('/website/my-charges', { token: customer });
 assert.ok(pending.body.some((c) => c.id === cd.id && c.status === 'pending'), '2.4 customer sees the pending customs charge');

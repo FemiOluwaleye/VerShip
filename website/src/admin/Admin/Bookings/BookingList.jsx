@@ -40,7 +40,7 @@ const BookingList = () => {
       1: { label: "Shipped", className: "bg-primary" },
       2: { label: "Delivered", className: "bg-success" },
       3: { label: "Dispatched", className: "bg-info" },
-      4: { label: "Completed", className: "bg-secondary" },
+      4: { label: "Cancelled", className: "bg-secondary" },
       5: { label: "Arrived in Jamaica", className: "bg-info text-dark" },
     };
 
@@ -541,11 +541,12 @@ const BookingList = () => {
                         <tr>
                           <td>Add-ons :</td>
                           <td className="text-end text-black fw-medium">
-                            {Array.isArray(selectedMatch.addOns)
-                              ? selectedMatch.addOns.join(", ")
-                              : typeof selectedMatch.addOns === 'string'
-                                ? selectedMatch.addOns
-                                : "N/A"}
+                            {(() => {
+                              let v = selectedMatch.addOns;
+                              if (typeof v === "string") { try { v = JSON.parse(v); } catch { /* plain text */ } }
+                              if (Array.isArray(v)) return v.length ? v.join(", ") : "None";
+                              return typeof v === "string" && v.trim() ? v : "None";
+                            })()}
                           </td>
                         </tr>
                       )}

@@ -139,9 +139,9 @@ module.exports = {
             const statusFilter = req.query.statusFilter || "all"; // Add status filter
 
             const whereClause = {
-                // In transit: shipped, arrived in Jamaica (customs due), delivered
+                // In transit: shipped, arrived in Jamaica (customs due). Delivered moves to Completed.
                 status: {
-                    [db.Sequelize.Op.in]: ["1", "5", "2"]
+                    [db.Sequelize.Op.in]: ["1", "5"]
                 },
                 payment_status: 1
             };
@@ -232,8 +232,9 @@ module.exports = {
             const search = req.query.search || "";
             const dateFilter = req.query.dateFilter || "all";
 
+            // Delivered bookings ('2'). '4' is cancelled and stays on the main Bookings list.
             const whereClause = {
-                status: "4"
+                status: "2"
             };
             const includeClause = [
                 {

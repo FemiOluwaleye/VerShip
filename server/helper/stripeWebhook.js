@@ -103,10 +103,20 @@ async function onPaymentIntentSucceeded(paymentIntent) {
 
 async function onChargeRefunded(charge) {
     const row = await payouts.handleRefundedCharge(charge);
+    let cancelledBookingId = null;
     if (charge.refunded) {
+        const refunded = await db.booking_charges.findAll({ where: { charge_id: charge.id, status: 'paid' } });
         await db.booking_charges.update({ status: 'cancelled' }, { where: { charge_id: charge.id, status: 'paid' } });
+        // Refunding the deposit ends the booking: cancel it and void whatever is still pending on it,
+        // so it stops showing as in transit with customs & delivery due.
+        const deposit = refunded.find((c) => c.kind === 'deposit');
+        if (deposit) {
+            await db.booking_charges.update({ status: 'cancelled' }, { where: { booking_id: deposit.booking_id, status: 'pending' } });
+            await db.bookings.update({ status: '4' }, { where: { id: deposit.booking_id } });
+            cancelledBookingId = deposit.booking_id;
+        }
     }
-    return { forwarderPayoutId: row?.id || null, fullyRefunded: !!charge.refunded };
+    return { forwarderPayoutId: row?.id || null, fullyRefunded: !!charge.refunded, cancelledBookingId };
 }
 
 async function handleStripeEvent(event) {

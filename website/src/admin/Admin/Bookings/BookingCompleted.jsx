@@ -32,7 +32,7 @@ const BookingCompleted = () => {
       1: { label: "Shipped", className: "bg-primary" },
       2: { label: "Delivered", className: "bg-success" },
       3: { label: "Dispatched", className: "bg-info" },
-      4: { label: "Completed", className: "bg-secondary" },
+      4: { label: "Cancelled", className: "bg-secondary" },
       5: { label: "Arrived in Jamaica", className: "bg-info text-dark" },
     };
 
@@ -421,6 +421,25 @@ const BookingCompleted = () => {
                       </span>
                     </td>
                   </tr>
+                  {/* Pay as Your Shipment Moves: one row per charge with its state */}
+                  {selectedMatch.charges?.length > 0 && (
+                    <>
+                      <tr className="table-light">
+                        <td colSpan="2" className="fw-bold">Payments</td>
+                      </tr>
+                      {selectedMatch.charges.map((c) => (
+                        <tr key={c.id}>
+                          <td>
+                            {c.kind === "deposit" ? "Deposit (sea freight & service fee)" : c.kind === "customs_delivery" ? (c.description || "Customs & delivery") : `Extra: ${c.description}`}
+                          </td>
+                          <td className="text-end text-black fw-medium">
+                            ${(c.amount_cents / 100).toFixed(2)}{" "}
+                            <span className={`badge bg-${c.status === "paid" ? "success" : c.status === "cancelled" ? "secondary" : "warning text-dark"}`}>{c.status}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
+                  )}
                 </tbody>
               </table>
             </>

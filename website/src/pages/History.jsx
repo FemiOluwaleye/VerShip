@@ -352,7 +352,7 @@ const History = () => {
   };
 
   const currentBookings = bookings.filter(b => ["0", "1", "3", "5"].includes(b.status));
-  const pastBookings = bookings.filter(b => ["2"].includes(b.status));
+  const pastBookings = bookings.filter(b => ["2", "4"].includes(b.status)); // delivered or cancelled
   const orders = activeTab === "current" ? currentBookings : pastBookings;
 
   const getStatusLabel = (status) => {
@@ -361,7 +361,7 @@ const History = () => {
       case "1": return "Shipped";
       case "2": return "Delivered";
       case "3": return "Dispatched";
-      case "4": return "Completed";
+      case "4": return "Cancelled";
       case "5": return "Arrived in Jamaica";
       default: return "Unknown";
     }
@@ -373,7 +373,7 @@ const History = () => {
       case "1": return "text-blue-400 border-blue-400";
       case "2": return "text-green-400 border-green-400";
       case "3": return "text-orange-400 border-orange-400";
-      case "4": return "text-green-500 border-green-500";
+      case "4": return "text-red-400 border-red-400";
       case "5": return "text-teal-300 border-teal-300";
       default: return "text-[#FF9900] border-[#FF9900]";
     }
@@ -588,7 +588,7 @@ const History = () => {
                 return (
                   <div className="border-t border-[#4E6B5D]/40 px-6 py-3 space-y-2" onClick={(e) => e.stopPropagation()} data-testid={`charges-${item.id}`}>
                     <p className="text-gray-400 text-xs uppercase tracking-wider font-semibold">Payments</p>
-                    {charges.filter((c) => c.status !== "cancelled").map((c) => (
+                    {charges.map((c) => (
                       <div key={c.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="text-sm text-gray-200">
                           {label(c)}
@@ -599,6 +599,9 @@ const History = () => {
                           <span className="text-[#FFC928] font-bold">${(c.amount_cents / 100).toFixed(2)}</span>
                           {c.status === "paid" ? (
                             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600/30 text-green-300">Paid</span>
+                          ) : c.status === "cancelled" ? (
+                            // A cancelled charge that had been paid was refunded (booking cancelled); one never paid was simply voided.
+                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-gray-300">{c.paid_at || c.charge_id ? "Refunded" : "Cancelled"}</span>
                           ) : userRole === "1" ? (
                             (c.kind !== "customs_delivery" || c.due_at) ? (
                               <button

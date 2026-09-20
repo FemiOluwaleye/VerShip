@@ -256,6 +256,7 @@ Payouts first because it is the piece with real money-movement risk and the one 
 | 2.4 Arrived in Jamaica → customs due → email/push → pay in History | ✅ | checkout §D |
 | 2.5 forwarder extras via charges | ✅ | checkout §E |
 | 2.6 admin bookings show charge rows (+ fixed leftover "ride" status labels) | ✅ | `e2e/admin-booking-charges.mjs` |
+| 2.8 QA pass fixes: admin Completed lists Delivered (`'2'`; was `'4'` = cancelled, so it was always empty) and Active no longer includes Delivered; `'4'` labelled Cancelled everywhere; Completed drawer shows Payments; Bookings List add-ons parsed (was raw JSON, "None" when empty); customer History Past includes Cancelled bookings with charges shown as Refunded/Cancelled; a fully refunded deposit cancels the booking and voids its pending charges (`onChargeRefunded`) | ✅ | `server/tests/payouts.api.test.mjs` §1.9/§2.4; `e2e/qa-blackbox.mjs` (black-box QA, sections A–F, M); browser re-check of each fix |
 | 2.7 admin bookings screens relabelled (Ride/Driver/Passenger → Order/Forwarder/Barrels/Route; dead ride-type helper removed; controller includes route + quantity) | ✅ | `e2e/admin-booking-charges.mjs`; routes 48/48; grep shows no ride/driver/passenger labels |
 | 3.1 guest quotes | ✅ | `e2e/guest.mjs` §A |
 | 3.2 guest pay → pending-password account; existing email → inline sign-in | ✅ | guest §B/§C |
