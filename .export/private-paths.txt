@@ -1,0 +1,46 @@
+# Paths removed from EVERY commit, not just HEAD.
+# Syntax is git-filter-repo --paths-from-file:
+#   bare path   -> exact path, or any path under it if it is a directory
+#   glob:...    -> shell glob
+#   regex:...   -> Python regex against the full path
+#
+# A bare rule matches the exact path OR a leading directory component, which is
+# the semantics export.sh's verifier emulates when it checks for leaks.
+
+# ---- the export machinery strips itself -------------------------------------
+.export/
+.github/workflows/export-clean.yml
+
+# ---- internal process + method records --------------------------------------
+# Not committed today (gitignored), listed so a future accidental commit is
+# still caught by an export that nobody remembered to update.
+how_we_work/
+.claude/
+.claude-persistent/
+regex:^CLAUDE_.*\.md$
+regex:^CODEX_.*\.md$
+glob:**/CLAUDE.md
+glob:**/AGENTS.md
+glob:**/.cursorrules
+
+# ---- AI/agent tooling committed to this repo --------------------------------
+tools/claude/
+
+# ---- platform + internal planning docs --------------------------------------
+# replit.md documents the stage/prod split, which secrets resolve where, and
+# that the published Deployment is production. Operational detail, not product.
+replit.md
+
+# CHECKOUT_PAYOUTS_PLAN.md is an internal plan: it quotes production data
+# findings (named forwarder records, a prod-only description value) and the
+# decision log behind them.
+CHECKOUT_PAYOUTS_PLAN.md
+
+# ---- kept deliberately (documented here so the decision is not re-litigated) -
+# RENDER_MIGRATION.md  - ops runbook describing the app's own architecture.
+#                        No agent traces, useful to anyone running the repo.
+# e2e/, server/tests/  - real test suites; they demonstrate the work.
+# artifacts/, lib/,    - inert Replit workspace scaffolding. Referenced by
+# scripts/               pnpm-workspace.yaml and the root typecheck script, so
+#                        removing them would require editing both. Not private.
+# .replit, render.yaml - platform run files; the clean repo stays runnable.

@@ -1,0 +1,42 @@
+# File-CONTENT rewrites applied across all of history (git filter-repo
+# --replace-text). Keep every rule narrow: these run against every blob, and a
+# loose pattern will quietly corrupt source files.
+#
+#   literal==>replacement
+#   regex:pattern==>replacement
+#
+# CRITICAL: an OMITTED or EMPTY replacement does not delete the text — filter-repo
+# substitutes the string ***REMOVED***. There is no way to delete a line with
+# --replace-text, only to substitute it. Every rule below therefore states a real
+# replacement, and rules are written per-line rather than spanning newlines.
+
+# ---- .gitignore names the private records it is ignoring --------------------
+# The files themselves were never committed, but these lines advertise what the
+# artefacts are called. Substituted with neutral equivalents. The clean repo is
+# a push-only mirror, so the altered ignore patterns have no practical effect.
+regex:#[^\n]*Claude Code persistent config[^\n]*==># Local tool state
+regex:# filesystem; must never be committed \(contains credentials\)\.==># (may contain credentials)
+regex:#[^\n]*Claude / Codex session artifacts[^\n]*==># Local working notes (not part of the app)
+.claude/==>.tool-state/
+CLAUDE_*.md==>NOTES_*.md
+CODEX_*.md==>SCRATCH_*.md
+
+# ---- session scratchpad paths hardcoded in the e2e scripts ------------------
+# 30 files under e2e/ write screenshots and dumps to the authoring session's
+# scratchpad, e.g.
+#   /tmp/claude-1000/-home-runner-workspace/<uuid>/scratchpad/shots
+# Nine distinct session ids appear. One rule normalises all of them to a path
+# the scripts can still create at runtime.
+regex:/tmp/claude-[0-9]+/[A-Za-z0-9._/-]*scratchpad==>/tmp/e2e-artifacts
+
+# ---- internal package mirror -------------------------------------------------
+# Not present in this repo's lockfile today (verified: no replit.internal hosts),
+# kept because a `pnpm install` on the platform can reintroduce it, and the fix
+# belongs in the export rather than in the source lockfile.
+regex:https?://[A-Za-z0-9.-]*replit\.internal[^\s"']*==>https://registry.npmjs.org/
+
+# ---- NOT rewritten (deliberate) ---------------------------------------------
+# website/public/vendor/css/icons.css defines .ri-claude-fill / .ri-claude-line.
+# Those are Remix Icon brand glyphs shipped with a vendored third-party icon
+# font, not a trace of how this repo was built. The verifier excludes vendor
+# paths from its content warning for the same reason.

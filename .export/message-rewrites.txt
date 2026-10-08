@@ -1,0 +1,24 @@
+# Commit-message rewrites, applied in order.
+#   literal==>replacement
+#   regex:pattern==>replacement      (Python re, MULTILINE; \n allowed)
+#
+# Trailer stripping (EXPORT_STRIP_TRAILERS) runs BEFORE these, so the rules here
+# only need to catch prose.
+
+# ---- subjects naming an internal process ------------------------------------
+# "Phase 1..6" on this branch are genuine migration phases, not an internal
+# playbook, so they are left alone. Add rules here if that changes.
+
+# ---- co-author / attribution prose that is not a trailer ---------------------
+regex:(?i)\n+generated with \[?claude code\]?[^\n]*==>
+regex:(?i)\n+co-authored-by:[^\n]*==>
+regex:(?i)^\s*🤖[^\n]*\n?==>
+
+# ---- safety nets -------------------------------------------------------------
+# Drop any BODY line (never the subject: ^(?!\A) keeps line 1 intact) that names
+# an internal record or, case-insensitively, an assistant. This is the rule that
+# catches a path like scripts/claude-persist-login.sh appearing in prose, which
+# no literal rule would have anticipated.
+regex:(?im)^(?!\A).*\b(claude|codex|anthropic|openai|copilot)\b.*\n?==>
+regex:(?im)^(?!\A).*\b(replit agent|agent session|session log|playbook|tracker)\b.*\n?==>
+regex:(?im)^(?!\A).*(CLAUDE_|CODEX_|how_we_work/|\.export/).*\n?==>

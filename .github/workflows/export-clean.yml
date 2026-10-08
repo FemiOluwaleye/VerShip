@@ -1,0 +1,46 @@
+name: Export clean repository
+
+# Rebuilds the public mirror from this repo's history on every push to the
+# export branch. The clean repo is push-only: each run rewrites its history from
+# scratch, so never commit into it directly.
+
+on:
+  push:
+    branches: [render-migration]
+  workflow_dispatch:
+
+concurrency:
+  group: export-clean
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the export needs the whole history
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install git-filter-repo
+        run: pip install git-filter-repo==2.47.0
+
+      - name: Build the export
+        run: bash .export/export.sh "$RUNNER_TEMP/export"
+
+      - name: Push to the clean repository
+        env:
+          CLEAN_REPO: ${{ vars.CLEAN_REPO }}
+          CLEAN_REPO_TOKEN: ${{ secrets.CLEAN_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$CLEAN_REPO" || { echo "vars.CLEAN_REPO is not set"; exit 1; }
+          git -C "$RUNNER_TEMP/export" push --force \
+            "https://x-access-token:${CLEAN_REPO_TOKEN}@github.com/${CLEAN_REPO}.git" \
+            render-migration:main
