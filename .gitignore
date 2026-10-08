@@ -49,6 +49,9 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+# gh stores its OAuth token here in plain text; only a machine-level
+# gitignore covered it before, which does not travel with a clone.
+.config/
 
 # Claude Code persistent config (login + transcripts) — persists on the Replit
 # filesystem; must never be committed (contains credentials).
@@ -56,6 +59,7 @@ Thumbs.db
 
 # Claude / Codex session artifacts (local working notes, not part of the app)
 .agents/
+how_we_work/
 CLAUDE_*.md
 CODEX_*.md
 
